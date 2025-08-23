@@ -102,8 +102,35 @@ export class MemStorage implements IStorage {
       notes: null,
     };
 
+    // Add sample request for field app testing
+    const request3: SurveyRequest = {
+      id: "sample-request-001",
+      requestNumber: "QMS-2024-003",
+      ownerName: "عبدالله محمد الحمادي",
+      region: "صنعاء - شارع الستين",
+      assignedSurveyor: "المساح محمد الشامي",
+      status: "assigned",
+      createdAt: new Date(2025, 0, 10),
+      updatedAt: new Date(2025, 0, 15),
+      documents: [],
+      notes: "طلب مسح أرض تجارية في شارع الستين",
+    };
+
     this.surveyRequests.set(request1.id, request1);
     this.surveyRequests.set(request2.id, request2);
+    this.surveyRequests.set(request3.id, request3);
+
+    // Add sample review comment
+    const sampleComment: ReviewComment = {
+      id: "comment-001",
+      requestId: "sample-request-001",
+      reviewerName: "مراجع فني أحمد الصالحي",
+      comment: "يرجى التأكد من دقة قياسات الحدود الشرقية للقطعة",
+      status: "pending",
+      createdAt: new Date(2025, 0, 18)
+    };
+
+    this.reviewComments.set(sampleComment.id, sampleComment);
   }
 
   // Survey Requests
@@ -122,6 +149,10 @@ export class MemStorage implements IStorage {
     const request: SurveyRequest = {
       ...insertRequest,
       id,
+      status: insertRequest.status || "submitted",
+      assignedSurveyor: insertRequest.assignedSurveyor || null,
+      documents: insertRequest.documents || [],
+      notes: insertRequest.notes || null,
       createdAt: new Date(),
       updatedAt: new Date(),
     };
@@ -154,6 +185,10 @@ export class MemStorage implements IStorage {
     const point: SurveyPoint = {
       ...insertPoint,
       id,
+      elevation: insertPoint.elevation || null,
+      accuracy: insertPoint.accuracy || null,
+      notes: insertPoint.notes || null,
+      photos: insertPoint.photos || [],
       capturedAt: new Date(),
     };
     this.surveyPoints.set(id, point);
@@ -176,6 +211,10 @@ export class MemStorage implements IStorage {
     const line: SurveyLine = {
       ...insertLine,
       id,
+      length: insertLine.length || null,
+      notes: insertLine.notes || null,
+      startPointId: insertLine.startPointId || null,
+      endPointId: insertLine.endPointId || null,
       createdAt: new Date(),
     };
     this.surveyLines.set(id, line);
@@ -198,6 +237,9 @@ export class MemStorage implements IStorage {
     const polygon: SurveyPolygon = {
       ...insertPolygon,
       id,
+      area: insertPolygon.area || null,
+      perimeter: insertPolygon.perimeter || null,
+      notes: insertPolygon.notes || null,
       createdAt: new Date(),
     };
     this.surveyPolygons.set(id, polygon);
@@ -219,6 +261,12 @@ export class MemStorage implements IStorage {
     const session: SurveySession = {
       ...insertSession,
       id,
+      endTime: insertSession.endTime || null,
+      gpsAccuracy: insertSession.gpsAccuracy || null,
+      satelliteCount: insertSession.satelliteCount || null,
+      instrumentUsed: insertSession.instrumentUsed || null,
+      weatherConditions: insertSession.weatherConditions || null,
+      isActive: insertSession.isActive !== undefined ? insertSession.isActive : true,
       startTime: new Date(),
     };
     this.surveySessions.set(id, session);

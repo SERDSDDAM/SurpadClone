@@ -8,6 +8,7 @@ import { toast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { ClipboardCheck, Check, Edit, X, FileText, Download } from "lucide-react";
 import { formatArea, exportFormats } from "@/lib/survey-utils";
+import { SurveyRequest, SurveyPoint, SurveyLine, SurveyPolygon, ReviewComment } from "@shared/schema";
 
 // For demo purposes, using a sample request ID
 const SAMPLE_REQUEST_ID = "sample-request-001";
@@ -17,23 +18,23 @@ export default function Review() {
   const queryClient = useQueryClient();
 
   // Query review data
-  const { data: request } = useQuery({
+  const { data: request } = useQuery<SurveyRequest>({
     queryKey: ["/api/survey-requests", SAMPLE_REQUEST_ID],
   });
 
-  const { data: surveyPoints = [] } = useQuery({
+  const { data: surveyPoints = [] } = useQuery<SurveyPoint[]>({
     queryKey: ["/api/survey-requests", SAMPLE_REQUEST_ID, "points"],
   });
 
-  const { data: surveyLines = [] } = useQuery({
+  const { data: surveyLines = [] } = useQuery<SurveyLine[]>({
     queryKey: ["/api/survey-requests", SAMPLE_REQUEST_ID, "lines"],
   });
 
-  const { data: surveyPolygons = [] } = useQuery({
+  const { data: surveyPolygons = [] } = useQuery<SurveyPolygon[]>({
     queryKey: ["/api/survey-requests", SAMPLE_REQUEST_ID, "polygons"],
   });
 
-  const { data: comments = [] } = useQuery({
+  const { data: comments = [] } = useQuery<ReviewComment[]>({
     queryKey: ["/api/survey-requests", SAMPLE_REQUEST_ID, "comments"],
   });
 
@@ -395,7 +396,7 @@ export default function Review() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-3">
-                  {comments.map((comment: any) => (
+                  {comments.map((comment) => (
                     <div key={comment.id} className="border-l-4 border-primary pl-4">
                       <div className="flex justify-between items-start mb-1">
                         <span className="font-medium">{comment.reviewerName}</span>

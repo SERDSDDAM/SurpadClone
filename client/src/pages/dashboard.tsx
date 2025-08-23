@@ -7,11 +7,16 @@ import { StatsCard } from "@/components/ui/stats-card";
 import { SurveyRequest } from "@shared/schema";
 
 export default function Dashboard() {
-  const { data: stats, isLoading: statsLoading } = useQuery({
+  const { data: stats, isLoading: statsLoading } = useQuery<{
+    newRequests: number;
+    inProgress: number;
+    underReview: number;
+    completed: number;
+  }>({
     queryKey: ["/api/stats"],
   });
 
-  const { data: requests, isLoading: requestsLoading } = useQuery({
+  const { data: requests, isLoading: requestsLoading } = useQuery<SurveyRequest[]>({
     queryKey: ["/api/survey-requests"],
   });
 
