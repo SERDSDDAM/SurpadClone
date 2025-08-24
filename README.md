@@ -19,10 +19,10 @@
 ## التثبيت والتشغيل
 ```bash
 # استنساخ المشروع
-git clone https://github.com/SERDSDDAM/yemen-surveying-system.git
+git clone https://github.com/SERDSDDAM/SurpadClone.git
 
 # الدخول إلى المشروع
-cd yemen-surveying-system
+cd SurpadClone
 
 # تثبيت الاعتماديات
 npm install
