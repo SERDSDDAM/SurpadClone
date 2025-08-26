@@ -17,6 +17,8 @@ import {
 import { useState } from "react";
 import Dashboard from "@/pages/dashboard";
 import FieldApp from "@/pages/field-app";
+import CleanFieldApp from "@/pages/clean-field-app";
+import SurveyorDashboard from "@/pages/surveyor-dashboard";
 import Review from "@/pages/review";
 import NotFound from "@/pages/not-found";
 
@@ -25,8 +27,9 @@ function Navigation() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const navigation = [
-    { name: "لوحة التحكم", href: "/", icon: LayoutDashboard },
+    { name: "لوحة التحكم", href: "/admin", icon: LayoutDashboard },
     { name: "تطبيق المساح", href: "/field-app", icon: Smartphone },
+    { name: "التطبيق النظيف", href: "/clean-field-app", icon: MapPin },
     { name: "المراجعة", href: "/review", icon: ClipboardCheck },
   ];
 
@@ -122,13 +125,21 @@ function Navigation() {
 }
 
 function Router() {
+  const [location] = useLocation();
+  
+  // Check if current route should hide navigation
+  const hideNavigation = location === "/" || location === "/dashboard" || location === "/clean-field-app";
+  
   return (
     <div className="min-h-screen bg-gray-50">
-      <Navigation />
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      {!hideNavigation && <Navigation />}
+      <main className={hideNavigation ? "" : "max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6"}>
         <Switch>
-          <Route path="/" component={Dashboard} />
+          <Route path="/" component={SurveyorDashboard} />
+          <Route path="/dashboard" component={SurveyorDashboard} />
+          <Route path="/admin" component={Dashboard} />
           <Route path="/field-app" component={FieldApp} />
+          <Route path="/clean-field-app" component={CleanFieldApp} />
           <Route path="/review" component={Review} />
           <Route component={NotFound} />
         </Switch>

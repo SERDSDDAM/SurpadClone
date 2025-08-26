@@ -161,14 +161,7 @@ export default function FieldApp() {
     return () => clearInterval(interval);
   }, []);
 
-  // Update survey stats when data changes
-  useEffect(() => {
-    setSurveyStats({
-      pointsCount: surveyPoints.length,
-      linesCount: surveyLines.length,
-      polygonsCount: surveyPolygons.length,
-    });
-  }, [surveyPoints, surveyLines, surveyPolygons]);
+  // Survey stats are calculated directly from data
 
   // Network status monitoring
   useEffect(() => {
