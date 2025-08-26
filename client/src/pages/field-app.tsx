@@ -2,10 +2,10 @@ import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "@/hooks/use-toast";
 import { AdvancedGPSPanel } from "@/components/ui/advanced-gps-panel";
-import { SmartToolbar } from "@/components/ui/smart-toolbar";
-import { InteractiveCanvas } from "@/components/ui/interactive-canvas";
+import { SmartToolbar, type ToolType } from "@/components/ui/smart-toolbar";
+import { InteractiveCanvas, type CanvasPoint, type CanvasLine, type CanvasPolygon } from "@/components/ui/interactive-canvas";
 import { SurveyProgress } from "@/components/ui/survey-progress";
-import { generatePointNumber } from "@/lib/survey-utils";
+import { generatePointNumber, generateLineNumber, generatePolygonNumber, featureCodes } from "@/lib/survey-utils";
 import { useWebSocket } from "@/hooks/use-websocket";
 import { apiRequest } from "@/lib/queryClient";
 import { SurveyPoint, SurveyLine, SurveyPolygon } from "@shared/schema";
@@ -13,7 +13,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { Wifi, WifiOff, Save, Upload, Download, Activity } from "lucide-react";
+import { Wifi, WifiOff, Save, Upload, Download, Activity, Bluetooth, Settings } from "lucide-react";
 
 // For demo purposes, using a sample request ID
 const SAMPLE_REQUEST_ID = "sample-request-001";
@@ -25,14 +25,12 @@ interface SurveyStats {
 }
 
 export default function FieldApp() {
-  const [activeTool, setActiveTool] = useState<"point" | "line" | "polygon" | "select">("point");
+  const [activeTool, setActiveTool] = useState<ToolType>("point");
+  const [selectedFeatureCode, setSelectedFeatureCode] = useState<string>("building-corner");
   const [snapEnabled, setSnapEnabled] = useState(true);
   const [isCapturing, setIsCapturing] = useState(false);
-  const [surveyStats, setSurveyStats] = useState<SurveyStats>({
-    pointsCount: 0,
-    linesCount: 0,
-    polygonsCount: 0,
-  });
+  const [sessionStartTime, setSessionStartTime] = useState<number>(Date.now());
+  const [sessionTime, setSessionTime] = useState<number>(0);
   
   // Advanced GPS simulation with realistic GNSS data
   const [advancedGPS, setAdvancedGPS] = useState({
@@ -111,6 +109,15 @@ export default function FieldApp() {
       }
     },
   });
+
+  // Session timer
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setSessionTime(Math.floor((Date.now() - sessionStartTime) / 1000));
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [sessionStartTime]);
 
   // Advanced GPS simulation with realistic GNSS data
   useEffect(() => {
@@ -202,22 +209,67 @@ export default function FieldApp() {
     setTimeout(() => setIsCapturing(false), 1000);
   };
 
-  const handleFeatureCreate = (type: string, featureCode: string, data: any) => {
-    const featureData = {
+  const handleCanvasPointClick = (x: number, y: number, lat: number, lng: number) => {
+    if (isCapturing || activeTool === "select") return;
+
+    setIsCapturing(true);
+    
+    const pointData = {
       requestId: SAMPLE_REQUEST_ID,
-      ...data,
-      longitude: advancedGPS.longitude,
-      latitude: advancedGPS.latitude,
+      pointNumber: generatePointNumber(surveyPoints.length),
+      featureCode: selectedFeatureCode,
+      featureType: featureCodes[activeTool]?.find(f => f.value === selectedFeatureCode)?.text || activeTool,
+      longitude: lng,
+      latitude: lat,
       elevation: advancedGPS.altitude,
       accuracy: advancedGPS.accuracy,
-      capturedBy: "المساح الميداني"
+      capturedBy: "المساح الميداني",
+      notes: `تم إنشاؤه باستخدام ${activeTool === 'point' ? 'أداة النقطة' : activeTool}`,
+      photos: []
     };
 
-    if (type === "point") {
-      createPointMutation.mutate(featureData);
-    }
-    // Add handlers for line and polygon later
+    createPointMutation.mutate(pointData);
+    setTimeout(() => setIsCapturing(false), 1000);
   };
+
+  // Calculate statistics  
+  const surveyStats = {
+    pointsCount: surveyPoints.length,
+    linesCount: surveyLines.length,
+    polygonsCount: surveyPolygons.length,
+  };
+
+  // Calculate completion percentage (placeholder logic)
+  const completionPercentage = Math.min(100, (surveyStats.pointsCount + surveyStats.linesCount + surveyStats.polygonsCount) * 5);
+
+  // Convert survey data to canvas format
+  const canvasPoints: CanvasPoint[] = surveyPoints.map(point => ({
+    id: point.id,
+    x: 0, // Will be calculated by canvas
+    y: 0,
+    lat: point.latitude,
+    lng: point.longitude,
+    featureCode: point.featureCode,
+    color: point.featureCode.includes('building') ? '#ef4444' : 
+           point.featureCode.includes('tree') ? '#22c55e' : 
+           '#3b82f6'
+  }));
+
+  const canvasLines: CanvasLine[] = surveyLines.map(line => ({
+    id: line.id,
+    points: [], // Would be populated from line points
+    featureCode: line.featureCode,
+    color: '#22c55e',
+    length: 0
+  }));
+
+  const canvasPolygons: CanvasPolygon[] = surveyPolygons.map(polygon => ({
+    id: polygon.id,
+    points: [], // Would be populated from polygon points  
+    featureCode: polygon.featureCode,
+    color: '#8b5cf6',
+    area: polygon.area ?? undefined
+  }));
 
   const handleSyncData = () => {
     toast({
@@ -240,33 +292,6 @@ export default function FieldApp() {
       description: "يتم تصدير بيانات الجلسة...",
     });
   };
-
-  // Convert survey data for canvas
-  const canvasPoints = surveyPoints.map(point => ({
-    id: point.id,
-    x: 0, // Will be calculated by canvas
-    y: 0,
-    lat: point.latitude,
-    lng: point.longitude,
-    featureCode: point.featureCode,
-    featureType: point.featureType,
-    color: point.featureCode === "BM" ? "#FF0000" : "#0066CC"
-  }));
-
-  const canvasLines = surveyLines.map(line => ({
-    id: line.id,
-    points: [], // Will be populated with actual points
-    featureCode: line.featureCode,
-    color: "#0066CC"
-  }));
-
-  const canvasPolygons = surveyPolygons.map(polygon => ({
-    id: polygon.id,
-    points: [], // Will be populated with actual points
-    featureCode: polygon.featureCode,
-    color: "#32CD32",
-    area: polygon.area
-  }));
 
   return (
     <div className="space-y-6 p-4">
@@ -312,7 +337,8 @@ export default function FieldApp() {
         <div className="xl:col-span-1">
           <AdvancedGPSPanel
             gpsData={advancedGPS}
-            onLocationCapture={handleLocationCapture}
+            isConnected={!isOffline && wsConnected}
+            onCapture={() => handleLocationCapture(advancedGPS)}
             isCapturing={isCapturing}
           />
         </div>
@@ -320,11 +346,13 @@ export default function FieldApp() {
         {/* Smart Toolbar */}
         <div className="xl:col-span-1">
           <SmartToolbar
-            activeMode={activeTool}
-            onModeChange={setActiveTool}
-            onFeatureCreate={handleFeatureCreate}
+            activeTool={activeTool}
+            onToolChange={setActiveTool}
+            selectedFeatureCode={selectedFeatureCode}
+            onFeatureCodeChange={setSelectedFeatureCode}
             snapEnabled={snapEnabled}
-            onSnapToggle={setSnapEnabled}
+            onSnapToggle={() => setSnapEnabled(!snapEnabled)}
+            isCapturing={isCapturing}
           />
         </div>
 
@@ -332,7 +360,8 @@ export default function FieldApp() {
         <div className="xl:col-span-1">
           <SurveyProgress
             stats={surveyStats}
-            isConnected={wsConnected}
+            sessionTime={sessionTime}
+            completionPercentage={completionPercentage}
           />
         </div>
 
@@ -376,66 +405,95 @@ export default function FieldApp() {
         </div>
       </div>
 
-      {/* Interactive Canvas for Drawing */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center justify-between">
-            <span>لوحة الرسم التفاعلية</span>
-            <div className="flex items-center gap-2 text-sm text-gray-500">
-              <Badge variant="outline" className="text-xs">
-                النقاط: {canvasPoints.length}
+      <Separator />
+
+      {/* Interactive Canvas */}
+      <div className="w-full">
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center justify-between">
+              <span>خريطة المسح التفاعلية</span>
+              <Badge variant="outline">
+                {activeTool === "select" ? "وضع التحديد" : 
+                 activeTool === "point" ? "وضع النقطة" :
+                 activeTool === "line" ? "وضع الخط" :
+                 "وضع المضلع"}
               </Badge>
-              <Badge variant="outline" className="text-xs">
-                الخطوط: {canvasLines.length}
-              </Badge>
-              <Badge variant="outline" className="text-xs">
-                المضلعات: {canvasPolygons.length}
-              </Badge>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <InteractiveCanvas
+              points={canvasPoints}
+              lines={canvasLines}
+              polygons={canvasPolygons}
+              activeTool={activeTool}
+              onPointClick={handleCanvasPointClick}
+              snapEnabled={snapEnabled}
+              currentGPS={{ lat: advancedGPS.latitude, lng: advancedGPS.longitude }}
+            />
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Advanced Features */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        {/* Bluetooth/Hardware Integration */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Bluetooth className="h-5 w-5" />
+              الأجهزة المتصلة
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="text-sm text-gray-600">
+              <div>• جهاز GNSS: غير متصل</div>
+              <div>• جهاز القياس بالليزر: غير متصل</div>
             </div>
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <InteractiveCanvas
-            points={canvasPoints}
-            lines={canvasLines}
-            polygons={canvasPolygons}
-            mode={activeTool}
-            snapEnabled={snapEnabled}
-            onPointAdd={(point) => {
-              const pointData = {
-                requestId: SAMPLE_REQUEST_ID,
-                pointNumber: generatePointNumber(surveyPoints.length + 1),
-                featureCode: "MANUAL",
-                featureType: "Manual Point",
-                longitude: point.lng,
-                latitude: point.lat,
-                elevation: advancedGPS.altitude,
-                accuracy: advancedGPS.accuracy,
-                capturedBy: "المساح الميداني",
-                photos: []
-              };
-              createPointMutation.mutate(pointData);
-            }}
-            onLineAdd={(line) => {
-              console.log('Line added:', line);
-              toast({
-                title: "خط جديد",
-                description: "تم إضافة خط جديد للخريطة",
-              });
-            }}
-            onPolygonAdd={(polygon) => {
-              console.log('Polygon added:', polygon);
-              toast({
-                title: "مضلع جديد",
-                description: "تم إضافة مضلع جديد للخريطة",
-              });
-            }}
-            onFeatureSelect={(feature) => {
-              console.log('Feature selected:', feature);
-            }}
-          />
-        </CardContent>
-      </Card>
+            <Button variant="outline" size="sm" className="w-full" disabled>
+              <Settings className="h-4 w-4 mr-2" />
+              إدارة الأجهزة
+            </Button>
+          </CardContent>
+        </Card>
+
+        {/* Offline Maps Status */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              خرائط أوفلاين
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="text-sm text-gray-600">
+              <div>• المنطقة الحالية: غير محفوظة</div>
+              <div>• الحجم المتاح: 2.1 جيجابايت</div>
+            </div>
+            <Button variant="outline" size="sm" className="w-full" disabled>
+              تحميل خرائط المنطقة
+            </Button>
+          </CardContent>
+        </Card>
+
+        {/* Advanced Settings */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Settings className="h-5 w-5" />
+              إعدادات متقدمة
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="text-sm text-gray-600">
+              <div>• نظام الإحداثيات: WGS84</div>
+              <div>• وحدة القياس: متر</div>
+            </div>
+            <Button variant="outline" size="sm" className="w-full" disabled>
+              تخصيص الإعدادات
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
 
       {/* Offline Mode Banner */}
       {isOffline && (

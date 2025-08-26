@@ -1,95 +1,81 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState, useCallback } from 'react';
 
-interface UseWebSocketOptions {
+interface UseWebSocketProps {
   onMessage?: (data: any) => void;
-  onConnect?: () => void;
-  onDisconnect?: () => void;
+  onOpen?: () => void;
+  onClose?: () => void;
   onError?: (error: Event) => void;
 }
 
-export function useWebSocket(options: UseWebSocketOptions = {}) {
+interface UseWebSocketReturn {
+  isConnected: boolean;
+  sendMessage: (message: any) => void;
+  lastMessage: any;
+}
+
+export function useWebSocket({
+  onMessage,
+  onOpen,
+  onClose,
+  onError,
+}: UseWebSocketProps = {}): UseWebSocketReturn {
   const [isConnected, setIsConnected] = useState(false);
   const [lastMessage, setLastMessage] = useState<any>(null);
-  const socketRef = useRef<WebSocket | null>(null);
-  const reconnectTimeoutRef = useRef<NodeJS.Timeout>();
+  const [socket, setSocket] = useState<WebSocket | null>(null);
 
-  const connect = () => {
-    try {
-      const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-      const wsUrl = `${protocol}//${window.location.host}/ws`;
-      
-      socketRef.current = new WebSocket(wsUrl);
-
-      socketRef.current.onopen = () => {
-        setIsConnected(true);
-        options.onConnect?.();
-        console.log('WebSocket connected');
-      };
-
-      socketRef.current.onmessage = (event) => {
-        try {
-          const data = JSON.parse(event.data);
-          setLastMessage(data);
-          options.onMessage?.(data);
-        } catch (error) {
-          console.error('Error parsing WebSocket message:', error);
-        }
-      };
-
-      socketRef.current.onclose = () => {
-        setIsConnected(false);
-        options.onDisconnect?.();
-        console.log('WebSocket disconnected');
-        
-        // Attempt to reconnect after 3 seconds
-        reconnectTimeoutRef.current = setTimeout(() => {
-          console.log('Attempting to reconnect...');
-          connect();
-        }, 3000);
-      };
-
-      socketRef.current.onerror = (error) => {
-        console.error('WebSocket error:', error);
-        options.onError?.(error);
-      };
-    } catch (error) {
-      console.error('Failed to create WebSocket connection:', error);
+  const sendMessage = useCallback((message: any) => {
+    if (socket && socket.readyState === WebSocket.OPEN) {
+      socket.send(JSON.stringify(message));
     }
-  };
-
-  const disconnect = () => {
-    if (reconnectTimeoutRef.current) {
-      clearTimeout(reconnectTimeoutRef.current);
-    }
-    
-    if (socketRef.current) {
-      socketRef.current.close();
-      socketRef.current = null;
-    }
-    setIsConnected(false);
-  };
-
-  const sendMessage = (message: any) => {
-    if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
-      socketRef.current.send(JSON.stringify(message));
-    } else {
-      console.warn('WebSocket is not connected');
-    }
-  };
+  }, [socket]);
 
   useEffect(() => {
-    connect();
+    // Get the WebSocket URL from the current host
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const host = window.location.host;
+    const wsUrl = `${protocol}//${host}/ws`;
+
+    const ws = new WebSocket(wsUrl);
+    
+    ws.onopen = () => {
+      console.log('WebSocket connected');
+      setIsConnected(true);
+      setSocket(ws);
+      onOpen?.();
+    };
+
+    ws.onclose = () => {
+      console.log('WebSocket disconnected');
+      setIsConnected(false);
+      setSocket(null);
+      onClose?.();
+    };
+
+    ws.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        setLastMessage(data);
+        onMessage?.(data);
+      } catch (error) {
+        console.error('Failed to parse WebSocket message:', error);
+      }
+    };
+
+    ws.onerror = (error) => {
+      console.error('WebSocket error:', error);
+      onError?.(error);
+    };
+
+    setSocket(ws);
 
     return () => {
-      disconnect();
+      ws.close();
     };
-  }, []);
+  }, [onMessage, onOpen, onClose, onError]);
 
   return {
     isConnected,
-    lastMessage,
     sendMessage,
-    connect,
-    disconnect,
+    lastMessage,
   };
 }
