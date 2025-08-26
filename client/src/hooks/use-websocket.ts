@@ -1,6 +1,18 @@
 import { useEffect, useRef, useState } from "react";
+// تكوين WebSocket
+const DEFAULT_CONFIG = {
+  maxRetries: 5,
+  retryInterval: 3000,
+  debug: false
+};
 
 interface UseWebSocketOptions {
+  url?: string;
+  config?: {
+    maxRetries?: number;
+    retryInterval?: number;
+    debug?: boolean;
+  };
   onMessage?: (data: any) => void;
   onConnect?: () => void;
   onDisconnect?: () => void;
@@ -10,15 +22,26 @@ interface UseWebSocketOptions {
 export function useWebSocket(options: UseWebSocketOptions = {}) {
   const [isConnected, setIsConnected] = useState(false);
   const [lastMessage, setLastMessage] = useState<any>(null);
+  const [retryCount, setRetryCount] = useState(0);
   const socketRef = useRef<WebSocket | null>(null);
   const reconnectTimeoutRef = useRef<NodeJS.Timeout>();
-
+  
+  const config = {
+    ...DEFAULT_CONFIG,
+    ...options.config
+  };
+  
+  const socketUrl = options.url || `${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${window.location.hostname}:5001/ws`;
+  
   const connect = () => {
     try {
-      const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-      const wsUrl = `${protocol}//${window.location.host}/ws`;
+      if (retryCount >= config.maxRetries) {
+        console.error(`Max retry attempts (${config.maxRetries}) reached`);
+        return;
+      }
       
-      socketRef.current = new WebSocket(wsUrl);
+      socketRef.current = new WebSocket(socketUrl);
+
 
       socketRef.current.onopen = () => {
         setIsConnected(true);
@@ -39,13 +62,19 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
       socketRef.current.onclose = () => {
         setIsConnected(false);
         options.onDisconnect?.();
-        console.log('WebSocket disconnected');
+        if (config.debug) console.log('WebSocket disconnected');
         
-        // Attempt to reconnect after 3 seconds
-        reconnectTimeoutRef.current = setTimeout(() => {
-          console.log('Attempting to reconnect...');
-          connect();
-        }, 3000);
+        // زيادة عداد المحاولات وإعادة الاتصال
+        setRetryCount(count => {
+          const newCount = count + 1;
+          if (newCount <= config.maxRetries) {
+            reconnectTimeoutRef.current = setTimeout(() => {
+              if (config.debug) console.log(`Attempting to reconnect... (${newCount}/${config.maxRetries})`);
+              connect();
+            }, config.retryInterval);
+          }
+          return newCount;
+        });
       };
 
       socketRef.current.onerror = (error) => {

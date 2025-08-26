@@ -36,8 +36,13 @@ app.use((req, res, next) => {
   next();
 });
 
+import { startWebSocketServer } from './ws-standalone';
+
 (async () => {
   const server = await registerRoutes(app);
+  
+  // إعداد خادم WebSocket المستقل
+  startWebSocketServer(5001);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;

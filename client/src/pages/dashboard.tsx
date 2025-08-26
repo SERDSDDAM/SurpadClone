@@ -1,3 +1,5 @@
+
+
 import { useQuery } from "@tanstack/react-query";
 import { FileText, MapPin, Eye, CheckCircle } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -7,16 +9,23 @@ import { StatsCard } from "@/components/ui/stats-card";
 import { SurveyRequest } from "@shared/schema";
 
 export default function Dashboard() {
-  const { data: stats, isLoading: statsLoading } = useQuery<{
-    newRequests: number;
-    inProgress: number;
-    underReview: number;
-    completed: number;
-  }>({
-    queryKey: ["/api/stats"],
-  });
+// جلب الإحصائيات من الخادم
+const { 
+  data: stats, 
+  isLoading: statsLoading, 
+  error: statsError 
+} = useQuery({
+  queryKey: ["/api/stats"],
+  queryFn: async () => {
+    const res = await fetch("/api/stats");
+    if (!res.ok) throw new Error("فشل في جلب الإحصائيات");
+    return res.json();
+  }
+});
 
-  const { data: requests, isLoading: requestsLoading } = useQuery<SurveyRequest[]>({
+  // جلب الطلبات من الخادم
+  const { data: requests, isLoading: requestsAreLoading } = useQuery<SurveyRequest[]>({
+
     queryKey: ["/api/survey-requests"],
   });
 
@@ -38,7 +47,8 @@ export default function Dashboard() {
     );
   };
 
-  if (statsLoading || requestsLoading) {
+ if (statsLoading || requestsAreLoading) {
+
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
@@ -46,6 +56,15 @@ export default function Dashboard() {
           <p className="mt-4 text-gray-600">جارٍ تحميل البيانات...</p>
         </div>
       </div>
+    );
+  }
+
+  if (statsError) {
+    return (
+    <div className="flex items-center justify-center min-h-screen">
+  <div className="text-center text-red-600">حدث خطأ أثناء جلب الإحصائيات: {statsError?.message || "Unknown error"}</div>
+</div>
+
     );
   }
 
@@ -59,28 +78,29 @@ export default function Dashboard() {
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <StatsCard
-          title="الطلبات الجديدة"
-          value={stats?.newRequests || 0}
+          title="طلبات جديدة"
+          value={stats?.newRequests ?? 0}
           icon={<FileText />}
-          gradient="from-blue-500 to-blue-600"
+          gradient="from-blue-400 to-blue-600"
         />
         <StatsCard
           title="قيد المساحة"
-          value={stats?.inProgress || 0}
+          value={stats?.inProgress ?? 0}
           icon={<MapPin />}
-          gradient="from-green-500 to-green-600"
+          gradient="from-green-400 to-green-600"
         />
         <StatsCard
           title="قيد المراجعة"
-          value={stats?.underReview || 0}
+          value={stats?.underReview ?? 0}
           icon={<Eye />}
-          gradient="from-orange-500 to-orange-600"
+          gradient="from-yellow-400 to-yellow-600"
+          textColor="text-gray-900"
         />
         <StatsCard
-          title="مكتملة"
-          value={stats?.completed || 0}
+          title="مكتمل/معتمد"
+          value={stats ? (stats.completed ?? 0) : 0}
           icon={<CheckCircle />}
-          gradient="from-purple-500 to-purple-600"
+          gradient="from-purple-400 to-purple-600"
         />
       </div>
 
