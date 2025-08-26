@@ -126,7 +126,7 @@ export class MemStorage implements IStorage {
       requestId: "sample-request-001",
       reviewerName: "مراجع فني أحمد الصالحي",
       comment: "يرجى التأكد من دقة قياسات الحدود الشرقية للقطعة",
-      status: "pending",
+      commentType: "revision_request",
       createdAt: new Date(2025, 0, 18)
     };
 
