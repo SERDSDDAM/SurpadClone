@@ -3,18 +3,57 @@ import { pgTable, text, varchar, timestamp, real, integer, jsonb, boolean } from
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
-// Survey Requests
+// Survey Requests - Enhanced for Yemen construction permits
 export const surveyRequests = pgTable("survey_requests", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   requestNumber: varchar("request_number").notNull().unique(),
+  title: varchar("title").notNull(),
   ownerName: text("owner_name").notNull(),
   region: text("region").notNull(),
+  location: text("location").notNull(),
+  requestType: varchar("request_type").notNull().default("building_permit"),
   assignedSurveyor: text("assigned_surveyor"),
-  status: text("status").notNull().default("submitted"), // submitted, under_review, surveying, completed, approved, rejected
+  assignedSurveyorId: varchar("assigned_surveyor_id"),
+  status: text("status").notNull().default("submitted"), // submitted, assigned, in_progress, completed, under_review, approved, rejected
+  priority: varchar("priority").notNull().default("medium"), // low, medium, high, urgent
+  dueDate: timestamp("due_date"),
+  estimatedHours: integer("estimated_hours"),
+  actualHours: real("actual_hours"),
+  completionPercentage: integer("completion_percentage").default(0),
+  coordinates: jsonb("coordinates"), // Center point of survey area
+  area: real("area"), // Total area in square meters
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
+  submittedAt: timestamp("submitted_at").defaultNow(),
+  assignedAt: timestamp("assigned_at"),
+  completedAt: timestamp("completed_at"),
+  reviewedAt: timestamp("reviewed_at"),
   documents: jsonb("documents").default('[]'),
   notes: text("notes"),
+});
+
+// Surveyors table - Yemen construction surveyors
+export const surveyors = pgTable("surveyors", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  employeeNumber: varchar("employee_number").notNull().unique(),
+  name: varchar("name").notNull(),
+  title: varchar("title").notNull(), // e.g., "Eng", "Technician"
+  department: varchar("department").default("Survey Department"),
+  specialization: varchar("specialization").default("Land Surveying"),
+  experience: integer("experience_years").default(0),
+  phone: varchar("phone"),
+  email: varchar("email"),
+  status: varchar("status").notNull().default("active"), // active, inactive, on_leave
+  currentLoad: integer("current_load").default(0), // Number of assigned requests
+  maxLoad: integer("max_load").default(5), // Maximum concurrent assignments
+  rating: real("rating").default(0), // Performance rating
+  totalProjects: integer("total_projects").default(0),
+  totalPoints: integer("total_points").default(0),
+  activeDays: integer("active_days").default(0),
+  joinedAt: timestamp("joined_at").defaultNow(),
+  lastActive: timestamp("last_active").defaultNow(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
 });
 
 // Survey Points
@@ -88,10 +127,18 @@ export const reviewComments = pgTable("review_comments", {
 });
 
 // Insert schemas
+export const insertSurveyorSchema = createInsertSchema(surveyors).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  lastActive: true,
+});
+
 export const insertSurveyRequestSchema = createInsertSchema(surveyRequests).omit({
   id: true,
   createdAt: true,
   updatedAt: true,
+  submittedAt: true,
 });
 
 export const insertSurveyPointSchema = createInsertSchema(surveyPoints).omit({
@@ -120,6 +167,9 @@ export const insertReviewCommentSchema = createInsertSchema(reviewComments).omit
 });
 
 // Types
+export type Surveyor = typeof surveyors.$inferSelect;
+export type InsertSurveyor = z.infer<typeof insertSurveyorSchema>;
+
 export type SurveyRequest = typeof surveyRequests.$inferSelect;
 export type InsertSurveyRequest = z.infer<typeof insertSurveyRequestSchema>;
 

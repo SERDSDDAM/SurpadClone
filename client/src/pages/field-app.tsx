@@ -15,8 +15,11 @@ import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Wifi, WifiOff, Save, Upload, Download, Activity, Bluetooth, Settings } from "lucide-react";
 
-// For demo purposes, using a sample request ID
-const SAMPLE_REQUEST_ID = "sample-request-001";
+// Get request ID from URL parameters
+function getRequestIdFromUrl(): string {
+  const urlParams = new URLSearchParams(window.location.search);
+  return urlParams.get('requestId') || "sample-request-001";
+}
 
 interface SurveyStats {
   pointsCount: number;
@@ -25,6 +28,9 @@ interface SurveyStats {
 }
 
 export default function FieldApp() {
+  const [, navigate] = useLocation();
+  const requestId = getRequestIdFromUrl();
+  
   const [activeTool, setActiveTool] = useState<ToolType>("point");
   const [selectedFeatureCode, setSelectedFeatureCode] = useState<string>("building-corner");
   const [snapEnabled, setSnapEnabled] = useState(true);
@@ -53,39 +59,48 @@ export default function FieldApp() {
 
   const queryClient = useQueryClient();
 
+  // Fetch current survey request details
+  const { data: currentRequest, isLoading: requestLoading } = useQuery<SurveyRequest>({
+    queryKey: ["/api/survey-requests", requestId],
+    enabled: !!requestId,
+  });
+
   // WebSocket for real-time updates
   const { isConnected: wsConnected } = useWebSocket({
     onMessage: (data) => {
       if (data.type === "POINT_ADDED") {
-        queryClient.invalidateQueries({ queryKey: ["/api/survey-requests", SAMPLE_REQUEST_ID, "points"] });
+        queryClient.invalidateQueries({ queryKey: ["/api/survey-requests", requestId, "points"] });
       } else if (data.type === "LINE_ADDED") {
-        queryClient.invalidateQueries({ queryKey: ["/api/survey-requests", SAMPLE_REQUEST_ID, "lines"] });
+        queryClient.invalidateQueries({ queryKey: ["/api/survey-requests", requestId, "lines"] });
       } else if (data.type === "POLYGON_ADDED") {
-        queryClient.invalidateQueries({ queryKey: ["/api/survey-requests", SAMPLE_REQUEST_ID, "polygons"] });
+        queryClient.invalidateQueries({ queryKey: ["/api/survey-requests", requestId, "polygons"] });
       }
     },
   });
 
-  // Query survey data
+  // Query survey data for this specific request
   const { data: surveyPoints = [] } = useQuery<SurveyPoint[]>({
-    queryKey: ["/api/survey-requests", SAMPLE_REQUEST_ID, "points"],
+    queryKey: ["/api/survey-requests", requestId, "points"],
+    enabled: !!requestId,
   });
 
   const { data: surveyLines = [] } = useQuery<SurveyLine[]>({
-    queryKey: ["/api/survey-requests", SAMPLE_REQUEST_ID, "lines"],
+    queryKey: ["/api/survey-requests", requestId, "lines"],
+    enabled: !!requestId,
   });
 
   const { data: surveyPolygons = [] } = useQuery<SurveyPolygon[]>({
-    queryKey: ["/api/survey-requests", SAMPLE_REQUEST_ID, "polygons"],
+    queryKey: ["/api/survey-requests", requestId, "polygons"],
+    enabled: !!requestId,
   });
 
-  // Mutations
+  // Mutations for creating survey data
   const createPointMutation = useMutation({
     mutationFn: async (pointData: any) => {
-      return apiRequest("POST", `/api/survey-requests/${SAMPLE_REQUEST_ID}/points`, pointData);
+      return apiRequest("POST", `/api/survey-requests/${requestId}/points`, pointData);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/survey-requests", SAMPLE_REQUEST_ID, "points"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/survey-requests", requestId, "points"] });
       toast({
         title: "نجح الرفع",
         description: "تم رفع النقطة بنجاح",
@@ -185,7 +200,7 @@ export default function FieldApp() {
     setIsCapturing(true);
     
     const pointData = {
-      requestId: SAMPLE_REQUEST_ID,
+      requestId: requestId,
       pointNumber: generatePointNumber(surveyPoints.length + 1),
       featureCode: "GPS",
       featureType: "GPS Point",
@@ -208,7 +223,7 @@ export default function FieldApp() {
     setIsCapturing(true);
     
     const pointData = {
-      requestId: SAMPLE_REQUEST_ID,
+      requestId: requestId,
       pointNumber: generatePointNumber(surveyPoints.length),
       featureCode: selectedFeatureCode,
       featureType: featureCodes[activeTool]?.find(f => f.value === selectedFeatureCode)?.text || activeTool,
@@ -290,9 +305,28 @@ export default function FieldApp() {
     <div className="space-y-6 p-4">
       {/* Header with Status */}
       <div className="flex justify-between items-start">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">التطبيق الميداني المتقدم</h1>
-          <p className="text-gray-600">نظام GNSS عالي الدقة مع أدوات مساحية ذكية</p>
+        <div className="flex items-center gap-4">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => navigate("/dashboard")}
+            className="text-gray-600 hover:text-teal-600"
+            data-testid="back-to-dashboard"
+          >
+            <ArrowLeft className="h-4 w-4 ml-2" />
+            العودة للوحة التحكم
+          </Button>
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">
+              {currentRequest?.title || "التطبيق الميداني المتقدم"}
+            </h1>
+            <p className="text-gray-600">
+              {currentRequest ? 
+                `رقم الطلب: ${currentRequest.requestNumber} - ${currentRequest.location}` :
+                "نظام GNSS عالي الدقة مع أدوات مساحية ذكية"
+              }
+            </p>
+          </div>
         </div>
         
         {/* Status Indicators */}

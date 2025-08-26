@@ -2,9 +2,65 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { WebSocketServer, WebSocket } from "ws";
 import { storage } from "./storage";
-import { insertSurveyRequestSchema, insertSurveyPointSchema, insertSurveyLineSchema, insertSurveyPolygonSchema, insertSurveySessionSchema, insertReviewCommentSchema } from "@shared/schema";
+import { 
+  insertSurveyorSchema,
+  insertSurveyRequestSchema, 
+  insertSurveyPointSchema, 
+  insertSurveyLineSchema, 
+  insertSurveyPolygonSchema, 
+  insertSurveySessionSchema, 
+  insertReviewCommentSchema 
+} from "@shared/schema";
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Surveyors Management
+  app.get("/api/surveyors", async (req, res) => {
+    try {
+      const surveyors = await storage.getSurveyors();
+      res.json(surveyors);
+    } catch (error) {
+      console.error("Error fetching surveyors:", error);
+      res.status(500).json({ message: "Failed to fetch surveyors" });
+    }
+  });
+
+  app.get("/api/surveyors/:id", async (req, res) => {
+    try {
+      const surveyor = await storage.getSurveyor(req.params.id);
+      if (!surveyor) {
+        return res.status(404).json({ message: "Surveyor not found" });
+      }
+      res.json(surveyor);
+    } catch (error) {
+      console.error("Error fetching surveyor:", error);
+      res.status(500).json({ message: "Failed to fetch surveyor" });
+    }
+  });
+
+  app.post("/api/surveyors", async (req, res) => {
+    try {
+      const validatedData = insertSurveyorSchema.parse(req.body);
+      const surveyor = await storage.createSurveyor(validatedData);
+      res.status(201).json(surveyor);
+    } catch (error) {
+      console.error("Error creating surveyor:", error);
+      res.status(400).json({ message: "Invalid surveyor data" });
+    }
+  });
+
+  app.patch("/api/surveyors/:id", async (req, res) => {
+    try {
+      const surveyor = await storage.updateSurveyor(req.params.id, req.body);
+      if (!surveyor) {
+        return res.status(404).json({ message: "Surveyor not found" });
+      }
+      res.json(surveyor);
+    } catch (error) {
+      console.error("Error updating surveyor:", error);
+      res.status(500).json({ message: "Failed to update surveyor" });
+    }
+  });
+
   // Survey Requests
   app.get("/api/survey-requests", async (req, res) => {
     try {
