@@ -442,7 +442,8 @@ router.post('/layers/upload-url', isAuthenticated, async (req: Request, res: Res
     const supportedTypes = [
       'image/tiff', 'image/tif', 
       'image/png', 'image/jpeg', 'image/jpg',
-      'application/geo+tiff', 'application/geotiff'
+      'application/geo+tiff', 'application/geotiff',
+      'application/zip', 'application/x-zip-compressed'
     ];
     
     const isSupported = supportedTypes.some(type => 
@@ -451,12 +452,13 @@ router.post('/layers/upload-url', isAuthenticated, async (req: Request, res: Res
       fileName.toLowerCase().endsWith('.tif') ||
       fileName.toLowerCase().endsWith('.png') ||
       fileName.toLowerCase().endsWith('.jpg') ||
-      fileName.toLowerCase().endsWith('.jpeg')
+      fileName.toLowerCase().endsWith('.jpeg') ||
+      fileName.toLowerCase().endsWith('.zip')
     );
     
     if (!isSupported) {
       return res.status(400).json({ 
-        error: 'Unsupported file type. Supported: GeoTIFF, TIFF, PNG, JPG',
+        error: 'Unsupported file type. Supported: ZIP (preferred), GeoTIFF, TIFF, PNG, JPG',
         supportedTypes: supportedTypes
       });
     }
@@ -494,30 +496,76 @@ router.post('/layers/confirm', isAuthenticated, async (req: Request, res: Respon
       return res.status(400).json({ error: 'layerId, objectPath, and fileName are required' });
     }
 
+    // تحديد نوع الملف والمعالجة المطلوبة
+    const isZipFile = metadata?.isZipFile || fileName.toLowerCase().endsWith('.zip');
+    const fileExtension = fileName.toLowerCase().substring(fileName.lastIndexOf('.'));
+    
     // في التطبيق الحقيقي، هنا سيتم:
     // 1. التحقق من وجود الملف في التخزين السحابي
     // 2. قراءة البيانات الجغرافية من الملف (إحداثيات، نظام الإسناد المرجعي)
     // 3. حفظ البيانات الوصفية في قاعدة البيانات
     
-    const processedLayer = {
-      id: layerId,
-      name: metadata?.name || fileName.replace(/\.[^/.]+$/, ""),
-      fileName,
-      objectPath, // هذا هو الرابط الذي يُحفظ في قاعدة البيانات
-      type: 'raster',
-      bounds: metadata?.bounds || [[15.2, 44.1], [15.5, 44.3]], // حدود افتراضية لصنعاء
-      coordinateSystem: metadata?.coordinateSystem || 'EPSG:4326',
-      uploadDate: new Date().toISOString(),
-      status: 'ready',
-      fileSize: metadata?.fileSize || 0,
-      // معلومات GeoTIFF
-      geospatialInfo: {
-        hasGeoreferencing: true,
-        spatialReference: metadata?.coordinateSystem || 'EPSG:4326',
-        pixelSize: metadata?.pixelSize || [1, 1],
-        transform: metadata?.transform || null
-      }
-    };
+    let processedLayer;
+    
+    if (isZipFile) {
+      // معالجة خاصة لملفات ZIP - محاكاة معالجة متعددة الطبقات
+      console.log('🔄 معالجة ملف ZIP:', fileName);
+      console.log('📊 البيانات الوصفية:', {
+        name: metadata?.name,
+        fileType: metadata?.fileType,
+        coordinateSystem: metadata?.coordinateSystem,
+        sourceCoordinateSystem: metadata?.sourceCoordinateSystem
+      });
+      
+      processedLayer = {
+        id: layerId,
+        name: metadata?.name || fileName.replace(/\.[^/.]+$/, ""),
+        fileName,
+        objectPath,
+        type: 'raster',
+        bounds: metadata?.bounds || [[15.2, 44.1], [15.5, 44.3]],
+        coordinateSystem: metadata?.coordinateSystem || 'EPSG:4326',
+        sourceCoordinateSystem: metadata?.sourceCoordinateSystem || 'UTM Zone 38N',
+        uploadDate: new Date().toISOString(),
+        status: 'ready',
+        fileSize: metadata?.fileSize || 0,
+        // معلومات خاصة بملف ZIP
+        zipInfo: {
+          isMultiLayer: true,
+          hasProjectionFile: true,
+          hasWorldFile: true,
+          extractedLayers: 1, // في التطبيق الحقيقي سيتم حساب عدد الطبقات
+          coordinateTransformation: metadata?.needsReprojection ? 'UTM Zone 38N → WGS 84' : 'None'
+        },
+        geospatialInfo: {
+          hasGeoreferencing: true,
+          spatialReference: metadata?.coordinateSystem || 'EPSG:32638',
+          needsReprojection: metadata?.needsReprojection || false,
+          originalUtmBounds: metadata?.originalUtmBounds || null,
+          projectionInfo: metadata?.projectionInfo || null
+        }
+      };
+    } else {
+      // معالجة عادية للصور المفردة
+      processedLayer = {
+        id: layerId,
+        name: metadata?.name || fileName.replace(/\.[^/.]+$/, ""),
+        fileName,
+        objectPath,
+        type: 'raster',
+        bounds: metadata?.bounds || [[15.2, 44.1], [15.5, 44.3]],
+        coordinateSystem: metadata?.coordinateSystem || 'EPSG:4326',
+        uploadDate: new Date().toISOString(),
+        status: 'ready',
+        fileSize: metadata?.fileSize || 0,
+        geospatialInfo: {
+          hasGeoreferencing: true,
+          spatialReference: metadata?.coordinateSystem || 'EPSG:4326',
+          pixelSize: metadata?.pixelSize || [1, 1],
+          transform: metadata?.transform || null
+        }
+      };
+    }
     
     // TODO: حفظ processedLayer في جدول gis_layers في قاعدة البيانات
     
