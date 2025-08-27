@@ -27,6 +27,8 @@ import {
   type InsertViolationReport,
   type PaymentTransaction,
   type InsertPaymentTransaction,
+  type InspectionReport,
+  type InsertInspectionReport,
 } from "@shared/schema";
 import { randomUUID } from "crypto";
 
@@ -112,6 +114,13 @@ export interface IStorage {
   createPaymentTransaction(transaction: InsertPaymentTransaction): Promise<PaymentTransaction>;
   updatePaymentTransaction(id: string, transaction: Partial<PaymentTransaction>): Promise<PaymentTransaction | undefined>;
 
+  // Inspection Reports
+  getInspectionReports(): Promise<InspectionReport[]>;
+  getInspectionReport(id: string): Promise<InspectionReport | undefined>;
+  createInspectionReport(report: InsertInspectionReport): Promise<InspectionReport>;
+  updateInspectionReport(id: string, report: Partial<InspectionReport>): Promise<InspectionReport | undefined>;
+  assignInspector(reportId: string, inspectorId: string, inspectorName: string): Promise<InspectionReport | undefined>;
+
   // Enhanced Statistics
   getStats(): Promise<{
     newRequests: number;
@@ -140,8 +149,7 @@ export class MemStorage implements IStorage {
   private occupancyCertificates: OccupancyCertificate[] = [];
   private violationReports: ViolationReport[] = [];
   private paymentTransactions: PaymentTransaction[] = [];
-  private occupancyCertificatesData: any[] = [];
-  private inspectionReportsData: any[] = [];
+  private inspectionReports: InspectionReport[] = [];
 
   constructor() {
     this.initializeSampleData();
@@ -472,7 +480,7 @@ export class MemStorage implements IStorage {
     ];
 
     // Sample Occupancy Certificates  
-    this.occupancyCertificatesData = [
+    this.occupancyCertificates = [
       {
         id: "cert-001",
         certificateNumber: "OC-2025-0001",
@@ -518,7 +526,7 @@ export class MemStorage implements IStorage {
     ];
 
     // Sample Inspection Reports
-    this.inspectionReportsData = [
+    this.inspectionReports = [
       {
         id: "report-001",
         reportNumber: "REP-2025-0001",
@@ -554,12 +562,15 @@ export class MemStorage implements IStorage {
         nextInspectionDate: null,
         status: "approved",
         priority: "normal",
-        attachments: [
-          { name: "تقرير الفحص الهيكلي.pdf", type: "structural_report" },
-          { name: "صور التفتيش.zip", type: "inspection_photos" }
-        ],
-        approvedBy: "م. عبدالله الصالح",
-        approvalDate: new Date("2025-01-24"),
+        attachments: [],
+        assignedDate: "2025-01-20",
+        completedDate: "2025-01-22",
+        reviewedDate: "2025-01-24",
+        reviewedBy: "م. عبدالله الصالح",
+        reviewNotes: "تقرير التفتيش شامل ومعتمد",
+        digitalSignature: null,
+        certificateGenerated: true,
+        notificationsSent: ["owner", "utilities"],
         createdAt: new Date("2025-01-22"),
         updatedAt: new Date("2025-01-24"),
       }
@@ -1107,82 +1118,130 @@ export class MemStorage implements IStorage {
   }
 
   // Occupancy Certificates methods
-  async getOccupancyCertificates(): Promise<any[]> {
-    return this.occupancyCertificatesData;
+  async getOccupancyCertificates(): Promise<OccupancyCertificate[]> {
+    return this.occupancyCertificates;
   }
 
-  async getOccupancyCertificate(id: string): Promise<any | undefined> {
-    return this.occupancyCertificatesData.find(cert => cert.id === id);
+  async getOccupancyCertificate(id: string): Promise<OccupancyCertificate | undefined> {
+    return this.occupancyCertificates.find(cert => cert.id === id);
   }
 
-  async createOccupancyCertificate(certData: any): Promise<any> {
-    const certificate = {
+  async createOccupancyCertificate(certData: InsertOccupancyCertificate): Promise<OccupancyCertificate> {
+    const certificate: OccupancyCertificate = {
       id: randomUUID(),
-      certificateNumber: `OC-2025-${String(this.occupancyCertificatesData.length + 1).padStart(4, '0')}`,
+      certificateNumber: `OC-2025-${String(this.occupancyCertificates.length + 1).padStart(4, '0')}`,
+      status: "draft",
+      priority: "normal",
+      buildingPermitId: null,
+      applicantNationalId: null,
+      coordinates: null,
+      basementFloors: 0,
+      plotArea: null,
+      completionDate: null,
+      inspectionDate: null,
+      inspectorId: null,
+      inspectorName: null,
+      inspectionNotes: null,
+      violationsFound: [],
+      correctiveActions: null,
+      issuedDate: null,
+      expiryDate: null,
+      issuedBy: null,
+      sentToUtilities: false,
+      utilitiesNotificationDate: null,
+      documents: [],
+      fees: 0,
+      paidAmount: 0,
+      paymentStatus: "unpaid",
       ...certData,
       createdAt: new Date(),
       updatedAt: new Date(),
     };
-    this.occupancyCertificatesData.push(certificate);
+    this.occupancyCertificates.push(certificate);
     return certificate;
   }
 
-  async updateOccupancyCertificate(id: string, updateData: any): Promise<any | undefined> {
-    const index = this.occupancyCertificatesData.findIndex(cert => cert.id === id);
+  async updateOccupancyCertificate(id: string, updateData: Partial<OccupancyCertificate>): Promise<OccupancyCertificate | undefined> {
+    const index = this.occupancyCertificates.findIndex(cert => cert.id === id);
     if (index === -1) return undefined;
     
-    this.occupancyCertificatesData[index] = {
-      ...this.occupancyCertificatesData[index],
+    this.occupancyCertificates[index] = {
+      ...this.occupancyCertificates[index],
       ...updateData,
       updatedAt: new Date(),
     };
-    return this.occupancyCertificatesData[index];
+    return this.occupancyCertificates[index];
   }
 
   // Inspection Reports methods
-  async getInspectionReports(): Promise<any[]> {
-    return this.inspectionReportsData;
+  async getInspectionReports(): Promise<InspectionReport[]> {
+    return this.inspectionReports;
   }
 
-  async getInspectionReport(id: string): Promise<any | undefined> {
-    return this.inspectionReportsData.find(report => report.id === id);
+  async getInspectionReport(id: string): Promise<InspectionReport | undefined> {
+    return this.inspectionReports.find(report => report.id === id);
   }
 
-  async createInspectionReport(reportData: any): Promise<any> {
-    const report = {
+  async createInspectionReport(reportData: InsertInspectionReport): Promise<InspectionReport> {
+    const report: InspectionReport = {
       id: randomUUID(),
-      reportNumber: `REP-2025-${String(this.inspectionReportsData.length + 1).padStart(4, '0')}`,
+      reportNumber: `REP-2025-${String(this.inspectionReports.length + 1).padStart(4, '0')}`,
+      status: "draft",
+      priority: "normal",
+      buildingPermitId: null,
+      occupancyCertificateId: null,
+      contractorName: null,
+      engineeringOfficeName: null,
+      totalFloors: null,
+      inspectedFloors: null,
+      buildingArea: null,
+      constructionProgress: null,
+      coordinates: null,
+      violationsFound: [],
+      correctiveActions: [],
+      recommendations: null,
+      nextInspectionDate: null,
+      attachments: [],
+      assignedDate: null,
+      completedDate: null,
+      reviewedDate: null,
+      reviewedBy: null,
+      reviewNotes: null,
+      digitalSignature: null,
+      certificateGenerated: false,
+      notificationsSent: [],
       ...reportData,
       createdAt: new Date(),
       updatedAt: new Date(),
     };
-    this.inspectionReportsData.push(report);
+    this.inspectionReports.push(report);
     return report;
   }
 
-  async updateInspectionReport(id: string, updateData: any): Promise<any | undefined> {
-    const index = this.inspectionReportsData.findIndex(report => report.id === id);
+  async updateInspectionReport(id: string, updateData: Partial<InspectionReport>): Promise<InspectionReport | undefined> {
+    const index = this.inspectionReports.findIndex(report => report.id === id);
     if (index === -1) return undefined;
     
-    this.inspectionReportsData[index] = {
-      ...this.inspectionReportsData[index],
+    this.inspectionReports[index] = {
+      ...this.inspectionReports[index],
       ...updateData,
       updatedAt: new Date(),
     };
-    return this.inspectionReportsData[index];
+    return this.inspectionReports[index];
   }
 
-  async assignInspector(reportId: string, inspectorId: string, inspectorName: string): Promise<any | undefined> {
-    const index = this.inspectionReportsData.findIndex(report => report.id === reportId);
+  async assignInspector(reportId: string, inspectorId: string, inspectorName: string): Promise<InspectionReport | undefined> {
+    const index = this.inspectionReports.findIndex(report => report.id === reportId);
     if (index === -1) return undefined;
     
-    this.inspectionReportsData[index] = {
-      ...this.inspectionReportsData[index],
+    this.inspectionReports[index] = {
+      ...this.inspectionReports[index],
       inspectorId,
       inspectorName,
+      assignedDate: new Date().toISOString(),
       updatedAt: new Date(),
     };
-    return this.inspectionReportsData[index];
+    return this.inspectionReports[index];
   }
 
   async getPaymentTransaction(id: string): Promise<PaymentTransaction | undefined> {

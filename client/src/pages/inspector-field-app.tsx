@@ -95,10 +95,7 @@ export default function InspectorFieldApp() {
   // Update report mutation
   const updateReportMutation = useMutation({
     mutationFn: async (data: any) => {
-      return apiRequest(`/api/inspection-reports/${reportId}`, {
-        method: "PUT",
-        body: JSON.stringify(data),
-      });
+      return apiRequest(`/api/inspection-reports/${reportId}`, "PUT", data);
     },
     onSuccess: () => {
       toast({
@@ -121,26 +118,23 @@ export default function InspectorFieldApp() {
   // Submit report mutation
   const submitReportMutation = useMutation({
     mutationFn: async () => {
-      return apiRequest(`/api/inspection-reports/${reportId}`, {
-        method: "PUT",
-        body: JSON.stringify({
-          status: "submitted",
-          overallCompliance: violations.length === 0 ? "compliant" : 
-                           violations.some(v => v.severity === "critical") ? "critical_violations" :
-                           violations.some(v => v.severity === "major") ? "major_violations" : "minor_violations",
-          structuralSafety: checklist.structural ? "safe" : "concerns",
-          fireSafety: checklist.fire ? "compliant" : "non_compliant",
-          electricalSafety: checklist.electrical ? "safe" : "unsafe",
-          plumbingSafety: checklist.plumbing ? "compliant" : "non_compliant",
-          accessibilitySafety: checklist.accessibility ? "compliant" : "non_compliant",
-          violationsFound: violations,
-          inspectionFindings: notes,
-          attachments: photos.map((photo, index) => ({
-            name: `تفتيش_صورة_${index + 1}.jpg`,
-            type: "photo",
-            url: photo
-          })),
-        }),
+      return apiRequest(`/api/inspection-reports/${reportId}`, "PUT", {
+        status: "submitted",
+        overallCompliance: violations.length === 0 ? "compliant" : 
+                         violations.some(v => v.severity === "critical") ? "critical_violations" :
+                         violations.some(v => v.severity === "major") ? "major_violations" : "minor_violations",
+        structuralSafety: checklist.structural ? "safe" : "concerns",
+        fireSafety: checklist.fire ? "compliant" : "non_compliant",
+        electricalSafety: checklist.electrical ? "safe" : "unsafe",
+        plumbingSafety: checklist.plumbing ? "compliant" : "non_compliant",
+        accessibilitySafety: checklist.accessibility ? "compliant" : "non_compliant",
+        violationsFound: violations,
+        inspectionFindings: notes,
+        attachments: photos.map((photo, index) => ({
+          name: `تفتيش_صورة_${index + 1}.jpg`,
+          type: "photo",
+          url: photo
+        })),
       });
     },
     onSuccess: () => {

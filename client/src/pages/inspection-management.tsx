@@ -144,10 +144,7 @@ export default function InspectionManagement() {
   // Create inspection report mutation
   const createReportMutation = useMutation({
     mutationFn: async (data: InspectionReportForm) => {
-      return apiRequest("/api/inspection-reports", {
-        method: "POST",
-        body: JSON.stringify(data),
-      });
+      return apiRequest("/api/inspection-reports", "POST", data);
     },
     onSuccess: () => {
       toast({
@@ -170,10 +167,7 @@ export default function InspectionManagement() {
   // Update report status mutation
   const updateStatusMutation = useMutation({
     mutationFn: async ({ id, status }: { id: string; status: string }) => {
-      return apiRequest(`/api/inspection-reports/${id}`, {
-        method: "PUT",
-        body: JSON.stringify({ status }),
-      });
+      return apiRequest(`/api/inspection-reports/${id}`, "PUT", { status });
     },
     onSuccess: () => {
       toast({
@@ -187,10 +181,7 @@ export default function InspectionManagement() {
   // Assign inspector mutation
   const assignInspectorMutation = useMutation({
     mutationFn: async ({ reportId, inspectorId, inspectorName }: { reportId: string; inspectorId: string; inspectorName: string }) => {
-      return apiRequest(`/api/inspection-reports/${reportId}/assign`, {
-        method: "PUT",
-        body: JSON.stringify({ inspectorId, inspectorName }),
-      });
+      return apiRequest(`/api/inspection-reports/${reportId}/assign`, "PUT", { inspectorId, inspectorName });
     },
     onSuccess: () => {
       toast({

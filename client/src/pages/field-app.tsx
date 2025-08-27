@@ -9,12 +9,12 @@ import { SurveyProgress } from "@/components/ui/survey-progress";
 import { generatePointNumber, generateLineNumber, generatePolygonNumber, featureCodes } from "@/lib/survey-utils";
 import { useWebSocket } from "@/hooks/use-websocket";
 import { apiRequest } from "@/lib/queryClient";
-import { SurveyPoint, SurveyLine, SurveyPolygon } from "@shared/schema";
+import { SurveyPoint, SurveyLine, SurveyPolygon, SurveyRequest } from "@shared/schema";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { Wifi, WifiOff, Save, Upload, Download, Activity, Bluetooth, Settings } from "lucide-react";
+import { Wifi, WifiOff, Save, Upload, Download, Activity, Bluetooth, Settings, ArrowLeft } from "lucide-react";
 
 // Get request ID from URL parameters
 function getRequestIdFromUrl(): string {
