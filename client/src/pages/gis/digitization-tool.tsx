@@ -40,6 +40,7 @@ import {
   utmToWgs84,
   YEMEN_UTM_REFERENCES 
 } from "@/lib/coordinate-transform";
+import { LayersPanel } from "@/components/LayersPanel";
 
 interface GeoreferencedLayer {
   id: string;
@@ -49,6 +50,16 @@ interface GeoreferencedLayer {
   bounds: [[number, number], [number, number]];
   visible: boolean;
   opacity: number;
+  coordinateSystem: string;
+  sourceCoordinateSystem?: string;
+  hasGeoreferencing: boolean;
+  needsReprojection?: boolean;
+  originalUtmBounds?: [[number, number], [number, number]] | null;
+  clipGeometry?: {
+    type: 'Polygon';
+    coordinates: number[][][];
+  };
+  isClipped?: boolean;
 }
 
 interface DrawnFeature {
@@ -86,6 +97,7 @@ export default function DigitizationTool() {
   const [uploadProgress, setUploadProgress] = useState(0);
   const [isUploading, setIsUploading] = useState(false);
   const [selectedFeature, setSelectedFeature] = useState<string | null>(null);
+  const [activeClipTool, setActiveClipTool] = useState<string | null>(null);
   
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
