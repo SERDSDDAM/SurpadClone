@@ -139,31 +139,70 @@ export default function DigitizationTool() {
     }
   });
 
-  // Mutation لرفع الطبقات الجغرافية
-  const uploadLayerMutation = useMutation({
-    mutationFn: async ({ file, metadata }: { file: File; metadata: any }) => {
-      const formData = new FormData();
-      formData.append('file', file);
-      formData.append('metadata', JSON.stringify(metadata));
-      
-      return apiRequest("/api/gis/layers/upload", {
+  // Mutation للحصول على رابط الرفع
+  const getUploadUrlMutation = useMutation({
+    mutationFn: async ({ fileName, fileType }: { fileName: string; fileType: string }) => {
+      return apiRequest("/api/gis/layers/upload-url", {
         method: "POST",
-        body: formData,
+        body: JSON.stringify({ fileName, fileType }),
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+  });
+
+  // Mutation لرفع الملف إلى التخزين السحابي
+  const uploadToCloudMutation = useMutation({
+    mutationFn: async ({ uploadUrl, file }: { uploadUrl: string; file: File }) => {
+      // في بيئة التطوير، نحاكي رفع الملف
+      if (uploadUrl.includes('mock-cloud-storage')) {
+        // محاكاة تأخير الرفع
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        return { ok: true, status: 200 };
+      }
+      
+      const response = await fetch(uploadUrl, {
+        method: 'PUT',
+        body: file,
+        headers: {
+          'Content-Type': file.type || 'application/octet-stream'
+        }
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Upload failed: ${response.status} ${response.statusText}`);
+      }
+      
+      return response;
+    }
+  });
+
+  // Mutation لتأكيد اكتمال الرفع
+  const confirmUploadMutation = useMutation({
+    mutationFn: async ({ layerId, objectPath, fileName, metadata }: { 
+      layerId: string; 
+      objectPath: string; 
+      fileName: string; 
+      metadata: any 
+    }) => {
+      return apiRequest("/api/gis/layers/confirm", {
+        method: "POST",
+        body: JSON.stringify({ layerId, objectPath, fileName, metadata }),
+        headers: { 'Content-Type': 'application/json' }
       });
     },
     onSuccess: (data) => {
       toast({
-        title: "تم رفع الطبقة بنجاح",
-        description: "تم رفع وتسجيل الطبقة الجغرافية"
+        title: "✅ تم رفع الطبقة بنجاح",
+        description: `تم رفع وتسجيل الطبقة الجغرافية: ${data.layer.name}`
       });
       
       // إضافة الطبقة الجديدة إلى القائمة
       const newLayer: GeoreferencedLayer = {
-        id: data.id,
-        name: data.name,
-        type: data.type,
-        url: data.url,
-        bounds: data.bounds,
+        id: data.layer.id,
+        name: data.layer.name,
+        type: data.layer.type,
+        url: data.layer.objectPath,
+        bounds: data.layer.bounds,
         visible: true,
         opacity: 0.7
       };
@@ -173,8 +212,8 @@ export default function DigitizationTool() {
     },
     onError: (error) => {
       toast({
-        title: "خطأ في رفع الطبقة",
-        description: "فشل في رفع الطبقة الجغرافية",
+        title: "❌ خطأ في تأكيد الرفع",
+        description: "فشل في تسجيل الطبقة الجغرافية",
         variant: "destructive"
       });
       setIsUploading(false);
@@ -186,40 +225,108 @@ export default function DigitizationTool() {
     const file = event.target.files?.[0];
     if (!file) return;
 
+    // التحقق من حجم الملف (100MB max)
+    const maxSize = 100 * 1024 * 1024; // 100MB
+    if (file.size > maxSize) {
+      toast({
+        title: "❌ الملف كبير جداً",
+        description: "الحد الأقصى لحجم الملف هو 100MB",
+        variant: "destructive"
+      });
+      return;
+    }
+
     // التحقق من نوع الملف
     const validTypes = ['.tiff', '.tif', '.png', '.jpg', '.jpeg'];
     const fileExtension = file.name.toLowerCase().substring(file.name.lastIndexOf('.'));
     
     if (!validTypes.includes(fileExtension)) {
       toast({
-        title: "نوع ملف غير مدعوم",
-        description: "يرجى اختيار ملف صورة جغرافية (GeoTIFF, PNG, JPG)",
+        title: "❌ نوع ملف غير مدعوم",
+        description: "يرجى اختيار ملف GeoTIFF (.tiff/.tif) أو صورة (PNG, JPG)",
         variant: "destructive"
       });
       return;
     }
 
-    setIsUploading(true);
-    setUploadProgress(25);
+    try {
+      setIsUploading(true);
+      setUploadProgress(10);
 
-    // محاكاة تقدم الرفع
-    const progressInterval = setInterval(() => {
-      setUploadProgress(prev => {
-        if (prev >= 90) {
-          clearInterval(progressInterval);
-          return 90;
-        }
-        return prev + 10;
+      // 1. الحصول على رابط الرفع
+      toast({
+        title: "🔄 جاري التحضير...",
+        description: "الحصول على رابط رفع آمن"
       });
-    }, 500);
 
-    const metadata = {
-      name: file.name.replace(/\.[^/.]+$/, ""),
-      type: 'raster',
-      coordinateSystem: 'EPSG:4326'
-    };
+      const uploadData = await getUploadUrlMutation.mutateAsync({
+        fileName: file.name,
+        fileType: file.type || 'image/tiff'
+      });
 
-    uploadLayerMutation.mutate({ file, metadata });
+      setUploadProgress(20);
+
+      // 2. رفع الملف إلى التخزين السحابي
+      toast({
+        title: "📤 جاري الرفع...",
+        description: `رفع ${file.name} إلى التخزين السحابي`
+      });
+
+      // تقدم الرفع
+      const uploadProgressInterval = setInterval(() => {
+        setUploadProgress(prev => {
+          if (prev >= 80) {
+            clearInterval(uploadProgressInterval);
+            return 80;
+          }
+          return prev + 10;
+        });
+      }, 1000);
+
+      await uploadToCloudMutation.mutateAsync({
+        uploadUrl: uploadData.uploadUrl,
+        file: file
+      });
+
+      clearInterval(uploadProgressInterval);
+      setUploadProgress(85);
+
+      // 3. تأكيد اكتمال الرفع وحفظ البيانات الوصفية
+      toast({
+        title: "💾 جاري الحفظ...",
+        description: "تسجيل الطبقة الجغرافية في النظام"
+      });
+
+      const metadata = {
+        name: file.name.replace(/\.[^/.]+$/, ""),
+        fileSize: file.size,
+        coordinateSystem: 'EPSG:4326', // افتراضي، يمكن تحسينه لاحقاً بقراءة البيانات من GeoTIFF
+        bounds: [[15.2, 44.1], [15.5, 44.3]], // صنعاء - افتراضي
+        hasGeoreferencing: fileExtension === '.tiff' || fileExtension === '.tif'
+      };
+
+      await confirmUploadMutation.mutateAsync({
+        layerId: uploadData.layerId,
+        objectPath: uploadData.objectPath,
+        fileName: file.name,
+        metadata
+      });
+
+      setUploadProgress(100);
+      
+    } catch (error) {
+      console.error('Upload error:', error);
+      toast({
+        title: "❌ فشل في رفع الملف",
+        description: error instanceof Error ? error.message : "خطأ غير متوقع",
+        variant: "destructive"
+      });
+      setIsUploading(false);
+      setUploadProgress(0);
+    }
+
+    // إعادة تعيين input
+    event.target.value = '';
   };
 
   const toggleLayerVisibility = (layerId: string) => {
@@ -390,7 +497,13 @@ export default function DigitizationTool() {
                           <span>جاري الرفع...</span>
                           <span>{uploadProgress}%</span>
                         </div>
-                        <Progress value={uploadProgress} className="h-2" />
+                        <Progress value={uploadProgress} />
+                        <div className="text-xs text-gray-500 text-center">
+                          {uploadProgress < 20 && "التحضير للرفع..."}
+                          {uploadProgress >= 20 && uploadProgress < 80 && "رفع إلى التخزين السحابي..."}
+                          {uploadProgress >= 80 && uploadProgress < 100 && "تسجيل في قاعدة البيانات..."}
+                          {uploadProgress === 100 && "تم الانتهاء بنجاح!"}
+                        </div>
                       </div>
                     )}
                   </CardContent>

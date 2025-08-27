@@ -429,32 +429,107 @@ router.post('/districts', isAuthenticated, async (req: Request, res: Response) =
 
 // ====== APIs الرقمنة - Digitization APIs ======
 
-// POST /api/gis/layers/upload - رفع طبقة جغرافية مرجعية
-router.post('/layers/upload', isAuthenticated, async (req: Request, res: Response) => {
+// POST /api/gis/layers/upload-url - الحصول على رابط رفع طبقة جغرافية
+router.post('/layers/upload-url', isAuthenticated, async (req: Request, res: Response) => {
   try {
-    // This is a placeholder for georeferenced layer upload
-    // In real implementation, this would process GeoTIFF and other raster formats
-    // using libraries like GDAL and generate tile services
+    const { fileName, fileType } = req.body;
     
-    const { metadata } = req.body;
+    if (!fileName || !fileType) {
+      return res.status(400).json({ error: 'fileName and fileType are required' });
+    }
+
+    // التحقق من أنواع الملفات المدعومة
+    const supportedTypes = [
+      'image/tiff', 'image/tif', 
+      'image/png', 'image/jpeg', 'image/jpg',
+      'application/geo+tiff', 'application/geotiff'
+    ];
     
-    // Simulate layer processing and return mock data
-    const layerId = `layer_${Date.now()}`;
+    const isSupported = supportedTypes.some(type => 
+      fileType.toLowerCase().includes(type) || 
+      fileName.toLowerCase().endsWith('.tiff') || 
+      fileName.toLowerCase().endsWith('.tif') ||
+      fileName.toLowerCase().endsWith('.png') ||
+      fileName.toLowerCase().endsWith('.jpg') ||
+      fileName.toLowerCase().endsWith('.jpeg')
+    );
+    
+    if (!isSupported) {
+      return res.status(400).json({ 
+        error: 'Unsupported file type. Supported: GeoTIFF, TIFF, PNG, JPG',
+        supportedTypes: supportedTypes
+      });
+    }
+
+    // إنشاء رابط رفع وهمي للتطوير
+    const layerId = `layer_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    const objectPath = `/objects/gis-layers/${layerId}`;
+    
+    // محاكاة رابط رفع آمن
+    const uploadUrl = `https://mock-cloud-storage.replit.dev/upload/${layerId}`;
+    
+    res.json({
+      layerId,
+      uploadUrl,
+      objectPath,
+      fileName,
+      fileType,
+      maxFileSize: '100MB',
+      expiresIn: '15 minutes',
+      mockUpload: true
+    });
+    
+  } catch (error) {
+    console.error('Error generating upload URL:', error);
+    res.status(500).json({ error: 'Failed to generate upload URL' });
+  }
+});
+
+// POST /api/gis/layers/confirm - تأكيد اكتمال رفع الطبقة وحفظ البيانات الوصفية
+router.post('/layers/confirm', isAuthenticated, async (req: Request, res: Response) => {
+  try {
+    const { layerId, objectPath, fileName, metadata } = req.body;
+    
+    if (!layerId || !objectPath || !fileName) {
+      return res.status(400).json({ error: 'layerId, objectPath, and fileName are required' });
+    }
+
+    // في التطبيق الحقيقي، هنا سيتم:
+    // 1. التحقق من وجود الملف في التخزين السحابي
+    // 2. قراءة البيانات الجغرافية من الملف (إحداثيات، نظام الإسناد المرجعي)
+    // 3. حفظ البيانات الوصفية في قاعدة البيانات
+    
     const processedLayer = {
       id: layerId,
-      name: metadata?.name || 'طبقة جديدة',
-      type: metadata?.type || 'raster',
-      url: `/api/gis/layers/${layerId}/tiles/{z}/{x}/{y}`,
-      bounds: [[15.2, 44.1], [15.5, 44.3]], // صنعاء تقريباً
+      name: metadata?.name || fileName.replace(/\.[^/.]+$/, ""),
+      fileName,
+      objectPath, // هذا هو الرابط الذي يُحفظ في قاعدة البيانات
+      type: 'raster',
+      bounds: metadata?.bounds || [[15.2, 44.1], [15.5, 44.3]], // حدود افتراضية لصنعاء
       coordinateSystem: metadata?.coordinateSystem || 'EPSG:4326',
       uploadDate: new Date().toISOString(),
-      status: 'processed'
+      status: 'ready',
+      fileSize: metadata?.fileSize || 0,
+      // معلومات GeoTIFF
+      geospatialInfo: {
+        hasGeoreferencing: true,
+        spatialReference: metadata?.coordinateSystem || 'EPSG:4326',
+        pixelSize: metadata?.pixelSize || [1, 1],
+        transform: metadata?.transform || null
+      }
     };
     
-    res.json(processedLayer);
+    // TODO: حفظ processedLayer في جدول gis_layers في قاعدة البيانات
+    
+    res.json({
+      success: true,
+      layer: processedLayer,
+      message: 'Layer uploaded and processed successfully'
+    });
+    
   } catch (error) {
-    console.error('Error uploading layer:', error);
-    res.status(500).json({ error: 'Failed to upload layer' });
+    console.error('Error confirming layer upload:', error);
+    res.status(500).json({ error: 'Failed to confirm layer upload' });
   }
 });
 
