@@ -31,7 +31,9 @@ import {
   Redo,
   ZoomIn,
   ZoomOut,
-  LocateFixed
+  LocateFixed,
+  Scissors,
+  Eraser
 } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { 
@@ -66,7 +68,7 @@ interface DrawingTool {
   id: string;
   name: string;
   icon: React.ComponentType;
-  type: 'street' | 'block' | 'hand';
+  type: 'street' | 'block' | 'hand' | 'clip' | 'erase';
   description: string;
 }
 
@@ -108,6 +110,20 @@ export default function DigitizationTool() {
       icon: Square,
       type: "block",
       description: "رسم مضلعات البلوكات والقطع"
+    },
+    {
+      id: "clip",
+      name: "أداة القص",
+      icon: Scissors,
+      type: "clip",
+      description: "قص الطبقات باستخدام مضلع"
+    },
+    {
+      id: "erase",
+      name: "الممحاة",
+      icon: Eraser,
+      type: "erase", 
+      description: "حذف أجزاء من الطبقات"
     }
   ];
 

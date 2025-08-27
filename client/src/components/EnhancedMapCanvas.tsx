@@ -68,56 +68,113 @@ export function EnhancedMapCanvas({
     return { lat, lng };
   }, [zoom, panX, panY]);
 
-  // رسم خريطة أساسية مبسطة (مربعات تمثل المناطق)
-  const drawBasemap = useCallback((ctx: CanvasRenderingContext2D) => {
-    ctx.save();
+  // خريطة أساسية بديلة في حالة فشل OSM
+  const drawFallbackBasemap = useCallback((ctx: CanvasRenderingContext2D) => {
+    // خلفية طبيعية لليمن
+    const gradient = ctx.createLinearGradient(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+    gradient.addColorStop(0, '#e8f4f8'); // أزرق فاتح للسماء
+    gradient.addColorStop(0.3, '#f5f5dc'); // بيج للصحراء
+    gradient.addColorStop(0.7, '#deb887'); // بني فاتح للجبال
+    gradient.addColorStop(1, '#8d6e63'); // بني للمرتفعات
     
-    // خلفية زرقاء فاتحة للمياه
-    ctx.fillStyle = '#e3f2fd';
+    ctx.fillStyle = gradient;
     ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
     
-    // رسم مناطق أراضي بسيطة
-    const landAreas = [
-      { center: { lat: 15.3694, lng: 44.1910 }, size: 0.2, color: '#f5f5dc' }, // صنعاء
-      { center: { lat: 15.2, lng: 44.0 }, size: 0.15, color: '#deb887' },
-      { center: { lat: 15.5, lng: 44.3 }, size: 0.18, color: '#d2b48c' },
-    ];
+    // إضافة نمط جغرافي بسيط
+    ctx.strokeStyle = '#bcaaa4';
+    ctx.lineWidth = 1;
+    ctx.globalAlpha = 0.3;
     
-    landAreas.forEach(area => {
-      const centerCanvas = geoToCanvas(area.center.lat, area.center.lng);
-      const radius = area.size * METERS_PER_DEGREE_LAT * zoom / 10;
-      
-      ctx.fillStyle = area.color;
+    // خطوط شبكة تمثل المناطق
+    const gridSpacing = 50 * zoom;
+    for (let x = panX % gridSpacing; x < CANVAS_WIDTH; x += gridSpacing) {
       ctx.beginPath();
-      ctx.arc(centerCanvas.x, centerCanvas.y, radius, 0, 2 * Math.PI);
-      ctx.fill();
-      
-      // حدود
-      ctx.strokeStyle = '#8d6e63';
-      ctx.lineWidth = 1;
+      ctx.moveTo(x, 0);
+      ctx.lineTo(x, CANVAS_HEIGHT);
       ctx.stroke();
-    });
+    }
     
-    // رسم شوارع رئيسية مبسطة
-    const roads = [
-      { start: { lat: 15.2, lng: 44.0 }, end: { lat: 15.5, lng: 44.3 } },
-      { start: { lat: 15.3, lng: 44.1 }, end: { lat: 15.4, lng: 44.2 } },
-    ];
-    
-    ctx.strokeStyle = '#757575';
-    ctx.lineWidth = 2 * zoom;
-    roads.forEach(road => {
-      const startCanvas = geoToCanvas(road.start.lat, road.start.lng);
-      const endCanvas = geoToCanvas(road.end.lat, road.end.lng);
-      
+    for (let y = panY % gridSpacing; y < CANVAS_HEIGHT; y += gridSpacing) {
       ctx.beginPath();
-      ctx.moveTo(startCanvas.x, startCanvas.y);
-      ctx.lineTo(endCanvas.x, endCanvas.y);
+      ctx.moveTo(0, y);
+      ctx.lineTo(CANVAS_WIDTH, y);
       ctx.stroke();
-    });
+    }
+    
+    ctx.globalAlpha = 1.0;
+  }, [zoom, panX, panY]);
+
+  // رسم خريطة أساسية حقيقية من OpenStreetMap
+  const drawBasemap = useCallback(async (ctx: CanvasRenderingContext2D) => {
+    ctx.save();
+    
+    // خلفية الخريطة
+    ctx.fillStyle = '#f8f9fa';
+    ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+    
+    try {
+      // حساب مستوى التكبير المناسب لـ OSM
+      const osmZoom = Math.max(1, Math.min(18, Math.round(Math.log2(zoom * 256) + 8)));
+      
+      // حساب إحداثيات البلاطات (tiles) المطلوبة
+      const centerLat = MAP_CENTER.lat;
+      const centerLng = MAP_CENTER.lng;
+      
+      // تحويل إحداثيات الخريطة إلى إحداثيات بلاطات OSM
+      const tileSize = 256;
+      const numTiles = Math.pow(2, osmZoom);
+      
+      const centerTileX = Math.floor((centerLng + 180) / 360 * numTiles);
+      const centerTileY = Math.floor((1 - Math.log(Math.tan(centerLat * Math.PI / 180) + 1 / Math.cos(centerLat * Math.PI / 180)) / Math.PI) / 2 * numTiles);
+      
+      // رسم البلاطات في شبكة 3x3 حول المركز
+      for (let dx = -1; dx <= 1; dx++) {
+        for (let dy = -1; dy <= 1; dy++) {
+          const tileX = centerTileX + dx;
+          const tileY = centerTileY + dy;
+          
+          if (tileX >= 0 && tileX < numTiles && tileY >= 0 && tileY < numTiles) {
+            const tileUrl = `https://tile.openstreetmap.org/${osmZoom}/${tileX}/${tileY}.png`;
+            
+            const img = new Image();
+            img.crossOrigin = 'anonymous';
+            
+            img.onload = () => {
+              try {
+                // حساب موقع البلاطة على الكانفاس
+                const canvasX = CANVAS_WIDTH / 2 + dx * tileSize * zoom / 2 + panX;
+                const canvasY = CANVAS_HEIGHT / 2 + dy * tileSize * zoom / 2 + panY;
+                
+                const scaledTileSize = tileSize * zoom / 2;
+                
+                ctx.globalAlpha = 0.7;
+                ctx.drawImage(img, canvasX - scaledTileSize / 2, canvasY - scaledTileSize / 2, scaledTileSize, scaledTileSize);
+                ctx.globalAlpha = 1.0;
+              } catch (err) {
+                console.warn('خطأ في رسم بلاطة OSM:', err);
+              }
+            };
+            
+            img.onerror = () => {
+              // في حالة فشل تحميل OSM، ارسم خلفية بديلة
+              drawFallbackBasemap(ctx);
+            };
+            
+            img.src = tileUrl;
+          }
+        }
+      }
+      
+      // رسم خلفية بديلة فورية أثناء تحميل OSM
+      drawFallbackBasemap(ctx);
+      
+    } catch (error) {
+      console.warn('خطأ في تحميل خريطة OSM، استخدام الخريطة البديلة:', error);
+      drawFallbackBasemap(ctx);
+    }
     
     ctx.restore();
-  }, [geoToCanvas, zoom]);
+  }, [zoom, panX, panY, drawFallbackBasemap]);
 
   // رسم الشبكة
   const drawGrid = useCallback((ctx: CanvasRenderingContext2D) => {
@@ -151,11 +208,10 @@ export function EnhancedMapCanvas({
     ctx.restore();
   }, [showGrid, zoom, panX, panY]);
 
-  // رسم الطبقات المرفوعة
+  // رسم الطبقات المرفوعة مع الصور الفعلية
   const drawLayers = useCallback(async (ctx: CanvasRenderingContext2D) => {
     for (const layer of layers.filter(l => l.visible)) {
       try {
-        // محاكاة عرض طبقة مرفوعة
         const [[minLat, minLng], [maxLat, maxLng]] = layer.bounds;
         const topLeft = geoToCanvas(maxLat, minLng);
         const bottomRight = geoToCanvas(minLat, maxLng);
@@ -163,35 +219,94 @@ export function EnhancedMapCanvas({
         const width = bottomRight.x - topLeft.x;
         const height = bottomRight.y - topLeft.y;
         
-        // رسم مستطيل يمثل الطبقة المرفوعة
         ctx.save();
         ctx.globalAlpha = layer.opacity;
         
-        // خلفية الطبقة
-        ctx.fillStyle = '#4CAF50';
-        ctx.fillRect(topLeft.x, topLeft.y, width, height);
-        
-        // إطار الطبقة
-        ctx.strokeStyle = '#388E3C';
-        ctx.lineWidth = 2;
-        ctx.strokeRect(topLeft.x, topLeft.y, width, height);
-        
-        // نص تعريفي
-        ctx.fillStyle = '#1B5E20';
-        ctx.font = `${Math.max(12, 10 * zoom)}px Arial`;
-        ctx.textAlign = 'center';
-        ctx.fillText(
-          layer.name, 
-          topLeft.x + width / 2, 
-          topLeft.y + height / 2
-        );
+        if (layer.url && layer.type === 'raster') {
+          // محاولة تحميل وعرض الصورة الفعلية
+          const img = new Image();
+          img.crossOrigin = 'anonymous';
+          
+          img.onload = () => {
+            try {
+              // رسم الصورة في الإحداثيات الصحيحة
+              ctx.drawImage(img, topLeft.x, topLeft.y, width, height);
+              
+              // إطار للطبقة
+              ctx.strokeStyle = '#2196F3';
+              ctx.lineWidth = 2;
+              ctx.setLineDash([5, 5]);
+              ctx.strokeRect(topLeft.x, topLeft.y, width, height);
+              
+              // نص تعريفي
+              ctx.fillStyle = '#1976D2';
+              ctx.font = `${Math.max(12, 8 * zoom)}px Arial`;
+              ctx.textAlign = 'left';
+              ctx.fillText(layer.name, topLeft.x + 5, topLeft.y + 15);
+              
+              console.log('✅ تم عرض الطبقة:', layer.name, { topLeft, width, height });
+            } catch (drawError) {
+              console.error('خطأ في رسم الصورة:', drawError);
+              drawPlaceholder();
+            }
+          };
+          
+          img.onerror = () => {
+            console.warn('فشل تحميل الصورة:', layer.url);
+            drawPlaceholder();
+          };
+          
+          // محاولة تحميل الصورة من URL مختلفة
+          const imageUrl = layer.url.startsWith('/objects/') 
+            ? layer.url  // URL من object storage
+            : `/public-objects/${layer.url}`; // URL من public storage
+            
+          img.src = imageUrl;
+          
+          // رسم placeholder مؤقت
+          const drawPlaceholder = () => {
+            ctx.fillStyle = '#E3F2FD';
+            ctx.fillRect(topLeft.x, topLeft.y, width, height);
+            
+            ctx.strokeStyle = '#2196F3';
+            ctx.lineWidth = 2;
+            ctx.setLineDash([]);
+            ctx.strokeRect(topLeft.x, topLeft.y, width, height);
+            
+            // أيقونة صورة
+            ctx.fillStyle = '#1976D2';
+            ctx.font = `${Math.max(16, 12 * zoom)}px Arial`;
+            ctx.textAlign = 'center';
+            ctx.fillText('📷', topLeft.x + width / 2, topLeft.y + height / 2 - 10);
+            
+            // اسم الطبقة
+            ctx.font = `${Math.max(10, 8 * zoom)}px Arial`;
+            ctx.fillText(layer.name, topLeft.x + width / 2, topLeft.y + height / 2 + 10);
+          };
+          
+          // رسم placeholder فورياً
+          drawPlaceholder();
+        } else {
+          // طبقة متجهة أو بدون صورة
+          ctx.fillStyle = layer.type === 'vector' ? '#FF9800' : '#9E9E9E';
+          ctx.fillRect(topLeft.x, topLeft.y, width, height);
+          
+          ctx.strokeStyle = layer.type === 'vector' ? '#F57C00' : '#616161';
+          ctx.lineWidth = 2;
+          ctx.strokeRect(topLeft.x, topLeft.y, width, height);
+          
+          ctx.fillStyle = layer.type === 'vector' ? '#E65100' : '#424242';
+          ctx.font = `${Math.max(12, 10 * zoom)}px Arial`;
+          ctx.textAlign = 'center';
+          ctx.fillText(layer.name, topLeft.x + width / 2, topLeft.y + height / 2);
+        }
         
         ctx.restore();
       } catch (error) {
         console.error('Error drawing layer:', layer.name, error);
       }
     }
-  }, [layers, geoToCanvas]);
+  }, [layers, geoToCanvas, zoom]);
 
   // رسم كل العناصر
   const draw = useCallback(async () => {
