@@ -427,4 +427,175 @@ router.post('/districts', isAuthenticated, async (req: Request, res: Response) =
   }
 });
 
+// ====== APIs الرقمنة - Digitization APIs ======
+
+// POST /api/gis/layers/upload - رفع طبقة جغرافية مرجعية
+router.post('/layers/upload', isAuthenticated, async (req: Request, res: Response) => {
+  try {
+    // This is a placeholder for georeferenced layer upload
+    // In real implementation, this would process GeoTIFF and other raster formats
+    // using libraries like GDAL and generate tile services
+    
+    const { metadata } = req.body;
+    
+    // Simulate layer processing and return mock data
+    const layerId = `layer_${Date.now()}`;
+    const processedLayer = {
+      id: layerId,
+      name: metadata?.name || 'طبقة جديدة',
+      type: metadata?.type || 'raster',
+      url: `/api/gis/layers/${layerId}/tiles/{z}/{x}/{y}`,
+      bounds: [[15.2, 44.1], [15.5, 44.3]], // صنعاء تقريباً
+      coordinateSystem: metadata?.coordinateSystem || 'EPSG:4326',
+      uploadDate: new Date().toISOString(),
+      status: 'processed'
+    };
+    
+    res.json(processedLayer);
+  } catch (error) {
+    console.error('Error uploading layer:', error);
+    res.status(500).json({ error: 'Failed to upload layer' });
+  }
+});
+
+// GET /api/gis/layers/:layerId/tiles/:z/:x/:y - خدمة البلاط للطبقات
+router.get('/layers/:layerId/tiles/:z/:x/:y', async (req: Request, res: Response) => {
+  try {
+    const { layerId, z, x, y } = req.params;
+    
+    // This is a placeholder for tile serving
+    // In real implementation, this would serve actual map tiles
+    res.json({
+      layerId,
+      tile: { z: parseInt(z), x: parseInt(x), y: parseInt(y) },
+      note: 'Tile serving endpoint - implement with tile server'
+    });
+  } catch (error) {
+    console.error('Error serving tile:', error);
+    res.status(500).json({ error: 'Failed to serve tile' });
+  }
+});
+
+// POST /api/gis/streets/digitize - حفظ شارع مرقمن
+router.post('/streets/digitize', isAuthenticated, async (req: Request, res: Response) => {
+  try {
+    const { geometry, properties } = req.body;
+    
+    if (!geometry || geometry.type !== 'LineString') {
+      return res.status(400).json({ error: 'Invalid street geometry - must be LineString' });
+    }
+    
+    // تحضير بيانات الشارع للحفظ
+    const streetData = {
+      nameAr: properties.name || 'شارع بدون اسم',
+      nameEn: properties.nameEn,
+      streetCode: properties.streetCode || `ST_${Date.now()}`,
+      geometry: `LINESTRING(${geometry.coordinates.map((coord: number[]) => `${coord[0]} ${coord[1]}`).join(', ')})`,
+      streetType: properties.streetType || 'local',
+      streetClass: properties.streetClass || 'tertiary',
+      width: properties.width || 6,
+      surfaceType: properties.surfaceType || 'asphalt',
+      condition: properties.condition || 'good',
+      isActive: true
+    };
+    
+    // محاكاة حفظ البيانات
+    // في التطبيق الحقيقي سيتم الحفظ في جدول streets
+    const savedStreet = {
+      id: Math.floor(Math.random() * 10000),
+      ...streetData,
+      createdAt: new Date().toISOString(),
+      source: 'digitization'
+    };
+    
+    res.status(201).json(savedStreet);
+  } catch (error) {
+    console.error('Error saving digitized street:', error);
+    res.status(500).json({ error: 'Failed to save street' });
+  }
+});
+
+// POST /api/gis/blocks/digitize - حفظ بلوك مرقمن
+router.post('/blocks/digitize', isAuthenticated, async (req: Request, res: Response) => {
+  try {
+    const { geometry, properties } = req.body;
+    
+    if (!geometry || geometry.type !== 'Polygon') {
+      return res.status(400).json({ error: 'Invalid block geometry - must be Polygon' });
+    }
+    
+    // تحضير بيانات البلوك للحفظ
+    const blockData = {
+      blockNumber: properties.blockNumber || `B${Math.floor(Math.random() * 1000)}`,
+      blockCode: properties.blockCode || `BLK_${Date.now()}`,
+      geometry: `POLYGON((${geometry.coordinates[0].map((coord: number[]) => `${coord[0]} ${coord[1]}`).join(', ')}))`,
+      landUse: properties.landUse || 'residential',
+      buildingType: properties.buildingType || 'villa',
+      area: properties.area || 0,
+      plotsCount: properties.plotsCount || 1,
+      developmentStatus: properties.developmentStatus || 'available',
+      ownershipType: properties.ownershipType || 'private',
+      description: properties.description,
+      isActive: true
+    };
+    
+    // محاكاة حفظ البيانات
+    // في التطبيق الحقيقي سيتم الحفظ في جدول blocks
+    const savedBlock = {
+      id: Math.floor(Math.random() * 10000),
+      ...blockData,
+      createdAt: new Date().toISOString(),
+      source: 'digitization'
+    };
+    
+    res.status(201).json(savedBlock);
+  } catch (error) {
+    console.error('Error saving digitized block:', error);
+    res.status(500).json({ error: 'Failed to save block' });
+  }
+});
+
+// GET /api/gis/digitization/session/:sessionId - استرجاع جلسة رقمنة
+router.get('/digitization/session/:sessionId', isAuthenticated, async (req: Request, res: Response) => {
+  try {
+    const { sessionId } = req.params;
+    
+    // محاكاة استرجاع جلسة الرقمنة
+    const sessionData = {
+      id: sessionId,
+      layers: [],
+      features: [],
+      lastModified: new Date().toISOString(),
+      status: 'active'
+    };
+    
+    res.json(sessionData);
+  } catch (error) {
+    console.error('Error retrieving digitization session:', error);
+    res.status(500).json({ error: 'Failed to retrieve session' });
+  }
+});
+
+// POST /api/gis/digitization/session - حفظ جلسة رقمنة
+router.post('/digitization/session', isAuthenticated, async (req: Request, res: Response) => {
+  try {
+    const { layers, features, metadata } = req.body;
+    
+    const sessionId = `session_${Date.now()}`;
+    const sessionData = {
+      id: sessionId,
+      layers: layers || [],
+      features: features || [],
+      metadata: metadata || {},
+      createdAt: new Date().toISOString(),
+      status: 'saved'
+    };
+    
+    res.status(201).json(sessionData);
+  } catch (error) {
+    console.error('Error saving digitization session:', error);
+    res.status(500).json({ error: 'Failed to save session' });
+  }
+});
+
 export default router;
