@@ -258,14 +258,14 @@ export default function DigitizationTool() {
       return;
     }
 
-    // التحقق من نوع الملف
-    const validTypes = ['.tiff', '.tif', '.png', '.jpg', '.jpeg'];
+    // التحقق من نوع الملف - دعم ZIP و الصور
+    const validTypes = ['.tiff', '.tif', '.png', '.jpg', '.jpeg', '.zip'];
     const fileExtension = file.name.toLowerCase().substring(file.name.lastIndexOf('.'));
     
     if (!validTypes.includes(fileExtension)) {
       toast({
         title: "❌ نوع ملف غير مدعوم",
-        description: "يرجى اختيار ملف GeoTIFF (.tiff/.tif) أو صورة (PNG, JPG)",
+        description: "يرجى اختيار ملف ZIP (للخرائط المتكاملة) أو GeoTIFF (.tiff/.tif) أو صورة (PNG, JPG)",
         variant: "destructive"
       });
       return;
@@ -283,7 +283,7 @@ export default function DigitizationTool() {
 
       const uploadData = await getUploadUrlMutation.mutateAsync({
         fileName: file.name,
-        fileType: file.type || 'image/tiff'
+        fileType: fileExtension === '.zip' ? 'application/zip' : (file.type || 'image/tiff')
       });
 
       setUploadProgress(20);
@@ -316,12 +316,13 @@ export default function DigitizationTool() {
       // 3. تأكيد اكتمال الرفع وحفظ البيانات الوصفية
       toast({
         title: "💾 جاري الحفظ...",
-        description: "تسجيل الطبقة الجغرافية في النظام"
+        description: fileExtension === '.zip' ? "معالجة ملف ZIP وتحليل الطبقات" : "تسجيل الطبقة الجغرافية في النظام"
       });
 
       // تحليل نوع الملف وتحديد نظام الإحداثيات
+      const isZipFile = fileExtension === '.zip';
       const isGeoTiff = fileExtension === '.tiff' || fileExtension === '.tif';
-      const isYemeniSurveyFile = isGeoTiff; // نفترض أن ملفات TIFF من اليمن تستخدم UTM Zone 38N
+      const isYemeniSurveyFile = isGeoTiff || isZipFile; // ملفات ZIP والـ TIFF من اليمن تستخدم UTM Zone 38N
       
       // إحداثيات افتراضية بنظام UTM Zone 38N لمنطقة صنعاء
       const defaultUtmBounds: [[number, number], [number, number]] = [
@@ -340,11 +341,13 @@ export default function DigitizationTool() {
       const metadata = {
         name: file.name.replace(/\.[^/.]+$/, ""),
         fileSize: file.size,
+        fileType: fileExtension,
+        isZipFile: isZipFile,
         coordinateSystem: isYemeniSurveyFile ? 'EPSG:32638' : 'EPSG:4326',
         sourceCoordinateSystem: isYemeniSurveyFile ? 'UTM Zone 38N' : 'WGS 84',
         bounds: displayBounds,
         originalUtmBounds: isYemeniSurveyFile ? defaultUtmBounds : null,
-        hasGeoreferencing: isGeoTiff,
+        hasGeoreferencing: isGeoTiff || isZipFile,
         needsReprojection: isYemeniSurveyFile,
         projectionInfo: parseGeoTiffProjection({
           spatialReference: isYemeniSurveyFile ? 'EPSG:32638' : 'EPSG:4326',
@@ -523,7 +526,7 @@ export default function DigitizationTool() {
                             اختر ملف صورة جغرافية
                           </span>
                           <span className="block text-xs text-gray-500">
-                            GeoTIFF, PNG, JPG (حتى 100MB)
+                            ZIP (مُستحسن), GeoTIFF, PNG, JPG (حتى 100MB)
                           </span>
                         </label>
                         <input
@@ -531,7 +534,7 @@ export default function DigitizationTool() {
                           name="layer-upload"
                           type="file"
                           className="sr-only"
-                          accept=".tiff,.tif,.png,.jpg,.jpeg"
+                          accept=".tiff,.tif,.png,.jpg,.jpeg,.zip,application/zip,application/x-zip-compressed,image/tiff,image/png,image/jpeg"
                           onChange={handleFileUpload}
                           data-testid="input-layer-upload"
                         />
