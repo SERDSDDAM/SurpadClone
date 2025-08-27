@@ -25,6 +25,7 @@ import Review from "@/pages/review";
 import CitizenPortal from "@/pages/citizen-portal";
 import ProfessionalsManagement from "@/pages/professionals-management";
 import BuildingPermits from "@/pages/building-permits";
+import OccupancyCertificates from "@/pages/occupancy-certificates";
 import NotFound from "@/pages/not-found";
 
 function Navigation() {
@@ -35,6 +36,7 @@ function Navigation() {
     { name: "لوحة التحكم", href: "/admin", icon: LayoutDashboard },
     { name: "بوابة المواطنين", href: "/citizen-portal", icon: Building2 },
     { name: "رخص البناء", href: "/building-permits", icon: Building2 },
+    { name: "شهادات الإشغال", href: "/occupancy-certificates", icon: ClipboardCheck },
     { name: "إدارة المهنيين", href: "/professionals", icon: Users },
     { name: "تطبيق المساح", href: "/field-app", icon: Smartphone },
     { name: "التطبيق النظيف", href: "/clean-field-app", icon: MapPin },
@@ -148,6 +150,7 @@ function Router() {
           <Route path="/admin" component={Dashboard} />
           <Route path="/citizen-portal" component={CitizenPortal} />
           <Route path="/building-permits" component={BuildingPermits} />
+          <Route path="/occupancy-certificates" component={OccupancyCertificates} />
           <Route path="/professionals" component={ProfessionalsManagement} />
           <Route path="/field-app" component={FieldApp} />
           <Route path="/clean-field-app" component={CleanFieldApp} />

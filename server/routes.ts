@@ -413,6 +413,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.get("/api/occupancy-certificates/:id", async (req, res) => {
+    try {
+      const certificate = await storage.getOccupancyCertificate(req.params.id);
+      if (!certificate) {
+        return res.status(404).json({ message: "Occupancy certificate not found" });
+      }
+      res.json(certificate);
+    } catch (error) {
+      console.error("Error fetching occupancy certificate:", error);
+      res.status(500).json({ message: "Failed to fetch occupancy certificate" });
+    }
+  });
+
+  app.post("/api/occupancy-certificates", async (req, res) => {
+    try {
+      const certificate = await storage.createOccupancyCertificate(req.body);
+      res.status(201).json(certificate);
+    } catch (error) {
+      console.error("Error creating occupancy certificate:", error);
+      res.status(500).json({ message: "Failed to create occupancy certificate" });
+    }
+  });
+
+  app.put("/api/occupancy-certificates/:id", async (req, res) => {
+    try {
+      const certificate = await storage.updateOccupancyCertificate(req.params.id, req.body);
+      if (!certificate) {
+        return res.status(404).json({ message: "Occupancy certificate not found" });
+      }
+      res.json(certificate);
+    } catch (error) {
+      console.error("Error updating occupancy certificate:", error);
+      res.status(500).json({ message: "Failed to update occupancy certificate" });
+    }
+  });
+
   // Violation Reports API routes
   app.get("/api/violation-reports", async (req, res) => {
     try {

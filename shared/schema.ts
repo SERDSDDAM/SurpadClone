@@ -229,39 +229,7 @@ export const buildingPermits = pgTable("building_permits", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
-// Occupancy Certificates - شهادات الإشغال
-export const occupancyCertificates = pgTable("occupancy_certificates", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  certificateNumber: varchar("certificate_number").notNull().unique(),
-  buildingPermitId: varchar("building_permit_id"), // Reference to building permit
-  applicantId: varchar("applicant_id").notNull(),
-  buildingName: text("building_name").notNull(),
-  buildingType: varchar("building_type").notNull(),
-  usageType: varchar("usage_type").notNull(), // residential, commercial, industrial, educational, medical
-  totalArea: real("total_area").notNull(),
-  location: text("location").notNull(),
-  coordinates: jsonb("coordinates"),
-  district: text("district").notNull(),
-  governorate: text("governorate").notNull(),
-  inspectionDate: timestamp("inspection_date"),
-  inspectorName: text("inspector_name"),
-  safetyCompliance: boolean("safety_compliance").default(false),
-  structuralCompliance: boolean("structural_compliance").default(false),
-  fireCompliante: boolean("fire_compliance").default(false),
-  electricalCompliance: boolean("electrical_compliance").default(false),
-  plumbingCompliance: boolean("plumbing_compliance").default(false),
-  status: varchar("status").notNull().default("submitted"),
-  issueDate: timestamp("issue_date"),
-  expiryDate: timestamp("expiry_date"),
-  issuedBy: text("issued_by"),
-  inspectionNotes: text("inspection_notes"),
-  documents: jsonb("documents").default('[]'),
-  fees: real("fees"),
-  paidAmount: real("paid_amount").default(0),
-  paymentStatus: varchar("payment_status").default("pending"),
-  createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
-});
+
 
 // Violation Reports - تقارير المخالفات
 export const violationReports = pgTable("violation_reports", {
@@ -381,12 +349,7 @@ export const insertBuildingPermitSchema = createInsertSchema(buildingPermits).om
   updatedAt: true,
 });
 
-export const insertOccupancyCertificateSchema = createInsertSchema(occupancyCertificates).omit({
-  id: true,
-  certificateNumber: true,
-  createdAt: true,
-  updatedAt: true,
-});
+
 
 export const insertViolationReportSchema = createInsertSchema(violationReports).omit({
   id: true,
@@ -438,11 +401,66 @@ export type InsertContractor = z.infer<typeof insertContractorSchema>;
 export type BuildingPermit = typeof buildingPermits.$inferSelect;
 export type InsertBuildingPermit = z.infer<typeof insertBuildingPermitSchema>;
 
-export type OccupancyCertificate = typeof occupancyCertificates.$inferSelect;
-export type InsertOccupancyCertificate = z.infer<typeof insertOccupancyCertificateSchema>;
+
 
 export type ViolationReport = typeof violationReports.$inferSelect;
 export type InsertViolationReport = z.infer<typeof insertViolationReportSchema>;
 
 export type PaymentTransaction = typeof paymentTransactions.$inferSelect;
 export type InsertPaymentTransaction = z.infer<typeof insertPaymentTransactionSchema>;
+
+// Occupancy Certificates Table - Phase 3
+export const occupancyCertificates = pgTable("occupancy_certificates", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  certificateNumber: varchar("certificate_number").notNull().unique(),
+  buildingPermitId: varchar("building_permit_id").references(() => buildingPermits.id),
+  applicantName: varchar("applicant_name").notNull(),
+  applicantNationalId: varchar("applicant_national_id"),
+  projectName: varchar("project_name").notNull(),
+  location: varchar("location").notNull(),
+  coordinates: jsonb("coordinates").$type<{ lat: number; lng: number }>(),
+  district: varchar("district").notNull(),
+  governorate: varchar("governorate").notNull(),
+  buildingType: varchar("building_type").notNull(),
+  totalFloors: integer("total_floors").notNull(),
+  basementFloors: integer("basement_floors").default(0),
+  totalUnits: integer("total_units").notNull(),
+  buildingArea: real("building_area").notNull(),
+  plotArea: real("plot_area"),
+  completionDate: varchar("completion_date"),
+  inspectionDate: varchar("inspection_date"),
+  inspectorId: varchar("inspector_id"),
+  inspectorName: varchar("inspector_name"),
+  inspectionNotes: text("inspection_notes"),
+  complianceStatus: varchar("compliance_status").notNull(),
+  violationsFound: jsonb("violations_found").$type<string[]>(),
+  correctiveActions: text("corrective_actions"),
+  status: varchar("status").notNull(),
+  priority: varchar("priority").notNull().default("normal"),
+  issuedDate: timestamp("issued_date"),
+  expiryDate: timestamp("expiry_date"),
+  issuedBy: varchar("issued_by"),
+  sentToUtilities: boolean("sent_to_utilities").default(false),
+  utilitiesNotificationDate: timestamp("utilities_notification_date"),
+  documents: jsonb("documents").$type<{ name: string; type: string; url?: string }[]>().default([]),
+  fees: real("fees").default(0),
+  paidAmount: real("paid_amount").default(0),
+  paymentStatus: varchar("payment_status").default("unpaid"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertOccupancyCertificateSchema = createInsertSchema(occupancyCertificates).omit({
+  id: true,
+  certificateNumber: true,
+  createdAt: true,
+  updatedAt: true,
+  issuedDate: true,
+  expiryDate: true,
+  issuedBy: true,
+  sentToUtilities: true,
+  utilitiesNotificationDate: true,
+});
+
+export type InsertOccupancyCertificate = z.infer<typeof insertOccupancyCertificateSchema>;
+export type OccupancyCertificate = typeof occupancyCertificates.$inferSelect;

@@ -140,6 +140,8 @@ export class MemStorage implements IStorage {
   private occupancyCertificates: OccupancyCertificate[] = [];
   private violationReports: ViolationReport[] = [];
   private paymentTransactions: PaymentTransaction[] = [];
+  private occupancyCertificatesData: any[] = [];
+  private inspectionReports: any[] = [];
 
   constructor() {
     this.initializeSampleData();
@@ -466,6 +468,52 @@ export class MemStorage implements IStorage {
         notes: "تم الدفع عبر التحويل البنكي",
         createdAt: new Date("2025-01-15"),
         updatedAt: new Date("2025-01-15"),
+      }
+    ];
+
+    // Sample Occupancy Certificates  
+    this.occupancyCertificatesData = [
+      {
+        id: "cert-001",
+        certificateNumber: "OC-2025-0001",
+        buildingPermitId: "permit-001",
+        applicantName: "أحمد محمد الزبيري",
+        applicantNationalId: "01234567891",
+        projectName: "منزل سكني - عائلة الزبيري",
+        location: "شارع الزبيري - حي الحصبة الشمالي",
+        coordinates: { lat: 15.3694, lng: 44.1910 },
+        district: "الحصبة",
+        governorate: "أمانة العاصمة",
+        buildingType: "residential",
+        totalFloors: 2,
+        basementFloors: 0,
+        totalUnits: 1,
+        buildingArea: 320.2,
+        plotArea: 450.5,
+        completionDate: "2025-01-20",
+        inspectionDate: "2025-01-22",
+        inspectorId: "inspector-001",
+        inspectorName: "م. سالم أحمد المفتش",
+        inspectionNotes: "تم فحص المبنى ووجد مطابقاً للمواصفات والشروط",
+        complianceStatus: "compliant",
+        violationsFound: [],
+        correctiveActions: null,
+        status: "approved",
+        priority: "normal",
+        issuedDate: new Date("2025-01-25"),
+        expiryDate: new Date("2027-01-25"),
+        issuedBy: "م. عبدالله الصالح",
+        sentToUtilities: true,
+        utilitiesNotificationDate: new Date("2025-01-25"),
+        documents: [
+          { name: "شهادة إتمام البناء.pdf", type: "completion_certificate" },
+          { name: "تقرير التفتيش النهائي.pdf", type: "final_inspection_report" }
+        ],
+        fees: 25000,
+        paidAmount: 25000,
+        paymentStatus: "paid",
+        createdAt: new Date("2025-01-22"),
+        updatedAt: new Date("2025-01-25"),
       }
     ];
   }
@@ -1008,6 +1056,39 @@ export class MemStorage implements IStorage {
   // Payment Transactions methods
   async getPaymentTransactions(): Promise<PaymentTransaction[]> {
     return this.paymentTransactions;
+  }
+
+  // Occupancy Certificates methods
+  async getOccupancyCertificates(): Promise<any[]> {
+    return this.occupancyCertificatesData;
+  }
+
+  async getOccupancyCertificate(id: string): Promise<any | undefined> {
+    return this.occupancyCertificatesData.find(cert => cert.id === id);
+  }
+
+  async createOccupancyCertificate(certData: any): Promise<any> {
+    const certificate = {
+      id: randomUUID(),
+      certificateNumber: `OC-2025-${String(this.occupancyCertificatesData.length + 1).padStart(4, '0')}`,
+      ...certData,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+    this.occupancyCertificatesData.push(certificate);
+    return certificate;
+  }
+
+  async updateOccupancyCertificate(id: string, updateData: any): Promise<any | undefined> {
+    const index = this.occupancyCertificatesData.findIndex(cert => cert.id === id);
+    if (index === -1) return undefined;
+    
+    this.occupancyCertificatesData[index] = {
+      ...this.occupancyCertificatesData[index],
+      ...updateData,
+      updatedAt: new Date(),
+    };
+    return this.occupancyCertificatesData[index];
   }
 
   async getPaymentTransaction(id: string): Promise<PaymentTransaction | undefined> {
