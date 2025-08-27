@@ -22,6 +22,10 @@ import Dashboard from "@/pages/dashboard";
 import FieldApp from "@/pages/field-app";
 import Login from "@/pages/auth/login";
 import Register from "@/pages/auth/register";
+import CitizenLogin from "@/pages/auth/citizen-login";
+import ProfessionalLogin from "@/pages/auth/professional-login";
+import EmployeeLogin from "@/pages/auth/employee-login";
+import PortalSelection from "@/pages/auth/portal-selection";
 import CleanFieldApp from "@/pages/clean-field-app";
 import SurveyorDashboard from "@/pages/surveyor-dashboard";
 import Review from "@/pages/review";
@@ -159,6 +163,7 @@ function Router() {
           <Route path="/" component={SurveyorDashboard} />
           <Route path="/dashboard" component={SurveyorDashboard} />
           <Route path="/admin" component={Dashboard} />
+          <Route path="/dashboard" component={Dashboard} />
           <Route path="/citizen-portal" component={CitizenPortal} />
           <Route path="/building-permits" component={BuildingPermits} />
           <Route path="/occupancy-certificates" component={OccupancyCertificates} />
@@ -172,6 +177,9 @@ function Router() {
           <Route path="/review" component={Review} />
           <Route path="/auth/login" component={Login} />
           <Route path="/auth/register" component={Register} />
+          <Route path="/auth/citizen-login" component={CitizenLogin} />
+          <Route path="/auth/professional-login" component={ProfessionalLogin} />
+          <Route path="/auth/employee-login" component={EmployeeLogin} />
           <Route component={NotFound} />
         </Switch>
       </main>
