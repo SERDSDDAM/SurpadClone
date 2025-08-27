@@ -41,26 +41,10 @@ import {
   YEMEN_UTM_REFERENCES 
 } from "@/lib/coordinate-transform";
 import { LayersPanel } from "@/components/LayersPanel";
+import { EnhancedMapCanvas, GeoreferencedLayer } from "@/components/EnhancedMapCanvas";
 
-interface GeoreferencedLayer {
-  id: string;
-  name: string;
-  type: 'raster' | 'vector';
-  url: string;
-  bounds: [[number, number], [number, number]];
-  visible: boolean;
-  opacity: number;
-  coordinateSystem: string;
-  sourceCoordinateSystem?: string;
-  hasGeoreferencing: boolean;
-  needsReprojection?: boolean;
-  originalUtmBounds?: [[number, number], [number, number]] | null;
-  clipGeometry?: {
-    type: 'Polygon';
-    coordinates: number[][][];
-  };
-  isClipped?: boolean;
-}
+// استخدام GeoreferencedLayer من المكون الاحترافي
+// interface GeoreferencedLayer محذوف لأنه موجود في ProfessionalMapView
 
 interface DrawnFeature {
   id: string;
@@ -686,77 +670,50 @@ export default function DigitizationTool() {
           </div>
         </div>
 
-        {/* منطقة الخريطة */}
+        {/* منطقة الخريطة الاحترافية */}
         <div className="flex-1 relative">
-          <div 
-            ref={mapContainerRef}
-            className="w-full h-full bg-gray-100 dark:bg-gray-700 relative overflow-hidden"
-            data-testid="map-container"
-          >
-            {/* محاكي الخريطة */}
-            <div className="absolute inset-0 flex items-center justify-center">
-              <div className="text-center space-y-4">
-                <div className="w-16 h-16 mx-auto bg-blue-500 rounded-full flex items-center justify-center">
-                  <Map className="h-8 w-8 text-white" />
-                </div>
-                <div>
-                  <h3 className="text-lg font-medium text-gray-900 dark:text-white">
-                    عارض الخريطة التفاعلي
-                  </h3>
-                  <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">
-                    {activeTool !== 'hand' ? `الأداة النشطة: ${drawingTools.find(t => t.id === activeTool)?.name}` : 'جاهز للاستخدام'}
-                  </p>
-                  
-                  <div className="mt-4 space-y-2 text-xs text-gray-500">
-                    <p>📍 الموقع: صنعاء، اليمن</p>
-                    <p>🔍 مستوى التكبير: {mapZoom}</p>
-                    <p>🗂️ الطبقات المرئية: {layers.filter(l => l.visible).length}</p>
-                    <p>✏️ الأشكال المرسومة: {drawnFeatures.length}</p>
-                  </div>
-                  
-                  {layers.length === 0 && (
-                    <div className="mt-4 p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg border border-yellow-200 dark:border-yellow-800">
-                      <p className="text-sm text-yellow-800 dark:text-yellow-200">
-                        💡 ابدأ برفع طبقة جغرافية من التبويب "الطبقات"
-                      </p>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            {/* شريط الحالة */}
-            <div className="absolute bottom-4 left-4 bg-white dark:bg-gray-800 rounded-lg shadow-lg p-2 text-xs border">
-              <div className="flex items-center gap-4">
-                <span>الإحداثيات: {mapCenter[1].toFixed(4)}, {mapCenter[0].toFixed(4)}</span>
-                <span>التكبير: {mapZoom}</span>
-                <span className="flex items-center gap-1">
-                  <div className={`w-2 h-2 rounded-full ${isDrawing ? 'bg-red-500' : 'bg-green-500'}`}></div>
-                  {isDrawing ? 'رسم' : 'جاهز'}
-                </span>
-              </div>
-            </div>
-
-            {/* أزرار التحكم السريع */}
-            <div className="absolute top-4 left-4 space-y-2">
-              <Button
-                variant="outline"
-                size="sm"
-                className="bg-white dark:bg-gray-800"
-                data-testid="button-center-map"
-              >
-                <LocateFixed className="h-4 w-4" />
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                className="bg-white dark:bg-gray-800"
-                data-testid="button-grid-toggle"
-              >
-                <Grid className="h-4 w-4" />
-              </Button>
-            </div>
-          </div>
+          <EnhancedMapCanvas
+            layers={layers}
+            activeTool={activeTool}
+            onPointClick={(lat, lng, utmX, utmY) => {
+              console.log('🗺️ نقر على الخريطة:', { 
+                lat: lat.toFixed(6), 
+                lng: lng.toFixed(6), 
+                utmX: utmX.toFixed(2), 
+                utmY: utmY.toFixed(2),
+                activeTool 
+              });
+              
+              // معالجة النقر على الخريطة حسب الأداة النشطة
+              if (activeTool !== 'hand') {
+                setIsDrawing(true);
+                
+                // إنشاء شكل جديد بناءً على الأداة النشطة
+                const newFeature: DrawnFeature = {
+                  id: `${activeTool}_${Date.now()}`,
+                  type: activeTool as 'street' | 'block',
+                  geometry: {
+                    type: activeTool === 'street' ? 'LineString' : 'Polygon',
+                    coordinates: activeTool === 'street' 
+                      ? [[lng, lat]] 
+                      : [[[lng, lat], [lng, lat], [lng, lat], [lng, lat]]] // نقطة واحدة للبداية
+                  },
+                  properties: {
+                    name: `${activeTool === 'street' ? 'شارع' : 'بلوك'} جديد`,
+                    utmCoordinates: [utmX, utmY]
+                  }
+                };
+                
+                setDrawnFeatures(prev => [...prev, newFeature]);
+                
+                toast({
+                  title: "✅ تم إضافة نقطة",
+                  description: `${activeTool === 'street' ? 'شارع' : 'بلوك'} جديد - UTM: ${utmX.toFixed(2)}, ${utmY.toFixed(2)}`,
+                  duration: 2000,
+                });
+              }
+            }}
+          />
         </div>
       </div>
     </div>
