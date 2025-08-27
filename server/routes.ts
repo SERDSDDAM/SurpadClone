@@ -15,6 +15,7 @@ import {
 import authRoutes from "./auth/auth-routes";
 import { authenticateToken, requireRole, requirePermission } from "./auth/auth-middleware";
 import surveyRoutes from "./routes/survey-routes";
+import gisRoutes from "./routes/gis-routes";
 import helmet from "helmet";
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -37,6 +38,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // Survey routes
   app.use("/api", surveyRoutes);
+  
+  // GIS routes
+  app.use("/api/gis", gisRoutes);
   // Surveyors Management
   app.get("/api/surveyors", async (req, res) => {
     try {
