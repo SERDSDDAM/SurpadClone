@@ -3,6 +3,8 @@
 
 ### User Preferences
 Preferred communication style: Simple, everyday language.
+Strategic Focus: "إتقان الأساسيات قبل التوسع" - Master the basics before expansion approach.
+Current Priority: Perfect the "القرار المساحي" (Survey Decision) service and field surveyor application as the foundation for all other services like construction permits.
 
 ### System Architecture
 

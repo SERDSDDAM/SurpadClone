@@ -14,6 +14,7 @@ import {
 
 import authRoutes from "./auth/auth-routes";
 import { authenticateToken, requireRole, requirePermission } from "./auth/auth-middleware";
+import surveyRoutes from "./routes/survey-routes";
 import helmet from "helmet";
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -33,6 +34,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Auth routes
   app.use("/api/auth", authRoutes);
+  
+  // Survey routes
+  app.use("/api", surveyRoutes);
   // Surveyors Management
   app.get("/api/surveyors", async (req, res) => {
     try {

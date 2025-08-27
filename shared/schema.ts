@@ -704,6 +704,9 @@ export const insertApiKeySchema = createInsertSchema(apiKeys).omit({
 
 // Types for Authentication System
 export type User = typeof users.$inferSelect;
+
+// Re-export survey schema types and tables
+export * from "./survey-schema";
 export type InsertUser = z.infer<typeof insertUserSchema>;
 
 export type UserSession = typeof userSessions.$inferSelect;

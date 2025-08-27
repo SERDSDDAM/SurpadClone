@@ -34,6 +34,9 @@ import UnifiedRequestDetails from "@/pages/citizen/unified-request-details";
 import CleanFieldApp from "@/pages/clean-field-app";
 import SurveyorDashboard from "@/pages/surveyor-dashboard";
 import Review from "@/pages/review";
+import AdvancedFieldApp from "@/pages/field-app-advanced";
+import SurveyRequestForm from "@/pages/survey/survey-request-form";
+import SurveyDashboard from "@/pages/survey/survey-dashboard";
 import CitizenPortal from "@/pages/citizen-portal";
 import ProfessionalsManagement from "@/pages/professionals-management";
 import BuildingPermits from "@/pages/building-permits";
@@ -60,6 +63,9 @@ function Navigation() {
     { name: "إدارة المهنيين", href: "/professionals", icon: Users },
     { name: "تطبيق المساح", href: "/field-app", icon: Smartphone },
     { name: "التطبيق النظيف", href: "/clean-field-app", icon: MapPin },
+    { name: "التطبيق المتقدم", href: "/advanced-field-app", icon: MapPin },
+    { name: "نموذج طلب مساحي", href: "/survey-request-form", icon: ClipboardCheck },
+    { name: "لوحة المساحة", href: "/survey-dashboard", icon: LayoutDashboard },
     { name: "المراجعة", href: "/review", icon: ClipboardCheck },
   ];
 
@@ -178,6 +184,9 @@ function Router() {
           <Route path="/professionals" component={ProfessionalsManagement} />
           <Route path="/field-app" component={FieldApp} />
           <Route path="/clean-field-app" component={CleanFieldApp} />
+          <Route path="/advanced-field-app" component={AdvancedFieldApp} />
+          <Route path="/survey-request-form" component={SurveyRequestForm} />
+          <Route path="/survey-dashboard" component={SurveyDashboard} />
           <Route path="/review" component={Review} />
           <Route path="/auth/login" component={Login} />
           <Route path="/auth/register" component={Register} />
