@@ -24,6 +24,7 @@ import SurveyorDashboard from "@/pages/surveyor-dashboard";
 import Review from "@/pages/review";
 import CitizenPortal from "@/pages/citizen-portal";
 import ProfessionalsManagement from "@/pages/professionals-management";
+import BuildingPermits from "@/pages/building-permits";
 import NotFound from "@/pages/not-found";
 
 function Navigation() {
@@ -33,6 +34,7 @@ function Navigation() {
   const navigation = [
     { name: "لوحة التحكم", href: "/admin", icon: LayoutDashboard },
     { name: "بوابة المواطنين", href: "/citizen-portal", icon: Building2 },
+    { name: "رخص البناء", href: "/building-permits", icon: Building2 },
     { name: "إدارة المهنيين", href: "/professionals", icon: Users },
     { name: "تطبيق المساح", href: "/field-app", icon: Smartphone },
     { name: "التطبيق النظيف", href: "/clean-field-app", icon: MapPin },
@@ -60,8 +62,8 @@ function Navigation() {
                 
                 return (
                   <Link key={item.name} href={item.href}>
-                    <a
-                      className={`px-3 py-2 text-sm font-medium rounded-lg transition-colors flex items-center ${
+                    <span
+                      className={`px-3 py-2 text-sm font-medium rounded-lg transition-colors flex items-center cursor-pointer ${
                         isActive
                           ? "bg-primary text-white"
                           : "text-gray-600 hover:text-primary hover:bg-primary/10"
@@ -70,7 +72,7 @@ function Navigation() {
                     >
                       <IconComponent className="ml-1 h-4 w-4" />
                       {item.name}
-                    </a>
+                    </span>
                   </Link>
                 );
               })}
@@ -108,8 +110,8 @@ function Navigation() {
                 
                 return (
                   <Link key={item.name} href={item.href}>
-                    <a
-                      className={`block px-3 py-2 text-sm font-medium rounded-lg transition-colors flex items-center ${
+                    <span
+                      className={`block px-3 py-2 text-sm font-medium rounded-lg transition-colors flex items-center cursor-pointer ${
                         isActive
                           ? "bg-primary text-white"
                           : "text-gray-600 hover:text-primary hover:bg-primary/10"
@@ -118,7 +120,7 @@ function Navigation() {
                     >
                       <IconComponent className="ml-2 h-4 w-4" />
                       {item.name}
-                    </a>
+                    </span>
                   </Link>
                 );
               })}
@@ -145,6 +147,7 @@ function Router() {
           <Route path="/dashboard" component={SurveyorDashboard} />
           <Route path="/admin" component={Dashboard} />
           <Route path="/citizen-portal" component={CitizenPortal} />
+          <Route path="/building-permits" component={BuildingPermits} />
           <Route path="/professionals" component={ProfessionalsManagement} />
           <Route path="/field-app" component={FieldApp} />
           <Route path="/clean-field-app" component={CleanFieldApp} />

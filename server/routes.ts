@@ -379,6 +379,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.post("/api/building-permits", async (req, res) => {
+    try {
+      const permit = await storage.createBuildingPermit(req.body);
+      res.status(201).json(permit);
+    } catch (error) {
+      console.error("Error creating building permit:", error);
+      res.status(500).json({ message: "Failed to create building permit" });
+    }
+  });
+
+  app.put("/api/building-permits/:id", async (req, res) => {
+    try {
+      const permit = await storage.updateBuildingPermit(req.params.id, req.body);
+      if (!permit) {
+        return res.status(404).json({ message: "Building permit not found" });
+      }
+      res.json(permit);
+    } catch (error) {
+      console.error("Error updating building permit:", error);
+      res.status(500).json({ message: "Failed to update building permit" });
+    }
+  });
+
   // Occupancy Certificates API routes
   app.get("/api/occupancy-certificates", async (req, res) => {
     try {

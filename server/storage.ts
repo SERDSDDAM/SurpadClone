@@ -736,6 +736,7 @@ export class MemStorage implements IStorage {
       establishedDate: null,
       approvedDate: null,
       email: null,
+      specializations: [],
       ...officeData,
       createdAt: new Date(),
       updatedAt: new Date(),
@@ -777,6 +778,7 @@ export class MemStorage implements IStorage {
       establishedDate: null,
       approvedDate: null,
       email: null,
+      specializations: [],
       ...contractorData,
       createdAt: new Date(),
       updatedAt: new Date(),
@@ -801,6 +803,57 @@ export class MemStorage implements IStorage {
   // Building Permits methods
   async getBuildingPermits(): Promise<BuildingPermit[]> {
     return this.buildingPermits;
+  }
+
+  async getBuildingPermit(id: string): Promise<BuildingPermit | undefined> {
+    return this.buildingPermits.find(permit => permit.id === id);
+  }
+
+  async createBuildingPermit(permitData: InsertBuildingPermit): Promise<BuildingPermit> {
+    const permitNumber = `BP-${new Date().getFullYear()}-${String(this.buildingPermits.length + 1).padStart(4, '0')}`;
+    
+    const permit: BuildingPermit = {
+      id: randomUUID(),
+      permitNumber,
+      status: "submitted",
+      priority: "normal",
+      submitDate: new Date(),
+      fees: this.calculatePermitFees(permitData.buildingArea, permitData.projectType),
+      paidAmount: 0,
+      paymentStatus: "pending",
+      documents: [],
+      ...permitData,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+    
+    this.buildingPermits.push(permit);
+    return permit;
+  }
+
+  async updateBuildingPermit(id: string, permitData: Partial<BuildingPermit>): Promise<BuildingPermit | undefined> {
+    const index = this.buildingPermits.findIndex(permit => permit.id === id);
+    if (index === -1) return undefined;
+    
+    this.buildingPermits[index] = {
+      ...this.buildingPermits[index],
+      ...permitData,
+      updatedAt: new Date(),
+    };
+    
+    return this.buildingPermits[index];
+  }
+
+  private calculatePermitFees(buildingArea: number, projectType: string): number {
+    // Fee calculation based on Yemeni building regulations
+    const baseRatePerSqm = projectType === "commercial" ? 150 : 100; // YER per square meter
+    const baseFee = buildingArea * baseRatePerSqm;
+    
+    // Additional fees
+    const administrativeFee = 25000; // Fixed administrative fee
+    const inspectionFee = 15000; // Fixed inspection fee
+    
+    return baseFee + administrativeFee + inspectionFee;
   }
 
   async getBuildingPermit(id: string): Promise<BuildingPermit | undefined> {
