@@ -449,6 +449,113 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Inspection Reports API routes
+  app.get("/api/inspection-reports", async (req, res) => {
+    try {
+      const reports = await storage.getInspectionReports();
+      res.json(reports);
+    } catch (error) {
+      console.error("Error fetching inspection reports:", error);
+      res.status(500).json({ message: "Failed to fetch inspection reports" });
+    }
+  });
+
+  app.get("/api/inspection-reports/:id", async (req, res) => {
+    try {
+      const report = await storage.getInspectionReport(req.params.id);
+      if (!report) {
+        return res.status(404).json({ message: "Inspection report not found" });
+      }
+      res.json(report);
+    } catch (error) {
+      console.error("Error fetching inspection report:", error);
+      res.status(500).json({ message: "Failed to fetch inspection report" });
+    }
+  });
+
+  app.post("/api/inspection-reports", async (req, res) => {
+    try {
+      const report = await storage.createInspectionReport(req.body);
+      res.status(201).json(report);
+    } catch (error) {
+      console.error("Error creating inspection report:", error);
+      res.status(500).json({ message: "Failed to create inspection report" });
+    }
+  });
+
+  app.put("/api/inspection-reports/:id", async (req, res) => {
+    try {
+      const report = await storage.updateInspectionReport(req.params.id, req.body);
+      if (!report) {
+        return res.status(404).json({ message: "Inspection report not found" });
+      }
+      res.json(report);
+    } catch (error) {
+      console.error("Error updating inspection report:", error);
+      res.status(500).json({ message: "Failed to update inspection report" });
+    }
+  });
+
+  app.put("/api/inspection-reports/:id/assign", async (req, res) => {
+    try {
+      const { inspectorId, inspectorName } = req.body;
+      const report = await storage.assignInspector(req.params.id, inspectorId, inspectorName);
+      if (!report) {
+        return res.status(404).json({ message: "Inspection report not found" });
+      }
+      res.json(report);
+    } catch (error) {
+      console.error("Error assigning inspector:", error);
+      res.status(500).json({ message: "Failed to assign inspector" });
+    }
+  });
+
+  // Digital Certificate and Notification routes
+  app.post("/api/occupancy-certificates/:id/sign", async (req, res) => {
+    try {
+      const certificate = await storage.updateOccupancyCertificate(req.params.id, {
+        status: "signed",
+        issuedBy: req.body.signedBy,
+        issuedDate: new Date(),
+        digitalSignature: {
+          signedBy: req.body.signedBy,
+          signatureType: req.body.signatureType,
+          timestamp: req.body.signatureTimestamp,
+        }
+      });
+      
+      if (!certificate) {
+        return res.status(404).json({ message: "Certificate not found" });
+      }
+      
+      res.json(certificate);
+    } catch (error) {
+      console.error("Error signing certificate:", error);
+      res.status(500).json({ message: "Failed to sign certificate" });
+    }
+  });
+
+  app.post("/api/occupancy-certificates/:id/notify", async (req, res) => {
+    try {
+      const { type, settings } = req.body;
+      // Mock notification sending
+      res.json({ success: true, message: "Notification sent successfully" });
+    } catch (error) {
+      console.error("Error sending notification:", error);
+      res.status(500).json({ message: "Failed to send notification" });
+    }
+  });
+
+  app.post("/api/notifications/send", async (req, res) => {
+    try {
+      // Mock notification sending
+      res.json({ success: true, message: "Notification sent successfully" });
+    } catch (error) {
+      console.error("Error sending notification:", error);
+      res.status(500).json({ message: "Failed to send notification" });
+    }
+  });
+
   // Violation Reports API routes
   app.get("/api/violation-reports", async (req, res) => {
     try {

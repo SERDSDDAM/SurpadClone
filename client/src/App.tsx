@@ -14,7 +14,8 @@ import {
   Menu,
   X,
   Building2,
-  Users
+  Users,
+  MessageSquare
 } from "lucide-react";
 import { useState } from "react";
 import Dashboard from "@/pages/dashboard";
@@ -26,6 +27,10 @@ import CitizenPortal from "@/pages/citizen-portal";
 import ProfessionalsManagement from "@/pages/professionals-management";
 import BuildingPermits from "@/pages/building-permits";
 import OccupancyCertificates from "@/pages/occupancy-certificates";
+import InspectionManagement from "@/pages/inspection-management";
+import InspectorFieldApp from "@/pages/inspector-field-app";
+import DigitalCertificates from "@/pages/digital-certificates";
+import NotificationsSystem from "@/pages/notifications-system";
 import NotFound from "@/pages/not-found";
 
 function Navigation() {
@@ -37,6 +42,10 @@ function Navigation() {
     { name: "بوابة المواطنين", href: "/citizen-portal", icon: Building2 },
     { name: "رخص البناء", href: "/building-permits", icon: Building2 },
     { name: "شهادات الإشغال", href: "/occupancy-certificates", icon: ClipboardCheck },
+    { name: "إدارة التفتيش", href: "/inspection-management", icon: ClipboardCheck },
+    { name: "تطبيق المفتش", href: "/inspector-field-app", icon: Smartphone },
+    { name: "الشهادات الرقمية", href: "/digital-certificates", icon: ClipboardCheck },
+    { name: "نظام الإشعارات", href: "/notifications", icon: MessageSquare },
     { name: "إدارة المهنيين", href: "/professionals", icon: Users },
     { name: "تطبيق المساح", href: "/field-app", icon: Smartphone },
     { name: "التطبيق النظيف", href: "/clean-field-app", icon: MapPin },
@@ -151,6 +160,10 @@ function Router() {
           <Route path="/citizen-portal" component={CitizenPortal} />
           <Route path="/building-permits" component={BuildingPermits} />
           <Route path="/occupancy-certificates" component={OccupancyCertificates} />
+          <Route path="/inspection-management" component={InspectionManagement} />
+          <Route path="/inspector-field-app" component={InspectorFieldApp} />
+          <Route path="/digital-certificates" component={DigitalCertificates} />
+          <Route path="/notifications" component={NotificationsSystem} />
           <Route path="/professionals" component={ProfessionalsManagement} />
           <Route path="/field-app" component={FieldApp} />
           <Route path="/clean-field-app" component={CleanFieldApp} />

@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useLocation } from "wouter";
 import { toast } from "@/hooks/use-toast";
 import { AdvancedGPSPanel } from "@/components/ui/advanced-gps-panel";
 import { SmartToolbar, type ToolType } from "@/components/ui/smart-toolbar";

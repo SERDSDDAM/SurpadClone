@@ -464,3 +464,69 @@ export const insertOccupancyCertificateSchema = createInsertSchema(occupancyCert
 
 export type InsertOccupancyCertificate = z.infer<typeof insertOccupancyCertificateSchema>;
 export type OccupancyCertificate = typeof occupancyCertificates.$inferSelect;
+
+// Inspection Reports Table - Phase 3
+export const inspectionReports = pgTable("inspection_reports", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  reportNumber: varchar("report_number").notNull().unique(),
+  buildingPermitId: varchar("building_permit_id").references(() => buildingPermits.id),
+  occupancyCertificateId: varchar("occupancy_certificate_id").references(() => occupancyCertificates.id),
+  inspectionType: varchar("inspection_type").notNull(), // initial, periodic, complaint_based, final
+  inspectorId: varchar("inspector_id").notNull(),
+  inspectorName: varchar("inspector_name").notNull(),
+  inspectionDate: varchar("inspection_date").notNull(),
+  location: varchar("location").notNull(),
+  coordinates: jsonb("coordinates").$type<{ lat: number; lng: number }>(),
+  district: varchar("district").notNull(),
+  governorate: varchar("governorate").notNull(),
+  projectName: varchar("project_name").notNull(),
+  ownerName: varchar("owner_name").notNull(),
+  contractorName: varchar("contractor_name"),
+  engineeringOfficeName: varchar("engineering_office_name"),
+  buildingType: varchar("building_type").notNull(),
+  totalFloors: integer("total_floors"),
+  inspectedFloors: integer("inspected_floors"),
+  buildingArea: real("building_area"),
+  constructionProgress: integer("construction_progress"), // percentage 0-100
+  overallCompliance: varchar("overall_compliance").notNull(), // compliant, minor_violations, major_violations, critical_violations
+  structuralSafety: varchar("structural_safety").notNull(), // safe, concerns, unsafe
+  fireSafety: varchar("fire_safety").notNull(), // compliant, non_compliant
+  electricalSafety: varchar("electrical_safety").notNull(), // safe, unsafe
+  plumbingSafety: varchar("plumbing_safety").notNull(), // compliant, non_compliant
+  accessibilitySafety: varchar("accessibility_safety").notNull(), // compliant, non_compliant
+  violationsFound: jsonb("violations_found").$type<{
+    type: string;
+    severity: string;
+    description: string;
+    location: string;
+    recommendedAction: string;
+  }[]>().default([]),
+  correctiveActions: jsonb("corrective_actions").$type<{
+    action: string;
+    deadline: string;
+    responsible: string;
+    status: string;
+  }[]>().default([]),
+  inspectionFindings: text("inspection_findings").notNull(),
+  recommendations: text("recommendations"),
+  nextInspectionDate: varchar("next_inspection_date"),
+  status: varchar("status").notNull(), // draft, submitted, approved, rejected
+  priority: varchar("priority").notNull().default("normal"), // urgent, high, normal, low
+  attachments: jsonb("attachments").$type<{ name: string; type: string; url?: string }[]>().default([]),
+  approvedBy: varchar("approved_by"),
+  approvalDate: timestamp("approval_date"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertInspectionReportSchema = createInsertSchema(inspectionReports).omit({
+  id: true,
+  reportNumber: true,
+  createdAt: true,
+  updatedAt: true,
+  approvedBy: true,
+  approvalDate: true,
+});
+
+export type InsertInspectionReport = z.infer<typeof insertInspectionReportSchema>;
+export type InspectionReport = typeof inspectionReports.$inferSelect;

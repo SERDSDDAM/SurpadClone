@@ -141,7 +141,7 @@ export class MemStorage implements IStorage {
   private violationReports: ViolationReport[] = [];
   private paymentTransactions: PaymentTransaction[] = [];
   private occupancyCertificatesData: any[] = [];
-  private inspectionReports: any[] = [];
+  private inspectionReportsData: any[] = [];
 
   constructor() {
     this.initializeSampleData();
@@ -514,6 +514,54 @@ export class MemStorage implements IStorage {
         paymentStatus: "paid",
         createdAt: new Date("2025-01-22"),
         updatedAt: new Date("2025-01-25"),
+      }
+    ];
+
+    // Sample Inspection Reports
+    this.inspectionReportsData = [
+      {
+        id: "report-001",
+        reportNumber: "REP-2025-0001",
+        buildingPermitId: "permit-001",
+        occupancyCertificateId: "cert-001",
+        inspectionType: "final",
+        inspectorId: "inspector-001",
+        inspectorName: "م. سالم أحمد المفتش",
+        inspectionDate: "2025-01-22",
+        location: "شارع الزبيري - حي الحصبة الشمالي",
+        coordinates: { lat: 15.3694, lng: 44.1910 },
+        district: "الحصبة",
+        governorate: "أمانة العاصمة",
+        projectName: "منزل سكني - عائلة الزبيري",
+        ownerName: "أحمد محمد الزبيري",
+        contractorName: "شركة البناء المتقدم",
+        engineeringOfficeName: "مكتب الهندسة المعمارية المتطورة",
+        buildingType: "residential",
+        totalFloors: 2,
+        inspectedFloors: 2,
+        buildingArea: 320.2,
+        constructionProgress: 100,
+        overallCompliance: "compliant",
+        structuralSafety: "safe",
+        fireSafety: "compliant",
+        electricalSafety: "safe",
+        plumbingSafety: "compliant",
+        accessibilitySafety: "compliant",
+        violationsFound: [],
+        correctiveActions: [],
+        inspectionFindings: "تم فحص المبنى بالكامل ووجد مطابقاً لجميع المواصفات والمعايير المطلوبة. البناء تم حسب المخططات المعتمدة والمواد المستخدمة ذات جودة عالية.",
+        recommendations: "المبنى جاهز لإصدار شهادة الإشغال",
+        nextInspectionDate: null,
+        status: "approved",
+        priority: "normal",
+        attachments: [
+          { name: "تقرير الفحص الهيكلي.pdf", type: "structural_report" },
+          { name: "صور التفتيش.zip", type: "inspection_photos" }
+        ],
+        approvedBy: "م. عبدالله الصالح",
+        approvalDate: new Date("2025-01-24"),
+        createdAt: new Date("2025-01-22"),
+        updatedAt: new Date("2025-01-24"),
       }
     ];
   }
@@ -1089,6 +1137,52 @@ export class MemStorage implements IStorage {
       updatedAt: new Date(),
     };
     return this.occupancyCertificatesData[index];
+  }
+
+  // Inspection Reports methods
+  async getInspectionReports(): Promise<any[]> {
+    return this.inspectionReportsData;
+  }
+
+  async getInspectionReport(id: string): Promise<any | undefined> {
+    return this.inspectionReportsData.find(report => report.id === id);
+  }
+
+  async createInspectionReport(reportData: any): Promise<any> {
+    const report = {
+      id: randomUUID(),
+      reportNumber: `REP-2025-${String(this.inspectionReportsData.length + 1).padStart(4, '0')}`,
+      ...reportData,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+    this.inspectionReportsData.push(report);
+    return report;
+  }
+
+  async updateInspectionReport(id: string, updateData: any): Promise<any | undefined> {
+    const index = this.inspectionReportsData.findIndex(report => report.id === id);
+    if (index === -1) return undefined;
+    
+    this.inspectionReportsData[index] = {
+      ...this.inspectionReportsData[index],
+      ...updateData,
+      updatedAt: new Date(),
+    };
+    return this.inspectionReportsData[index];
+  }
+
+  async assignInspector(reportId: string, inspectorId: string, inspectorName: string): Promise<any | undefined> {
+    const index = this.inspectionReportsData.findIndex(report => report.id === reportId);
+    if (index === -1) return undefined;
+    
+    this.inspectionReportsData[index] = {
+      ...this.inspectionReportsData[index],
+      inspectorId,
+      inspectorName,
+      updatedAt: new Date(),
+    };
+    return this.inspectionReportsData[index];
   }
 
   async getPaymentTransaction(id: string): Promise<PaymentTransaction | undefined> {
