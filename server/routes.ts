@@ -12,7 +12,27 @@ import {
   insertReviewCommentSchema 
 } from "@shared/schema";
 
+import authRoutes from "./auth/auth-routes";
+import { authenticateToken, requireRole, requirePermission } from "./auth/auth-middleware";
+import helmet from "helmet";
+
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Security middleware
+  app.use(helmet({
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+        scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
+        fontSrc: ["'self'", "https://fonts.gstatic.com"],
+        connectSrc: ["'self'", "ws://localhost:*", "wss://localhost:*"],
+        imgSrc: ["'self'", "data:", "https:"],
+      },
+    },
+  }));
+
+  // Auth routes
+  app.use("/api/auth", authRoutes);
   // Surveyors Management
   app.get("/api/surveyors", async (req, res) => {
     try {
@@ -517,11 +537,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         status: "signed",
         issuedBy: req.body.signedBy,
         issuedDate: new Date(),
-        digitalSignature: {
-          signedBy: req.body.signedBy,
-          signatureType: req.body.signatureType,
-          timestamp: req.body.signatureTimestamp,
-        }
+        issueDate: new Date()
       });
       
       if (!certificate) {

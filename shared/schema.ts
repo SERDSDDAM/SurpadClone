@@ -530,3 +530,193 @@ export const insertInspectionReportSchema = createInsertSchema(inspectionReports
 
 export type InsertInspectionReport = z.infer<typeof insertInspectionReportSchema>;
 export type InspectionReport = typeof inspectionReports.$inferSelect;
+
+// Phase 4: Authentication and Security System
+
+// Users Authentication Table
+export const users = pgTable("users", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  nationalId: varchar("national_id").notNull().unique(),
+  username: varchar("username").unique(),
+  email: varchar("email"),
+  phone: varchar("phone").notNull(),
+  password: varchar("password"), // hashed password
+  firstName: varchar("first_name").notNull(),
+  lastName: varchar("last_name").notNull(),
+  middleName: varchar("middle_name"),
+  dateOfBirth: varchar("date_of_birth"),
+  gender: varchar("gender"), // male, female
+  address: jsonb("address").$type<{
+    governorate: string;
+    district: string;
+    area: string;
+    street?: string;
+    building?: string;
+  }>(),
+  role: varchar("role").notNull().default("citizen"), // citizen, inspector, admin, surveyor, engineer, contractor
+  permissions: jsonb("permissions").$type<string[]>().default([]),
+  isActive: boolean("is_active").default(true),
+  isVerified: boolean("is_verified").default(false),
+  lastLogin: timestamp("last_login"),
+  loginAttempts: integer("login_attempts").default(0),
+  lockedUntil: timestamp("locked_until"),
+  twoFactorEnabled: boolean("two_factor_enabled").default(false),
+  twoFactorSecret: varchar("two_factor_secret"),
+  backupCodes: jsonb("backup_codes").$type<string[]>().default([]),
+  profilePicture: varchar("profile_picture"),
+  preferences: jsonb("preferences").$type<{
+    language: string;
+    theme: string;
+    notifications: {
+      email: boolean;
+      sms: boolean;
+      system: boolean;
+    };
+  }>().default({
+    language: "ar",
+    theme: "light",
+    notifications: {
+      email: true,
+      sms: true,
+      system: true
+    }
+  }),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// User Sessions Table
+export const userSessions = pgTable("user_sessions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  sessionToken: varchar("session_token").notNull().unique(),
+  deviceInfo: jsonb("device_info").$type<{
+    deviceType: string;
+    browser: string;
+    os: string;
+    ipAddress: string;
+    userAgent: string;
+  }>(),
+  location: jsonb("location").$type<{
+    country?: string;
+    city?: string;
+    region?: string;
+  }>(),
+  isActive: boolean("is_active").default(true),
+  expiresAt: timestamp("expires_at").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+  lastAccessedAt: timestamp("last_accessed_at").defaultNow(),
+});
+
+// Security Audit Log Table
+export const auditLogs = pgTable("audit_logs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").references(() => users.id),
+  action: varchar("action").notNull(), // login, logout, create, update, delete, view
+  resource: varchar("resource").notNull(), // building_permit, inspection, user, etc.
+  resourceId: varchar("resource_id"),
+  details: jsonb("details").$type<{
+    oldValues?: any;
+    newValues?: any;
+    metadata?: any;
+  }>(),
+  ipAddress: varchar("ip_address"),
+  userAgent: varchar("user_agent"),
+  success: boolean("success").default(true),
+  errorMessage: text("error_message"),
+  severity: varchar("severity").default("info"), // info, warning, error, critical
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Password Reset Tokens
+export const passwordResetTokens = pgTable("password_reset_tokens", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  token: varchar("token").notNull().unique(),
+  expiresAt: timestamp("expires_at").notNull(),
+  isUsed: boolean("is_used").default(false),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Two-Factor Authentication Tokens
+export const twoFactorTokens = pgTable("two_factor_tokens", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  token: varchar("token").notNull(),
+  type: varchar("type").notNull(), // sms, email, authenticator
+  expiresAt: timestamp("expires_at").notNull(),
+  isUsed: boolean("is_used").default(false),
+  attempts: integer("attempts").default(0),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// API Keys for external integrations
+export const apiKeys = pgTable("api_keys", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").references(() => users.id, { onDelete: "cascade" }),
+  name: varchar("name").notNull(),
+  keyHash: varchar("key_hash").notNull().unique(),
+  permissions: jsonb("permissions").$type<string[]>().default([]),
+  lastUsedAt: timestamp("last_used_at"),
+  expiresAt: timestamp("expires_at"),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Insert Schemas for Authentication
+export const insertUserSchema = createInsertSchema(users).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  lastLogin: true,
+  loginAttempts: true,
+  lockedUntil: true,
+});
+
+export const insertUserSessionSchema = createInsertSchema(userSessions).omit({
+  id: true,
+  createdAt: true,
+  lastAccessedAt: true,
+});
+
+export const insertAuditLogSchema = createInsertSchema(auditLogs).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertPasswordResetTokenSchema = createInsertSchema(passwordResetTokens).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertTwoFactorTokenSchema = createInsertSchema(twoFactorTokens).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertApiKeySchema = createInsertSchema(apiKeys).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  lastUsedAt: true,
+});
+
+// Types for Authentication System
+export type User = typeof users.$inferSelect;
+export type InsertUser = z.infer<typeof insertUserSchema>;
+
+export type UserSession = typeof userSessions.$inferSelect;
+export type InsertUserSession = z.infer<typeof insertUserSessionSchema>;
+
+export type AuditLog = typeof auditLogs.$inferSelect;
+export type InsertAuditLog = z.infer<typeof insertAuditLogSchema>;
+
+export type PasswordResetToken = typeof passwordResetTokens.$inferSelect;
+export type InsertPasswordResetToken = z.infer<typeof insertPasswordResetTokenSchema>;
+
+export type TwoFactorToken = typeof twoFactorTokens.$inferSelect;
+export type InsertTwoFactorToken = z.infer<typeof insertTwoFactorTokenSchema>;
+
+export type ApiKey = typeof apiKeys.$inferSelect;
+export type InsertApiKey = z.infer<typeof insertApiKeySchema>;

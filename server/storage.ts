@@ -132,6 +132,24 @@ export interface IStorage {
     pendingPermits: number;
     totalRevenue: number;
   }>;
+
+  // Authentication and User management - Phase 4
+  getUser(userId: string): Promise<User | undefined>;
+  getUserByNationalId(nationalId: string): Promise<User | undefined>;
+  getUserByEmail(email: string): Promise<User | undefined>;
+  createUser(userData: InsertUser): Promise<User>;
+  updateUser(userId: string, updateData: Partial<User>): Promise<User | undefined>;
+
+  // Session management
+  createUserSession(sessionData: InsertUserSession): Promise<UserSession>;
+  getUserSession(sessionId: string): Promise<UserSession | undefined>;
+  getUserSessions(userId: string): Promise<UserSession[]>;
+  updateSessionAccess(sessionId: string): Promise<void>;
+  deactivateUserSession(sessionId: string): Promise<void>;
+
+  // Audit logging
+  createAuditLog(logData: InsertAuditLog): Promise<AuditLog>;
+  getAuditLogs(userId?: string): Promise<AuditLog[]>;
 }
 
 export class MemStorage implements IStorage {
@@ -150,6 +168,11 @@ export class MemStorage implements IStorage {
   private violationReports: ViolationReport[] = [];
   private paymentTransactions: PaymentTransaction[] = [];
   private inspectionReports: InspectionReport[] = [];
+  
+  // Phase 4: Authentication and Security data
+  private users: User[] = [];
+  private userSessions: UserSession[] = [];
+  private auditLogs: AuditLog[] = [];
 
   constructor() {
     this.initializeSampleData();
@@ -1115,6 +1138,92 @@ export class MemStorage implements IStorage {
   // Payment Transactions methods
   async getPaymentTransactions(): Promise<PaymentTransaction[]> {
     return this.paymentTransactions;
+  }
+
+  // Authentication and user management methods - Phase 4
+  async getUser(userId: string): Promise<User | undefined> {
+    return this.users.find(user => user.id === userId);
+  }
+
+  async getUserByNationalId(nationalId: string): Promise<User | undefined> {
+    return this.users.find(user => user.nationalId === nationalId);
+  }
+
+  async getUserByEmail(email: string): Promise<User | undefined> {
+    return this.users.find(user => user.email === email);
+  }
+
+  async createUser(userData: InsertUser): Promise<User> {
+    const newUser: User = {
+      id: `user-${Date.now()}`,
+      ...userData,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+    this.users.push(newUser);
+    return newUser;
+  }
+
+  async updateUser(userId: string, updateData: Partial<User>): Promise<User | undefined> {
+    const userIndex = this.users.findIndex(user => user.id === userId);
+    if (userIndex === -1) return undefined;
+
+    this.users[userIndex] = {
+      ...this.users[userIndex],
+      ...updateData,
+      updatedAt: new Date(),
+    };
+    return this.users[userIndex];
+  }
+
+  async createUserSession(sessionData: InsertUserSession): Promise<UserSession> {
+    const newSession: UserSession = {
+      id: `session-${Date.now()}`,
+      ...sessionData,
+      createdAt: new Date(),
+      lastAccessedAt: new Date(),
+    };
+    this.userSessions.push(newSession);
+    return newSession;
+  }
+
+  async getUserSession(sessionId: string): Promise<UserSession | undefined> {
+    return this.userSessions.find(session => session.id === sessionId);
+  }
+
+  async getUserSessions(userId: string): Promise<UserSession[]> {
+    return this.userSessions.filter(session => session.userId === userId);
+  }
+
+  async updateSessionAccess(sessionId: string): Promise<void> {
+    const sessionIndex = this.userSessions.findIndex(session => session.id === sessionId);
+    if (sessionIndex !== -1) {
+      this.userSessions[sessionIndex].lastAccessedAt = new Date();
+    }
+  }
+
+  async deactivateUserSession(sessionId: string): Promise<void> {
+    const sessionIndex = this.userSessions.findIndex(session => session.id === sessionId);
+    if (sessionIndex !== -1) {
+      this.userSessions[sessionIndex].isActive = false;
+    }
+  }
+
+  async createAuditLog(logData: InsertAuditLog): Promise<AuditLog> {
+    const newLog: AuditLog = {
+      id: `log-${Date.now()}`,
+      ...logData,
+      createdAt: new Date(),
+    };
+    this.auditLogs.push(newLog);
+    return newLog;
+  }
+
+  async getAuditLogs(userId?: string): Promise<AuditLog[]> {
+    if (userId) {
+      return this.auditLogs.filter(log => log.userId === userId);
+    }
+    return this.auditLogs;
   }
 
   // Occupancy Certificates methods

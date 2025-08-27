@@ -20,6 +20,8 @@ import {
 import { useState } from "react";
 import Dashboard from "@/pages/dashboard";
 import FieldApp from "@/pages/field-app";
+import Login from "@/pages/auth/login";
+import Register from "@/pages/auth/register";
 import CleanFieldApp from "@/pages/clean-field-app";
 import SurveyorDashboard from "@/pages/surveyor-dashboard";
 import Review from "@/pages/review";
@@ -168,6 +170,8 @@ function Router() {
           <Route path="/field-app" component={FieldApp} />
           <Route path="/clean-field-app" component={CleanFieldApp} />
           <Route path="/review" component={Review} />
+          <Route path="/auth/login" component={Login} />
+          <Route path="/auth/register" component={Register} />
           <Route component={NotFound} />
         </Switch>
       </main>
