@@ -12,7 +12,9 @@ import {
   ClipboardCheck, 
   MapPin,
   Menu,
-  X 
+  X,
+  Building2,
+  Users
 } from "lucide-react";
 import { useState } from "react";
 import Dashboard from "@/pages/dashboard";
@@ -20,6 +22,8 @@ import FieldApp from "@/pages/field-app";
 import CleanFieldApp from "@/pages/clean-field-app";
 import SurveyorDashboard from "@/pages/surveyor-dashboard";
 import Review from "@/pages/review";
+import CitizenPortal from "@/pages/citizen-portal";
+import ProfessionalsManagement from "@/pages/professionals-management";
 import NotFound from "@/pages/not-found";
 
 function Navigation() {
@@ -28,6 +32,8 @@ function Navigation() {
 
   const navigation = [
     { name: "لوحة التحكم", href: "/admin", icon: LayoutDashboard },
+    { name: "بوابة المواطنين", href: "/citizen-portal", icon: Building2 },
+    { name: "إدارة المهنيين", href: "/professionals", icon: Users },
     { name: "تطبيق المساح", href: "/field-app", icon: Smartphone },
     { name: "التطبيق النظيف", href: "/clean-field-app", icon: MapPin },
     { name: "المراجعة", href: "/review", icon: ClipboardCheck },
@@ -138,6 +144,8 @@ function Router() {
           <Route path="/" component={SurveyorDashboard} />
           <Route path="/dashboard" component={SurveyorDashboard} />
           <Route path="/admin" component={Dashboard} />
+          <Route path="/citizen-portal" component={CitizenPortal} />
+          <Route path="/professionals" component={ProfessionalsManagement} />
           <Route path="/field-app" component={FieldApp} />
           <Route path="/clean-field-app" component={CleanFieldApp} />
           <Route path="/review" component={Review} />

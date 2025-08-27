@@ -283,6 +283,135 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Citizens API routes
+  app.get("/api/citizens", async (req, res) => {
+    try {
+      const citizens = await storage.getCitizens();
+      res.json(citizens);
+    } catch (error) {
+      console.error("Error fetching citizens:", error);
+      res.status(500).json({ message: "Failed to fetch citizens" });
+    }
+  });
+
+  app.get("/api/citizens/:id", async (req, res) => {
+    try {
+      const citizen = await storage.getCitizen(req.params.id);
+      if (!citizen) {
+        return res.status(404).json({ message: "Citizen not found" });
+      }
+      res.json(citizen);
+    } catch (error) {
+      console.error("Error fetching citizen:", error);
+      res.status(500).json({ message: "Failed to fetch citizen" });
+    }
+  });
+
+  // Engineering Offices API routes
+  app.get("/api/engineering-offices", async (req, res) => {
+    try {
+      const offices = await storage.getEngineeringOffices();
+      res.json(offices);
+    } catch (error) {
+      console.error("Error fetching engineering offices:", error);
+      res.status(500).json({ message: "Failed to fetch engineering offices" });
+    }
+  });
+
+  app.get("/api/engineering-offices/:id", async (req, res) => {
+    try {
+      const office = await storage.getEngineeringOffice(req.params.id);
+      if (!office) {
+        return res.status(404).json({ message: "Engineering office not found" });
+      }
+      res.json(office);
+    } catch (error) {
+      console.error("Error fetching engineering office:", error);
+      res.status(500).json({ message: "Failed to fetch engineering office" });
+    }
+  });
+
+  // Contractors API routes
+  app.get("/api/contractors", async (req, res) => {
+    try {
+      const contractors = await storage.getContractors();
+      res.json(contractors);
+    } catch (error) {
+      console.error("Error fetching contractors:", error);
+      res.status(500).json({ message: "Failed to fetch contractors" });
+    }
+  });
+
+  app.get("/api/contractors/:id", async (req, res) => {
+    try {
+      const contractor = await storage.getContractor(req.params.id);
+      if (!contractor) {
+        return res.status(404).json({ message: "Contractor not found" });
+      }
+      res.json(contractor);
+    } catch (error) {
+      console.error("Error fetching contractor:", error);
+      res.status(500).json({ message: "Failed to fetch contractor" });
+    }
+  });
+
+  // Building Permits API routes
+  app.get("/api/building-permits", async (req, res) => {
+    try {
+      const permits = await storage.getBuildingPermits();
+      res.json(permits);
+    } catch (error) {
+      console.error("Error fetching building permits:", error);
+      res.status(500).json({ message: "Failed to fetch building permits" });
+    }
+  });
+
+  app.get("/api/building-permits/:id", async (req, res) => {
+    try {
+      const permit = await storage.getBuildingPermit(req.params.id);
+      if (!permit) {
+        return res.status(404).json({ message: "Building permit not found" });
+      }
+      res.json(permit);
+    } catch (error) {
+      console.error("Error fetching building permit:", error);
+      res.status(500).json({ message: "Failed to fetch building permit" });
+    }
+  });
+
+  // Occupancy Certificates API routes
+  app.get("/api/occupancy-certificates", async (req, res) => {
+    try {
+      const certificates = await storage.getOccupancyCertificates();
+      res.json(certificates);
+    } catch (error) {
+      console.error("Error fetching occupancy certificates:", error);
+      res.status(500).json({ message: "Failed to fetch occupancy certificates" });
+    }
+  });
+
+  // Violation Reports API routes
+  app.get("/api/violation-reports", async (req, res) => {
+    try {
+      const reports = await storage.getViolationReports();
+      res.json(reports);
+    } catch (error) {
+      console.error("Error fetching violation reports:", error);
+      res.status(500).json({ message: "Failed to fetch violation reports" });
+    }
+  });
+
+  // Payment Transactions API routes
+  app.get("/api/payment-transactions", async (req, res) => {
+    try {
+      const transactions = await storage.getPaymentTransactions();
+      res.json(transactions);
+    } catch (error) {
+      console.error("Error fetching payment transactions:", error);
+      res.status(500).json({ message: "Failed to fetch payment transactions" });
+    }
+  });
+
   // Export endpoints
   app.get("/api/survey-requests/:requestId/export/:format", async (req, res) => {
     try {

@@ -13,6 +13,20 @@ import {
   type InsertSurveySession,
   type ReviewComment,
   type InsertReviewComment,
+  type Citizen,
+  type InsertCitizen,
+  type EngineeringOffice,
+  type InsertEngineeringOffice,
+  type Contractor,
+  type InsertContractor,
+  type BuildingPermit,
+  type InsertBuildingPermit,
+  type OccupancyCertificate,
+  type InsertOccupancyCertificate,
+  type ViolationReport,
+  type InsertViolationReport,
+  type PaymentTransaction,
+  type InsertPaymentTransaction,
 } from "@shared/schema";
 import { randomUUID } from "crypto";
 
@@ -53,12 +67,61 @@ export interface IStorage {
   getReviewComments(requestId: string): Promise<ReviewComment[]>;
   createReviewComment(comment: InsertReviewComment): Promise<ReviewComment>;
 
-  // Statistics
+  // Citizens
+  getCitizens(): Promise<Citizen[]>;
+  getCitizen(id: string): Promise<Citizen | undefined>;
+  getCitizenByNationalId(nationalId: string): Promise<Citizen | undefined>;
+  createCitizen(citizen: InsertCitizen): Promise<Citizen>;
+  updateCitizen(id: string, citizen: Partial<Citizen>): Promise<Citizen | undefined>;
+
+  // Engineering Offices
+  getEngineeringOffices(): Promise<EngineeringOffice[]>;
+  getEngineeringOffice(id: string): Promise<EngineeringOffice | undefined>;
+  createEngineeringOffice(office: InsertEngineeringOffice): Promise<EngineeringOffice>;
+  updateEngineeringOffice(id: string, office: Partial<EngineeringOffice>): Promise<EngineeringOffice | undefined>;
+
+  // Contractors
+  getContractors(): Promise<Contractor[]>;
+  getContractor(id: string): Promise<Contractor | undefined>;
+  createContractor(contractor: InsertContractor): Promise<Contractor>;
+  updateContractor(id: string, contractor: Partial<Contractor>): Promise<Contractor | undefined>;
+
+  // Building Permits
+  getBuildingPermits(): Promise<BuildingPermit[]>;
+  getBuildingPermit(id: string): Promise<BuildingPermit | undefined>;
+  getBuildingPermitsByApplicant(applicantId: string): Promise<BuildingPermit[]>;
+  createBuildingPermit(permit: InsertBuildingPermit): Promise<BuildingPermit>;
+  updateBuildingPermit(id: string, permit: Partial<BuildingPermit>): Promise<BuildingPermit | undefined>;
+
+  // Occupancy Certificates
+  getOccupancyCertificates(): Promise<OccupancyCertificate[]>;
+  getOccupancyCertificate(id: string): Promise<OccupancyCertificate | undefined>;
+  createOccupancyCertificate(certificate: InsertOccupancyCertificate): Promise<OccupancyCertificate>;
+  updateOccupancyCertificate(id: string, certificate: Partial<OccupancyCertificate>): Promise<OccupancyCertificate | undefined>;
+
+  // Violation Reports
+  getViolationReports(): Promise<ViolationReport[]>;
+  getViolationReport(id: string): Promise<ViolationReport | undefined>;
+  createViolationReport(report: InsertViolationReport): Promise<ViolationReport>;
+  updateViolationReport(id: string, report: Partial<ViolationReport>): Promise<ViolationReport | undefined>;
+
+  // Payment Transactions
+  getPaymentTransactions(): Promise<PaymentTransaction[]>;
+  getPaymentTransaction(id: string): Promise<PaymentTransaction | undefined>;
+  getPaymentsByReference(referenceType: string, referenceId: string): Promise<PaymentTransaction[]>;
+  createPaymentTransaction(transaction: InsertPaymentTransaction): Promise<PaymentTransaction>;
+  updatePaymentTransaction(id: string, transaction: Partial<PaymentTransaction>): Promise<PaymentTransaction | undefined>;
+
+  // Enhanced Statistics
   getStats(): Promise<{
     newRequests: number;
     inProgress: number;
     underReview: number;
     completed: number;
+    totalCitizens: number;
+    activeBuildingPermits: number;
+    pendingPermits: number;
+    totalRevenue: number;
   }>;
 }
 
@@ -70,6 +133,13 @@ export class MemStorage implements IStorage {
   private surveyPolygons: SurveyPolygon[] = [];
   private surveySessions: SurveySession[] = [];
   private reviewComments: ReviewComment[] = [];
+  private citizens: Citizen[] = [];
+  private engineeringOffices: EngineeringOffice[] = [];
+  private contractors: Contractor[] = [];
+  private buildingPermits: BuildingPermit[] = [];
+  private occupancyCertificates: OccupancyCertificate[] = [];
+  private violationReports: ViolationReport[] = [];
+  private paymentTransactions: PaymentTransaction[] = [];
 
   constructor() {
     this.initializeSampleData();
@@ -241,6 +311,163 @@ export class MemStorage implements IStorage {
         createdAt: new Date("2025-01-26"),
       }
     ];
+
+    // Sample Citizens Data
+    this.citizens = [
+      {
+        id: "citizen-001",
+        nationalId: "01234567891",
+        firstName: "أحمد",
+        lastName: "محمد الزبيري",
+        phone: "+967-777-111111",
+        email: "ahmed.zuberi@gmail.com",
+        address: "شارع الزبيري - حي الحصبة الشمالي",
+        district: "الحصبة",
+        governorate: "أمانة العاصمة",
+        dateOfBirth: new Date("1985-05-15"),
+        gender: "male",
+        status: "active",
+        totalRequests: 3,
+        createdAt: new Date("2024-11-01"),
+        updatedAt: new Date(),
+      },
+      {
+        id: "citizen-002",
+        nationalId: "01234567892",
+        firstName: "فاطمة",
+        lastName: "علي السباعي",
+        phone: "+967-777-222222",
+        email: "fatima.sabai@yahoo.com",
+        address: "شارع الستين - منطقة التحرير",
+        district: "التحرير",
+        governorate: "أمانة العاصمة",
+        dateOfBirth: new Date("1990-08-20"),
+        gender: "female",
+        status: "active",
+        totalRequests: 1,
+        createdAt: new Date("2024-12-15"),
+        updatedAt: new Date(),
+      }
+    ];
+
+    // Sample Engineering Offices
+    this.engineeringOffices = [
+      {
+        id: "office-001",
+        officeName: "مكتب الهندسة المعمارية المتقدمة",
+        licenseNumber: "ENG-AAE-2020-001",
+        ownerName: "م. خالد أحمد الشامي",
+        ownerNationalId: "01234567893",
+        phone: "+967-1-234567",
+        email: "info@aae-yemen.com",
+        address: "شارع الجمهورية - مجمع الخليج التجاري",
+        district: "التحرير",
+        governorate: "أمانة العاصمة",
+        specializations: ["architectural", "structural", "interior_design"],
+        classification: "grade_a",
+        status: "approved",
+        establishedDate: new Date("2020-03-15"),
+        approvedDate: new Date("2020-04-01"),
+        rating: 4.7,
+        totalProjects: 85,
+        activeProjects: 12,
+        createdAt: new Date("2020-03-15"),
+        updatedAt: new Date(),
+      }
+    ];
+
+    // Sample Contractors
+    this.contractors = [
+      {
+        id: "contractor-001",
+        contractorName: "شركة البناء الحديث المحدودة",
+        licenseNumber: "CON-MBC-2019-001",
+        ownerName: "محمد عبدالله الحداد",
+        ownerNationalId: "01234567894",
+        phone: "+967-1-345678",
+        email: "contracts@mbc-yemen.com",
+        address: "شارع الثورة - المجمع التجاري الجديد",
+        district: "الصافية",
+        governorate: "أمانة العاصمة",
+        specializations: ["residential", "commercial", "infrastructure"],
+        classification: "grade_2",
+        maxProjectValue: 50000000, // 50 million YER
+        status: "approved",
+        establishedDate: new Date("2019-06-10"),
+        approvedDate: new Date("2019-07-15"),
+        rating: 4.4,
+        totalProjects: 67,
+        activeProjects: 8,
+        createdAt: new Date("2019-06-10"),
+        updatedAt: new Date(),
+      }
+    ];
+
+    // Sample Building Permits
+    this.buildingPermits = [
+      {
+        id: "permit-001",
+        permitNumber: "BP-2025-0001",
+        applicantId: "citizen-001",
+        engineeringOfficeId: "office-001",
+        contractorId: "contractor-001",
+        projectName: "منزل سكني - عائلة الزبيري",
+        projectType: "residential",
+        buildingType: "house",
+        plotArea: 450.5,
+        buildingArea: 320.2,
+        totalFloors: 2,
+        basementFloors: 0,
+        estimatedCost: 15000000, // 15 million YER
+        location: "شارع الزبيري - حي الحصبة الشمالي",
+        coordinates: { lat: 15.3694, lng: 44.1910 },
+        district: "الحصبة",
+        governorate: "أمانة العاصمة",
+        status: "approved",
+        priority: "normal",
+        submitDate: new Date("2025-01-10"),
+        reviewDate: new Date("2025-01-18"),
+        approvalDate: new Date("2025-01-20"),
+        expiryDate: new Date("2027-01-20"),
+        issuedBy: "م. سعد الدين المهندس",
+        reviewNotes: "تمت الموافقة بعد استيفاء جميع المتطلبات",
+        documents: [
+          { name: "صك الملكية.pdf", type: "ownership_document" },
+          { name: "المخططات المعمارية.dwg", type: "architectural_plans" },
+          { name: "تقرير دراسة التربة.pdf", type: "soil_study" }
+        ],
+        fees: 75000, // 75k YER
+        paidAmount: 75000,
+        paymentStatus: "paid",
+        createdAt: new Date("2025-01-10"),
+        updatedAt: new Date("2025-01-20"),
+      }
+    ];
+
+    // Sample Payment Transactions
+    this.paymentTransactions = [
+      {
+        id: "payment-001",
+        transactionId: "TXN-2025-0001",
+        referenceType: "building_permit",
+        referenceId: "permit-001",
+        payerName: "أحمد محمد الزبيري",
+        payerContact: "+967-777-111111",
+        amount: 75000,
+        currency: "YER",
+        paymentMethod: "bank_transfer",
+        paymentGateway: null,
+        gatewayTransactionId: null,
+        status: "completed",
+        paidAt: new Date("2025-01-15"),
+        description: "رسوم رخصة البناء رقم BP-2025-0001",
+        receiptNumber: "REC-2025-0001",
+        processedBy: "موظف الخزينة - أحمد محمد",
+        notes: "تم الدفع عبر التحويل البنكي",
+        createdAt: new Date("2025-01-15"),
+        updatedAt: new Date("2025-01-15"),
+      }
+    ];
   }
 
   // Surveyor methods
@@ -255,6 +482,13 @@ export class MemStorage implements IStorage {
   async createSurveyor(surveyorData: InsertSurveyor): Promise<Surveyor> {
     const surveyor: Surveyor = {
       id: randomUUID(),
+      status: "active",
+      currentLoad: 0,
+      maxLoad: 5,
+      rating: 0,
+      totalProjects: 0,
+      totalPoints: 0,
+      activeDays: 0,
       ...surveyorData,
       createdAt: new Date(),
       updatedAt: new Date(),
@@ -290,6 +524,9 @@ export class MemStorage implements IStorage {
     const request: SurveyRequest = {
       id: randomUUID(),
       requestNumber: `REQ-2025-${String(this.surveyRequests.length + 1).padStart(3, '0')}`,
+      status: "submitted",
+      priority: "medium",
+      requestType: "building_permit",
       completionPercentage: 0,
       ...requestData,
       createdAt: new Date(),
@@ -324,6 +561,10 @@ export class MemStorage implements IStorage {
   async createSurveyPoint(pointData: InsertSurveyPoint): Promise<SurveyPoint> {
     const point: SurveyPoint = {
       id: randomUUID(),
+      elevation: null,
+      accuracy: 0.02,
+      notes: null,
+      photos: [],
       ...pointData,
       capturedAt: new Date(),
     };
@@ -346,6 +587,10 @@ export class MemStorage implements IStorage {
   async createSurveyLine(lineData: InsertSurveyLine): Promise<SurveyLine> {
     const line: SurveyLine = {
       id: randomUUID(),
+      startPointId: null,
+      endPointId: null,
+      length: null,
+      notes: null,
       ...lineData,
       createdAt: new Date(),
     };
@@ -368,6 +613,9 @@ export class MemStorage implements IStorage {
   async createSurveyPolygon(polygonData: InsertSurveyPolygon): Promise<SurveyPolygon> {
     const polygon: SurveyPolygon = {
       id: randomUUID(),
+      area: null,
+      perimeter: null,
+      notes: null,
       ...polygonData,
       createdAt: new Date(),
     };
@@ -390,6 +638,12 @@ export class MemStorage implements IStorage {
   async createSurveySession(sessionData: InsertSurveySession): Promise<SurveySession> {
     const session: SurveySession = {
       id: randomUUID(),
+      endTime: null,
+      gpsAccuracy: null,
+      satelliteCount: null,
+      instrumentUsed: null,
+      weatherConditions: null,
+      isActive: true,
       ...sessionData,
       startTime: new Date(),
     };
@@ -424,23 +678,362 @@ export class MemStorage implements IStorage {
     return comment;
   }
 
-  // Statistics methods
+  // Citizens methods
+  async getCitizens(): Promise<Citizen[]> {
+    return this.citizens;
+  }
+
+  async getCitizen(id: string): Promise<Citizen | undefined> {
+    return this.citizens.find(citizen => citizen.id === id);
+  }
+
+  async getCitizenByNationalId(nationalId: string): Promise<Citizen | undefined> {
+    return this.citizens.find(citizen => citizen.nationalId === nationalId);
+  }
+
+  async createCitizen(citizenData: InsertCitizen): Promise<Citizen> {
+    const citizen: Citizen = {
+      id: randomUUID(),
+      status: "active",
+      totalRequests: 0,
+      ...citizenData,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+    this.citizens.push(citizen);
+    return citizen;
+  }
+
+  async updateCitizen(id: string, citizenData: Partial<Citizen>): Promise<Citizen | undefined> {
+    const index = this.citizens.findIndex(citizen => citizen.id === id);
+    if (index === -1) return undefined;
+    
+    this.citizens[index] = {
+      ...this.citizens[index],
+      ...citizenData,
+      updatedAt: new Date(),
+    };
+    
+    return this.citizens[index];
+  }
+
+  // Engineering Offices methods
+  async getEngineeringOffices(): Promise<EngineeringOffice[]> {
+    return this.engineeringOffices;
+  }
+
+  async getEngineeringOffice(id: string): Promise<EngineeringOffice | undefined> {
+    return this.engineeringOffices.find(office => office.id === id);
+  }
+
+  async createEngineeringOffice(officeData: InsertEngineeringOffice): Promise<EngineeringOffice> {
+    const office: EngineeringOffice = {
+      id: randomUUID(),
+      status: "pending",
+      rating: 0,
+      totalProjects: 0,
+      activeProjects: 0,
+      establishedDate: null,
+      approvedDate: null,
+      email: null,
+      ...officeData,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+    this.engineeringOffices.push(office);
+    return office;
+  }
+
+  async updateEngineeringOffice(id: string, officeData: Partial<EngineeringOffice>): Promise<EngineeringOffice | undefined> {
+    const index = this.engineeringOffices.findIndex(office => office.id === id);
+    if (index === -1) return undefined;
+    
+    this.engineeringOffices[index] = {
+      ...this.engineeringOffices[index],
+      ...officeData,
+      updatedAt: new Date(),
+    };
+    
+    return this.engineeringOffices[index];
+  }
+
+  // Contractors methods
+  async getContractors(): Promise<Contractor[]> {
+    return this.contractors;
+  }
+
+  async getContractor(id: string): Promise<Contractor | undefined> {
+    return this.contractors.find(contractor => contractor.id === id);
+  }
+
+  async createContractor(contractorData: InsertContractor): Promise<Contractor> {
+    const contractor: Contractor = {
+      id: randomUUID(),
+      status: "pending",
+      rating: 0,
+      totalProjects: 0,
+      activeProjects: 0,
+      maxProjectValue: null,
+      establishedDate: null,
+      approvedDate: null,
+      email: null,
+      ...contractorData,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+    this.contractors.push(contractor);
+    return contractor;
+  }
+
+  async updateContractor(id: string, contractorData: Partial<Contractor>): Promise<Contractor | undefined> {
+    const index = this.contractors.findIndex(contractor => contractor.id === id);
+    if (index === -1) return undefined;
+    
+    this.contractors[index] = {
+      ...this.contractors[index],
+      ...contractorData,
+      updatedAt: new Date(),
+    };
+    
+    return this.contractors[index];
+  }
+
+  // Building Permits methods
+  async getBuildingPermits(): Promise<BuildingPermit[]> {
+    return this.buildingPermits;
+  }
+
+  async getBuildingPermit(id: string): Promise<BuildingPermit | undefined> {
+    return this.buildingPermits.find(permit => permit.id === id);
+  }
+
+  async getBuildingPermitsByApplicant(applicantId: string): Promise<BuildingPermit[]> {
+    return this.buildingPermits.filter(permit => permit.applicantId === applicantId);
+  }
+
+  async createBuildingPermit(permitData: InsertBuildingPermit): Promise<BuildingPermit> {
+    const permit: BuildingPermit = {
+      id: randomUUID(),
+      permitNumber: `BP-2025-${String(this.buildingPermits.length + 1).padStart(4, '0')}`,
+      status: "submitted",
+      priority: "normal",
+      engineeringOfficeId: null,
+      contractorId: null,
+      basementFloors: 0,
+      estimatedCost: null,
+      coordinates: null,
+      reviewDate: null,
+      approvalDate: null,
+      expiryDate: null,
+      issuedBy: null,
+      reviewNotes: null,
+      documents: [],
+      fees: null,
+      paidAmount: 0,
+      paymentStatus: "pending",
+      ...permitData,
+      submitDate: new Date(),
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+    this.buildingPermits.push(permit);
+    return permit;
+  }
+
+  async updateBuildingPermit(id: string, permitData: Partial<BuildingPermit>): Promise<BuildingPermit | undefined> {
+    const index = this.buildingPermits.findIndex(permit => permit.id === id);
+    if (index === -1) return undefined;
+    
+    this.buildingPermits[index] = {
+      ...this.buildingPermits[index],
+      ...permitData,
+      updatedAt: new Date(),
+    };
+    
+    return this.buildingPermits[index];
+  }
+
+  // Occupancy Certificates methods
+  async getOccupancyCertificates(): Promise<OccupancyCertificate[]> {
+    return this.occupancyCertificates;
+  }
+
+  async getOccupancyCertificate(id: string): Promise<OccupancyCertificate | undefined> {
+    return this.occupancyCertificates.find(cert => cert.id === id);
+  }
+
+  async createOccupancyCertificate(certData: InsertOccupancyCertificate): Promise<OccupancyCertificate> {
+    const certificate: OccupancyCertificate = {
+      id: randomUUID(),
+      certificateNumber: `OC-2025-${String(this.occupancyCertificates.length + 1).padStart(4, '0')}`,
+      status: "submitted",
+      buildingPermitId: null,
+      coordinates: null,
+      inspectionDate: null,
+      inspectorName: null,
+      safetyCompliance: false,
+      structuralCompliance: false,
+      fireCompliante: false,
+      electricalCompliance: false,
+      plumbingCompliance: false,
+      issueDate: null,
+      expiryDate: null,
+      issuedBy: null,
+      inspectionNotes: null,
+      documents: [],
+      fees: null,
+      paidAmount: 0,
+      paymentStatus: "pending",
+      ...certData,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+    this.occupancyCertificates.push(certificate);
+    return certificate;
+  }
+
+  async updateOccupancyCertificate(id: string, certData: Partial<OccupancyCertificate>): Promise<OccupancyCertificate | undefined> {
+    const index = this.occupancyCertificates.findIndex(cert => cert.id === id);
+    if (index === -1) return undefined;
+    
+    this.occupancyCertificates[index] = {
+      ...this.occupancyCertificates[index],
+      ...certData,
+      updatedAt: new Date(),
+    };
+    
+    return this.occupancyCertificates[index];
+  }
+
+  // Violation Reports methods
+  async getViolationReports(): Promise<ViolationReport[]> {
+    return this.violationReports;
+  }
+
+  async getViolationReport(id: string): Promise<ViolationReport | undefined> {
+    return this.violationReports.find(report => report.id === id);
+  }
+
+  async createViolationReport(reportData: InsertViolationReport): Promise<ViolationReport> {
+    const report: ViolationReport = {
+      id: randomUUID(),
+      reportNumber: `VR-2025-${String(this.violationReports.length + 1).padStart(4, '0')}`,
+      status: "reported",
+      violatorName: null,
+      violatorContact: null,
+      coordinates: null,
+      evidencePhotos: [],
+      inspectorName: null,
+      inspectionDate: null,
+      resolution: null,
+      fineAmount: null,
+      paidAmount: 0,
+      paymentStatus: "pending",
+      resolvedDate: null,
+      ...reportData,
+      reportDate: new Date(),
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+    this.violationReports.push(report);
+    return report;
+  }
+
+  async updateViolationReport(id: string, reportData: Partial<ViolationReport>): Promise<ViolationReport | undefined> {
+    const index = this.violationReports.findIndex(report => report.id === id);
+    if (index === -1) return undefined;
+    
+    this.violationReports[index] = {
+      ...this.violationReports[index],
+      ...reportData,
+      updatedAt: new Date(),
+    };
+    
+    return this.violationReports[index];
+  }
+
+  // Payment Transactions methods
+  async getPaymentTransactions(): Promise<PaymentTransaction[]> {
+    return this.paymentTransactions;
+  }
+
+  async getPaymentTransaction(id: string): Promise<PaymentTransaction | undefined> {
+    return this.paymentTransactions.find(transaction => transaction.id === id);
+  }
+
+  async getPaymentsByReference(referenceType: string, referenceId: string): Promise<PaymentTransaction[]> {
+    return this.paymentTransactions.filter(
+      transaction => transaction.referenceType === referenceType && transaction.referenceId === referenceId
+    );
+  }
+
+  async createPaymentTransaction(transactionData: InsertPaymentTransaction): Promise<PaymentTransaction> {
+    const transaction: PaymentTransaction = {
+      id: randomUUID(),
+      transactionId: `TXN-2025-${String(this.paymentTransactions.length + 1).padStart(4, '0')}`,
+      status: "pending",
+      currency: "YER",
+      paymentGateway: null,
+      gatewayTransactionId: null,
+      paidAt: null,
+      description: null,
+      receiptNumber: null,
+      processedBy: null,
+      notes: null,
+      payerContact: null,
+      ...transactionData,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+    this.paymentTransactions.push(transaction);
+    return transaction;
+  }
+
+  async updatePaymentTransaction(id: string, transactionData: Partial<PaymentTransaction>): Promise<PaymentTransaction | undefined> {
+    const index = this.paymentTransactions.findIndex(transaction => transaction.id === id);
+    if (index === -1) return undefined;
+    
+    this.paymentTransactions[index] = {
+      ...this.paymentTransactions[index],
+      ...transactionData,
+      updatedAt: new Date(),
+    };
+    
+    return this.paymentTransactions[index];
+  }
+
+  // Enhanced Statistics methods
   async getStats(): Promise<{
     newRequests: number;
     inProgress: number;
     underReview: number;
     completed: number;
+    totalCitizens: number;
+    activeBuildingPermits: number;
+    pendingPermits: number;
+    totalRevenue: number;
   }> {
     const newRequests = this.surveyRequests.filter(req => req.status === "submitted").length;
     const inProgress = this.surveyRequests.filter(req => req.status === "in_progress").length;
     const underReview = this.surveyRequests.filter(req => req.status === "under_review").length;
     const completed = this.surveyRequests.filter(req => req.status === "completed").length;
+    
+    const totalCitizens = this.citizens.length;
+    const activeBuildingPermits = this.buildingPermits.filter(permit => permit.status === "approved").length;
+    const pendingPermits = this.buildingPermits.filter(permit => permit.status === "submitted").length;
+    const totalRevenue = this.paymentTransactions
+      .filter(payment => payment.status === "completed")
+      .reduce((sum, payment) => sum + payment.amount, 0);
 
     return {
       newRequests,
       inProgress,
       underReview,
       completed,
+      totalCitizens,
+      activeBuildingPermits,
+      pendingPermits,
+      totalRevenue,
     };
   }
 }

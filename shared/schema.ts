@@ -126,6 +126,194 @@ export const reviewComments = pgTable("review_comments", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+// Citizens - المواطنين
+export const citizens = pgTable("citizens", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  nationalId: varchar("national_id").notNull().unique(),
+  firstName: text("first_name").notNull(),
+  lastName: text("last_name").notNull(),
+  phone: varchar("phone").notNull(),
+  email: varchar("email"),
+  address: text("address").notNull(),
+  district: text("district").notNull(),
+  governorate: text("governorate").notNull(),
+  dateOfBirth: timestamp("date_of_birth"),
+  gender: varchar("gender"), // male, female
+  status: varchar("status").notNull().default("active"), // active, inactive, suspended
+  totalRequests: integer("total_requests").default(0),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Engineering Offices - المكاتب الهندسية
+export const engineeringOffices = pgTable("engineering_offices", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  officeName: text("office_name").notNull(),
+  licenseNumber: varchar("license_number").notNull().unique(),
+  ownerName: text("owner_name").notNull(),
+  ownerNationalId: varchar("owner_national_id").notNull(),
+  phone: varchar("phone").notNull(),
+  email: varchar("email"),
+  address: text("address").notNull(),
+  district: text("district").notNull(),
+  governorate: text("governorate").notNull(),
+  specializations: jsonb("specializations").default('[]'), // architectural, structural, electrical, etc.
+  classification: varchar("classification").notNull(), // grade_a, grade_b, grade_c
+  status: varchar("status").notNull().default("pending"), // pending, approved, suspended, rejected
+  establishedDate: timestamp("established_date"),
+  approvedDate: timestamp("approved_date"),
+  rating: real("rating").default(0),
+  totalProjects: integer("total_projects").default(0),
+  activeProjects: integer("active_projects").default(0),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Contractors - المقاولين
+export const contractors = pgTable("contractors", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  contractorName: text("contractor_name").notNull(),
+  licenseNumber: varchar("license_number").notNull().unique(),
+  ownerName: text("owner_name").notNull(),
+  ownerNationalId: varchar("owner_national_id").notNull(),
+  phone: varchar("phone").notNull(),
+  email: varchar("email"),
+  address: text("address").notNull(),
+  district: text("district").notNull(),
+  governorate: text("governorate").notNull(),
+  specializations: jsonb("specializations").default('[]'), // residential, commercial, infrastructure
+  classification: varchar("classification").notNull(), // grade_1, grade_2, grade_3, grade_4, grade_5
+  maxProjectValue: real("max_project_value"), // Maximum allowed project value based on classification
+  status: varchar("status").notNull().default("pending"),
+  establishedDate: timestamp("established_date"),
+  approvedDate: timestamp("approved_date"),
+  rating: real("rating").default(0),
+  totalProjects: integer("total_projects").default(0),
+  activeProjects: integer("active_projects").default(0),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Building Permits - رخص البناء
+export const buildingPermits = pgTable("building_permits", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  permitNumber: varchar("permit_number").notNull().unique(),
+  applicantId: varchar("applicant_id").notNull(), // citizen ID
+  engineeringOfficeId: varchar("engineering_office_id"),
+  contractorId: varchar("contractor_id"),
+  projectName: text("project_name").notNull(),
+  projectType: varchar("project_type").notNull(), // residential, commercial, industrial, mixed
+  buildingType: varchar("building_type").notNull(), // house, villa, apartment_building, office, shop, warehouse
+  plotArea: real("plot_area").notNull(), // Plot area in square meters
+  buildingArea: real("building_area").notNull(), // Building area in square meters
+  totalFloors: integer("total_floors").notNull(),
+  basementFloors: integer("basement_floors").default(0),
+  estimatedCost: real("estimated_cost"),
+  location: text("location").notNull(),
+  coordinates: jsonb("coordinates"),
+  district: text("district").notNull(),
+  governorate: text("governorate").notNull(),
+  status: varchar("status").notNull().default("submitted"), // submitted, under_review, approved, rejected, expired
+  priority: varchar("priority").notNull().default("normal"), // low, normal, high, urgent
+  submitDate: timestamp("submit_date").defaultNow(),
+  reviewDate: timestamp("review_date"),
+  approvalDate: timestamp("approval_date"),
+  expiryDate: timestamp("expiry_date"),
+  issuedBy: text("issued_by"),
+  reviewNotes: text("review_notes"),
+  documents: jsonb("documents").default('[]'),
+  fees: real("fees"),
+  paidAmount: real("paid_amount").default(0),
+  paymentStatus: varchar("payment_status").default("pending"), // pending, partial, paid, refunded
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Occupancy Certificates - شهادات الإشغال
+export const occupancyCertificates = pgTable("occupancy_certificates", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  certificateNumber: varchar("certificate_number").notNull().unique(),
+  buildingPermitId: varchar("building_permit_id"), // Reference to building permit
+  applicantId: varchar("applicant_id").notNull(),
+  buildingName: text("building_name").notNull(),
+  buildingType: varchar("building_type").notNull(),
+  usageType: varchar("usage_type").notNull(), // residential, commercial, industrial, educational, medical
+  totalArea: real("total_area").notNull(),
+  location: text("location").notNull(),
+  coordinates: jsonb("coordinates"),
+  district: text("district").notNull(),
+  governorate: text("governorate").notNull(),
+  inspectionDate: timestamp("inspection_date"),
+  inspectorName: text("inspector_name"),
+  safetyCompliance: boolean("safety_compliance").default(false),
+  structuralCompliance: boolean("structural_compliance").default(false),
+  fireCompliante: boolean("fire_compliance").default(false),
+  electricalCompliance: boolean("electrical_compliance").default(false),
+  plumbingCompliance: boolean("plumbing_compliance").default(false),
+  status: varchar("status").notNull().default("submitted"),
+  issueDate: timestamp("issue_date"),
+  expiryDate: timestamp("expiry_date"),
+  issuedBy: text("issued_by"),
+  inspectionNotes: text("inspection_notes"),
+  documents: jsonb("documents").default('[]'),
+  fees: real("fees"),
+  paidAmount: real("paid_amount").default(0),
+  paymentStatus: varchar("payment_status").default("pending"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Violation Reports - تقارير المخالفات
+export const violationReports = pgTable("violation_reports", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  reportNumber: varchar("report_number").notNull().unique(),
+  violationType: varchar("violation_type").notNull(), // unauthorized_construction, safety_violation, zoning_violation
+  severity: varchar("severity").notNull(), // minor, major, critical
+  reportedBy: text("reported_by").notNull(),
+  violatorName: text("violator_name"),
+  violatorContact: text("violator_contact"),
+  location: text("location").notNull(),
+  coordinates: jsonb("coordinates"),
+  district: text("district").notNull(),
+  governorate: text("governorate").notNull(),
+  description: text("description").notNull(),
+  evidencePhotos: jsonb("evidence_photos").default('[]'),
+  inspectorName: text("inspector_name"),
+  inspectionDate: timestamp("inspection_date"),
+  status: varchar("status").notNull().default("reported"), // reported, investigating, confirmed, resolved, dismissed
+  resolution: text("resolution"),
+  fineAmount: real("fine_amount"),
+  paidAmount: real("paid_amount").default(0),
+  paymentStatus: varchar("payment_status").default("pending"),
+  reportDate: timestamp("report_date").defaultNow(),
+  resolvedDate: timestamp("resolved_date"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Payment Transactions - معاملات الدفع
+export const paymentTransactions = pgTable("payment_transactions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  transactionId: varchar("transaction_id").notNull().unique(),
+  referenceType: varchar("reference_type").notNull(), // building_permit, occupancy_certificate, survey_request, violation_fine
+  referenceId: varchar("reference_id").notNull(), // ID of the related record
+  payerName: text("payer_name").notNull(),
+  payerContact: text("payer_contact"),
+  amount: real("amount").notNull(),
+  currency: varchar("currency").default("YER"),
+  paymentMethod: varchar("payment_method").notNull(), // cash, bank_transfer, online_payment, check
+  paymentGateway: varchar("payment_gateway"), // for online payments
+  gatewayTransactionId: varchar("gateway_transaction_id"),
+  status: varchar("status").notNull().default("pending"), // pending, completed, failed, cancelled, refunded
+  paidAt: timestamp("paid_at"),
+  description: text("description"),
+  receiptNumber: varchar("receipt_number"),
+  processedBy: text("processed_by"),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 // Insert schemas
 export const insertSurveyorSchema = createInsertSchema(surveyors).omit({
   id: true,
@@ -166,7 +354,56 @@ export const insertReviewCommentSchema = createInsertSchema(reviewComments).omit
   createdAt: true,
 });
 
-// Types
+// New schema validations for expanded services
+export const insertCitizenSchema = createInsertSchema(citizens).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertEngineeringOfficeSchema = createInsertSchema(engineeringOffices).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertContractorSchema = createInsertSchema(contractors).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertBuildingPermitSchema = createInsertSchema(buildingPermits).omit({
+  id: true,
+  permitNumber: true,
+  submitDate: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertOccupancyCertificateSchema = createInsertSchema(occupancyCertificates).omit({
+  id: true,
+  certificateNumber: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertViolationReportSchema = createInsertSchema(violationReports).omit({
+  id: true,
+  reportNumber: true,
+  reportDate: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertPaymentTransactionSchema = createInsertSchema(paymentTransactions).omit({
+  id: true,
+  transactionId: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+// Original Types
 export type Surveyor = typeof surveyors.$inferSelect;
 export type InsertSurveyor = z.infer<typeof insertSurveyorSchema>;
 
@@ -187,3 +424,25 @@ export type InsertSurveySession = z.infer<typeof insertSurveySessionSchema>;
 
 export type ReviewComment = typeof reviewComments.$inferSelect;
 export type InsertReviewComment = z.infer<typeof insertReviewCommentSchema>;
+
+// New Types for expanded services
+export type Citizen = typeof citizens.$inferSelect;
+export type InsertCitizen = z.infer<typeof insertCitizenSchema>;
+
+export type EngineeringOffice = typeof engineeringOffices.$inferSelect;
+export type InsertEngineeringOffice = z.infer<typeof insertEngineeringOfficeSchema>;
+
+export type Contractor = typeof contractors.$inferSelect;
+export type InsertContractor = z.infer<typeof insertContractorSchema>;
+
+export type BuildingPermit = typeof buildingPermits.$inferSelect;
+export type InsertBuildingPermit = z.infer<typeof insertBuildingPermitSchema>;
+
+export type OccupancyCertificate = typeof occupancyCertificates.$inferSelect;
+export type InsertOccupancyCertificate = z.infer<typeof insertOccupancyCertificateSchema>;
+
+export type ViolationReport = typeof violationReports.$inferSelect;
+export type InsertViolationReport = z.infer<typeof insertViolationReportSchema>;
+
+export type PaymentTransaction = typeof paymentTransactions.$inferSelect;
+export type InsertPaymentTransaction = z.infer<typeof insertPaymentTransactionSchema>;
