@@ -1,0 +1,1 @@
+export { default as GISDataManagement } from './gis-data-management';

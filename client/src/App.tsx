@@ -45,6 +45,7 @@ import InspectionManagement from "@/pages/inspection-management";
 import InspectorFieldApp from "@/pages/inspector-field-app";
 import DigitalCertificates from "@/pages/digital-certificates";
 import NotificationsSystem from "@/pages/notifications-system";
+import { GISDataManagement } from "@/pages/gis";
 import NotFound from "@/pages/not-found";
 
 function Navigation() {
@@ -60,6 +61,7 @@ function Navigation() {
     { name: "تطبيق المفتش", href: "/inspector-field-app", icon: Smartphone },
     { name: "الشهادات الرقمية", href: "/digital-certificates", icon: ClipboardCheck },
     { name: "نظام الإشعارات", href: "/notifications", icon: MessageSquare },
+    { name: "إدارة البيانات الجغرافية", href: "/gis-management", icon: MapPin },
     { name: "إدارة المهنيين", href: "/professionals", icon: Users },
     { name: "تطبيق المساح", href: "/field-app", icon: Smartphone },
     { name: "التطبيق النظيف", href: "/clean-field-app", icon: MapPin },
@@ -181,6 +183,7 @@ function Router() {
           <Route path="/inspector-field-app" component={InspectorFieldApp} />
           <Route path="/digital-certificates" component={DigitalCertificates} />
           <Route path="/notifications" component={NotificationsSystem} />
+          <Route path="/gis-management" component={GISDataManagement} />
           <Route path="/professionals" component={ProfessionalsManagement} />
           <Route path="/field-app" component={FieldApp} />
           <Route path="/clean-field-app" component={CleanFieldApp} />

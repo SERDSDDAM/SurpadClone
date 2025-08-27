@@ -1,16 +1,23 @@
 import { Router, Request, Response } from 'express';
 import { db } from '../db';
-// GIS schema will be implemented in next phase
-// import { 
-//   governorates, 
-//   districts, 
-//   subDistricts, 
-//   sectors, 
-//   neighborhoodUnits, 
-//   blocks, 
-//   streets,
-//   streetNeighborhoodBoundaries 
-// } from '../../shared/gis-schema';
+import { 
+  governorates, 
+  districts, 
+  subDistricts, 
+  sectors, 
+  neighborhoodUnits, 
+  blocks, 
+  streets,
+  streetNeighborhoodBoundaries,
+  insertGovernorateSchema,
+  insertDistrictSchema,
+  insertSubDistrictSchema,
+  insertSectorSchema,
+  insertNeighborhoodUnitSchema,
+  insertBlockSchema,
+  insertStreetSchema,
+  insertStreetNeighborhoodBoundarySchema
+} from '../../shared/gis-schema';
 import { eq, and, sql } from 'drizzle-orm';
 import { z } from 'zod';
 
@@ -280,41 +287,143 @@ router.get('/streets/neighborhood/:neighborhoodId', async (req: Request, res: Re
   }
 });
 
-// GET /api/gis/statistics - إحصائيات النظام الجغرافي (نموذج تجريبي)
+// GET /api/gis/statistics - إحصائيات النظام الجغرافي الشاملة
 router.get('/statistics', async (req: Request, res: Response) => {
   try {
-    // إحصائيات تجريبية للنظام الجغرافي
-    const gisStatistics = {
-      administrativeDivisions: {
-        governorates: 8, // محافظات جاهزة للنظام التجريبي
-        districts: 25, // مديريات رئيسية
-        subDistricts: 75, // عزل أساسية
-        sectors: 200, // قطاعات مخططة
-        neighborhoodUnits: 500, // وحدات جوار
-        blocks: 2000, // بلوكات سكنية وتجارية
+    // إحصائيات شاملة من قاعدة البيانات
+    const [
+      governoratesCount,
+      districtsCount,
+      subDistrictsCount,
+      sectorsCount,
+      neighborhoodUnitsCount,
+      blocksCount,
+      streetsCount
+    ] = await Promise.all([
+      db.select({ count: sql<number>`count(*)` }).from(governorates),
+      db.select({ count: sql<number>`count(*)` }).from(districts),
+      db.select({ count: sql<number>`count(*)` }).from(subDistricts),
+      db.select({ count: sql<number>`count(*)` }).from(sectors),
+      db.select({ count: sql<number>`count(*)` }).from(neighborhoodUnits),
+      db.select({ count: sql<number>`count(*)` }).from(blocks),
+      db.select({ count: sql<number>`count(*)` }).from(streets)
+    ]);
+
+    // إحصائيات التغطية الجغرافية
+    const [
+      governoratesWithGeometry,
+      districtsWithGeometry,
+      totalRecords
+    ] = await Promise.all([
+      db.select({ count: sql<number>`count(*)` }).from(governorates).where(sql`geometry IS NOT NULL`),
+      db.select({ count: sql<number>`count(*)` }).from(districts).where(sql`geometry IS NOT NULL`),
+      db.select({ count: sql<number>`count(*)` }).from(governorates)
+        .unionAll(db.select({ count: sql<number>`count(*)` }).from(districts))
+        .unionAll(db.select({ count: sql<number>`count(*)` }).from(subDistricts))
+    ]);
+
+    const withGeometry = (governoratesWithGeometry[0]?.count || 0) + (districtsWithGeometry[0]?.count || 0);
+    const totalCount = (governoratesCount[0]?.count || 0) + (districtsCount[0]?.count || 0) + (subDistrictsCount[0]?.count || 0);
+    const coveragePercentage = totalCount > 0 ? Math.round((withGeometry / totalCount) * 100) : 0;
+
+    const statistics = {
+      total: {
+        governorates: governoratesCount[0]?.count || 0,
+        districts: districtsCount[0]?.count || 0,
+        subDistricts: subDistrictsCount[0]?.count || 0,
+        sectors: sectorsCount[0]?.count || 0,
+        neighborhoodUnits: neighborhoodUnitsCount[0]?.count || 0,
+        blocks: blocksCount[0]?.count || 0,
+        streets: streetsCount[0]?.count || 0
       },
-      infrastructure: {
-        streets: 1500, // شوارع مرقمنة
-        digitalizedMaps: 50, // خرائط مرقمنة
-        uploadedShapefiles: 12, // ملفات شيب مرفوعة
+      coverage: {
+        withGeometry: withGeometry,
+        totalRecords: totalCount,
+        percentage: coveragePercentage
       },
-      geography: {
-        totalAreaSqKm: 527968, // المساحة الإجمالية لليمن
-        totalPopulation: 32981640, // التعداد السكاني التقديري
-        coveragePercentage: 25, // نسبة التغطية الحالية
-      },
-      systemStatus: {
-        lastUpdate: new Date().toISOString(),
-        activeUsers: 45,
-        pendingSurveyRequests: 12,
-        completedSurveys: 238
-      }
+      lastUpdated: new Date().toISOString()
     };
     
-    res.json({ gisStatistics });
+    res.json(statistics);
   } catch (error) {
     console.error('Error fetching GIS statistics:', error);
     res.status(500).json({ error: 'Failed to fetch GIS statistics' });
+  }
+});
+
+// POST /api/gis/upload - رفع البيانات الجغرافية بصيغ مختلفة
+router.post('/upload', isAuthenticated, async (req: Request, res: Response) => {
+  try {
+    // This is a placeholder for file upload processing
+    // In a real implementation, this would use multer for file handling
+    // and libraries like GDAL for shapefile processing
+    
+    res.json({
+      success: true,
+      message: "File upload endpoint ready - implement with multer and GDAL",
+      supportedFormats: ["JSON", "GeoJSON", "Shapefile", "ZIP"],
+      note: "Integration with file processing libraries pending"
+    });
+  } catch (error) {
+    console.error('Error in upload endpoint:', error);
+    res.status(500).json({ error: 'Upload endpoint error' });
+  }
+});
+
+// POST /api/gis/governorates - إضافة محافظة جديدة
+router.post('/governorates', isAuthenticated, async (req: Request, res: Response) => {
+  try {
+    const validatedData = insertGovernorateSchema.parse(req.body);
+    const [newGovernorate] = await db.insert(governorates).values([validatedData]).returning();
+    res.status(201).json(newGovernorate);
+  } catch (error) {
+    console.error('Error creating governorate:', error);
+    res.status(400).json({ error: 'Invalid governorate data' });
+  }
+});
+
+// PUT /api/gis/governorates/:id - تحديث محافظة
+router.put('/governorates/:id', isAuthenticated, async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const validatedData = insertGovernorateSchema.partial().parse(req.body);
+    
+    const [updatedGovernorate] = await db
+      .update(governorates)
+      .set({ 
+        nameAr: validatedData.nameAr,
+        nameEn: validatedData.nameEn,
+        code: validatedData.code,
+        capitalCity: validatedData.capitalCity,
+        population: validatedData.population,
+        area: validatedData.area,
+        governor: validatedData.governor,
+        isActive: validatedData.isActive,
+        updatedAt: new Date() 
+      })
+      .where(eq(governorates.id, parseInt(id)))
+      .returning();
+    
+    if (!updatedGovernorate) {
+      return res.status(404).json({ error: 'Governorate not found' });
+    }
+    
+    res.json(updatedGovernorate);
+  } catch (error) {
+    console.error('Error updating governorate:', error);
+    res.status(400).json({ error: 'Invalid update data' });
+  }
+});
+
+// POST /api/gis/districts - إضافة مديرية جديدة
+router.post('/districts', isAuthenticated, async (req: Request, res: Response) => {
+  try {
+    const validatedData = insertDistrictSchema.parse(req.body);
+    const [newDistrict] = await db.insert(districts).values([validatedData]).returning();
+    res.status(201).json(newDistrict);
+  } catch (error) {
+    console.error('Error creating district:', error);
+    res.status(400).json({ error: 'Invalid district data' });
   }
 });
 

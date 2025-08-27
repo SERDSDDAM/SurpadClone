@@ -544,8 +544,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const certificate = await storage.updateOccupancyCertificate(req.params.id, {
         status: "signed",
         issuedBy: req.body.signedBy,
-        issuedDate: new Date(),
-        issueDate: new Date()
+        issuedDate: new Date()
       });
       
       if (!certificate) {
