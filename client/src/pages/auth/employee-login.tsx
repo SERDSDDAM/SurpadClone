@@ -63,14 +63,14 @@ export default function EmployeeLogin() {
       
       // Redirect based on role
       const role = response.user.role;
-      if (role === "admin") {
-        window.location.href = "/admin";
+      if (role === "admin" || role === "super_admin") {
+        window.location.href = "/analytics-dashboard";
       } else if (role === "inspector") {
         window.location.href = "/inspector-field-app";
       } else if (role === "surveyor") {
         window.location.href = "/field-app";
       } else {
-        window.location.href = "/dashboard";
+        window.location.href = "/employee-dashboard";
       }
     },
     onError: (error: any) => {

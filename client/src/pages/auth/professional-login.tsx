@@ -63,9 +63,9 @@ export default function ProfessionalLogin() {
       
       // Redirect based on role
       const role = response.user.role;
-      if (role === "engineer") {
+      if (role === "engineer" || role === "engineer_owner") {
         window.location.href = "/engineering-office";
-      } else if (role === "contractor") {
+      } else if (role === "contractor" || role === "contractor_owner") {
         window.location.href = "/contractor-portal";
       } else {
         window.location.href = "/professionals";

@@ -26,6 +26,11 @@ import CitizenLogin from "@/pages/auth/citizen-login";
 import ProfessionalLogin from "@/pages/auth/professional-login";
 import EmployeeLogin from "@/pages/auth/employee-login";
 import PortalSelection from "@/pages/auth/portal-selection";
+import CitizenDashboard from "@/pages/citizen/citizen-dashboard";
+import SmartEmployeeDashboard from "@/pages/employee/smart-employee-dashboard";
+import AnalyticsDashboard from "@/pages/admin/analytics-dashboard";
+import RoleManagement from "@/pages/admin/role-management";
+import UnifiedRequestDetails from "@/pages/citizen/unified-request-details";
 import CleanFieldApp from "@/pages/clean-field-app";
 import SurveyorDashboard from "@/pages/surveyor-dashboard";
 import Review from "@/pages/review";
@@ -160,8 +165,7 @@ function Router() {
       {!hideNavigation && <Navigation />}
       <main className={hideNavigation ? "" : "max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6"}>
         <Switch>
-          <Route path="/" component={SurveyorDashboard} />
-          <Route path="/dashboard" component={SurveyorDashboard} />
+          <Route path="/" component={PortalSelection} />
           <Route path="/admin" component={Dashboard} />
           <Route path="/dashboard" component={Dashboard} />
           <Route path="/citizen-portal" component={CitizenPortal} />
@@ -180,6 +184,11 @@ function Router() {
           <Route path="/auth/citizen-login" component={CitizenLogin} />
           <Route path="/auth/professional-login" component={ProfessionalLogin} />
           <Route path="/auth/employee-login" component={EmployeeLogin} />
+          <Route path="/citizen-dashboard" component={CitizenDashboard} />
+          <Route path="/employee-dashboard" component={SmartEmployeeDashboard} />
+          <Route path="/analytics-dashboard" component={AnalyticsDashboard} />
+          <Route path="/role-management" component={RoleManagement} />
+          <Route path="/request-details/:id" component={UnifiedRequestDetails} />
           <Route component={NotFound} />
         </Switch>
       </main>

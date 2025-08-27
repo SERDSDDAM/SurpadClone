@@ -61,7 +61,7 @@ export default function CitizenLogin() {
       });
       
       // Redirect to citizen dashboard
-      window.location.href = "/citizen-portal";
+      window.location.href = "/citizen-dashboard";
     },
     onError: (error: any) => {
       toast({
