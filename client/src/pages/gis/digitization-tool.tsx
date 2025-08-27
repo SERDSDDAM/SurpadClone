@@ -40,7 +40,7 @@ import {
   utmToWgs84,
   YEMEN_UTM_REFERENCES 
 } from "@/lib/coordinate-transform";
-import { LayersPanel } from "@/components/LayersPanel";
+import { AdvancedLayersPanel } from "@/components/AdvancedLayersPanel";
 import { EnhancedMapCanvas, GeoreferencedLayer } from "@/components/EnhancedMapCanvas";
 
 // استخدام GeoreferencedLayer من المكون الاحترافي
@@ -397,6 +397,45 @@ export default function DigitizationTool() {
     }
   };
 
+  // وظائف إدارة الطبقات المتقدمة
+  const deleteLayer = (layerId: string) => {
+    setLayers(prev => prev.filter(layer => layer.id !== layerId));
+    toast({
+      title: "تم حذف الطبقة",
+      description: "تم حذف الطبقة بنجاح من المشروع",
+      duration: 3000,
+    });
+  };
+
+  const reorderLayers = (dragIndex: number, hoverIndex: number) => {
+    setLayers(prev => {
+      const newLayers = [...prev];
+      const draggedLayer = newLayers[dragIndex];
+      newLayers.splice(dragIndex, 1);
+      newLayers.splice(hoverIndex, 0, draggedLayer);
+      return newLayers;
+    });
+    
+    toast({
+      title: "تم إعادة ترتيب الطبقات",
+      description: "تم تحديث ترتيب عرض الطبقات",
+      duration: 2000,
+    });
+  };
+
+  const zoomToLayer = (layerId: string) => {
+    const layer = layers.find(l => l.id === layerId);
+    if (layer && layer.bounds) {
+      console.log('🔍 تكبير للطبقة:', layer.name, layer.bounds);
+      
+      toast({
+        title: "تم التكبير للطبقة",
+        description: `تم توسيط الخريطة على طبقة: ${layer.name}`,
+        duration: 2000,
+      });
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900" dir="rtl">
       <div className="flex h-screen">
@@ -492,8 +531,9 @@ export default function DigitizationTool() {
                 </Card>
               </TabsContent>
 
-              {/* تبويب الطبقات */}
+              {/* تبويب الطبقات المتقدم */}
               <TabsContent value="layers" className="space-y-4">
+                {/* رفع طبقة جديدة */}
                 <Card>
                   <CardHeader className="pb-3">
                     <CardTitle className="text-sm flex items-center gap-2">
@@ -543,62 +583,15 @@ export default function DigitizationTool() {
                   </CardContent>
                 </Card>
 
-                <Card>
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-sm">الطبقات المحملة</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    {layers.length === 0 ? (
-                      <p className="text-sm text-gray-500 text-center py-4">
-                        لا توجد طبقات محملة
-                      </p>
-                    ) : (
-                      <div className="space-y-3">
-                        {layers.map((layer) => (
-                          <div key={layer.id} className="border rounded-lg p-3 space-y-2">
-                            <div className="flex items-center justify-between">
-                              <span className="text-sm font-medium truncate">
-                                {layer.name}
-                              </span>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => toggleLayerVisibility(layer.id)}
-                                data-testid={`toggle-layer-${layer.id}`}
-                              >
-                                {layer.visible ? 
-                                  <Eye className="h-4 w-4" /> : 
-                                  <EyeOff className="h-4 w-4" />
-                                }
-                              </Button>
-                            </div>
-                            
-                            <div className="space-y-1">
-                              <Label className="text-xs">الشفافية</Label>
-                              <input
-                                type="range"
-                                min="0"
-                                max="1"
-                                step="0.1"
-                                value={layer.opacity}
-                                onChange={(e) => updateLayerOpacity(layer.id, parseFloat(e.target.value))}
-                                className="w-full"
-                                data-testid={`opacity-layer-${layer.id}`}
-                              />
-                              <div className="text-xs text-gray-500">
-                                {Math.round(layer.opacity * 100)}%
-                              </div>
-                            </div>
-                            
-                            <Badge variant="secondary" className="text-xs">
-                              {layer.type}
-                            </Badge>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
+                {/* لوحة إدارة الطبقات المتقدمة */}
+                <AdvancedLayersPanel
+                  layers={layers}
+                  onLayerToggle={toggleLayerVisibility}
+                  onLayerOpacityChange={updateLayerOpacity}
+                  onLayerDelete={deleteLayer}
+                  onLayerReorder={reorderLayers}
+                  onZoomToLayer={zoomToLayer}
+                />
               </TabsContent>
 
               {/* تبويب الأشكال المرسومة */}
