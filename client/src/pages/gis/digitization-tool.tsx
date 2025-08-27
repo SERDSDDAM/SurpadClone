@@ -34,6 +34,12 @@ import {
   LocateFixed
 } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
+import { 
+  transformImageBoundsForDisplay, 
+  parseGeoTiffProjection,
+  utmToWgs84,
+  YEMEN_UTM_REFERENCES 
+} from "@/lib/coordinate-transform";
 
 interface GeoreferencedLayer {
   id: string;
@@ -191,9 +197,13 @@ export default function DigitizationTool() {
       });
     },
     onSuccess: (data) => {
+      const coordinateInfo = data.layer.needsReprojection 
+        ? `تم تحويل الإحداثيات من ${data.layer.sourceCoordinateSystem} إلى WGS 84`
+        : `نظام الإحداثيات: ${data.layer.sourceCoordinateSystem}`;
+        
       toast({
-        title: "✅ تم رفع الطبقة بنجاح",
-        description: `تم رفع وتسجيل الطبقة الجغرافية: ${data.layer.name}`
+        title: "✅ تم رفع الطبقة بنجاح", 
+        description: `${data.layer.name} - ${coordinateInfo}`
       });
       
       // إضافة الطبقة الجديدة إلى القائمة
@@ -297,12 +307,37 @@ export default function DigitizationTool() {
         description: "تسجيل الطبقة الجغرافية في النظام"
       });
 
+      // تحليل نوع الملف وتحديد نظام الإحداثيات
+      const isGeoTiff = fileExtension === '.tiff' || fileExtension === '.tif';
+      const isYemeniSurveyFile = isGeoTiff; // نفترض أن ملفات TIFF من اليمن تستخدم UTM Zone 38N
+      
+      // إحداثيات افتراضية بنظام UTM Zone 38N لمنطقة صنعاء
+      const defaultUtmBounds: [[number, number], [number, number]] = [
+        [398000, 1698000], // النقطة الجنوبية الغربية (UTM)
+        [402000, 1702000]  // النقطة الشمالية الشرقية (UTM)
+      ];
+      
+      // تحويل الإحداثيات إلى WGS 84 للعرض
+      const displayBounds = isYemeniSurveyFile 
+        ? transformImageBoundsForDisplay(defaultUtmBounds, { 
+            spatialReference: 'EPSG:32638',
+            projection: 'UTM Zone 38N'
+          })
+        : [[15.2, 44.1], [15.5, 44.3]]; // إحداثيات WGS 84 افتراضية
+
       const metadata = {
         name: file.name.replace(/\.[^/.]+$/, ""),
         fileSize: file.size,
-        coordinateSystem: 'EPSG:4326', // افتراضي، يمكن تحسينه لاحقاً بقراءة البيانات من GeoTIFF
-        bounds: [[15.2, 44.1], [15.5, 44.3]], // صنعاء - افتراضي
-        hasGeoreferencing: fileExtension === '.tiff' || fileExtension === '.tif'
+        coordinateSystem: isYemeniSurveyFile ? 'EPSG:32638' : 'EPSG:4326',
+        sourceCoordinateSystem: isYemeniSurveyFile ? 'UTM Zone 38N' : 'WGS 84',
+        bounds: displayBounds,
+        originalUtmBounds: isYemeniSurveyFile ? defaultUtmBounds : null,
+        hasGeoreferencing: isGeoTiff,
+        needsReprojection: isYemeniSurveyFile,
+        projectionInfo: parseGeoTiffProjection({
+          spatialReference: isYemeniSurveyFile ? 'EPSG:32638' : 'EPSG:4326',
+          projection: isYemeniSurveyFile ? 'UTM Zone 38N' : 'WGS 84'
+        })
       };
 
       await confirmUploadMutation.mutateAsync({
