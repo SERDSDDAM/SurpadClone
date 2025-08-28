@@ -221,6 +221,93 @@ export default function SimpleDigitizationTool() {
     }
   }, [layers]);
 
+  // دالة استقصاء حالة الطبقة
+  const startPollingLayer = useCallback((layerId: string) => {
+    console.log(`🔄 بدء استقصاء الطبقة: ${layerId}`);
+    
+    const maxAttempts = 20; // حد أقصى 60 ثانية (20 × 3 ثوانٍ)
+    let attempts = 0;
+    
+    const poll = async () => {
+      if (attempts >= maxAttempts) {
+        console.warn(`⏰ انتهى وقت انتظار الطبقة: ${layerId}`);
+        setLayers(prev => prev.map(layer => 
+          layer.id === layerId 
+            ? { ...layer, status: 'timeout', error: 'انتهى وقت المعالجة' }
+            : layer
+        ));
+        return;
+      }
+      
+      attempts++;
+      
+      try {
+        const response = await fetch(`/api/gis/layers/${layerId}`);
+        const result = await response.json();
+        
+        if (result.success && result.imageUrl) {
+          console.log(`✅ الطبقة جاهزة: ${layerId}`);
+          
+          // تحديث الطبقة بالمعلومات الكاملة
+          setLayers(prev => {
+            const updated = prev.map(layer => 
+              layer.id === layerId 
+                ? { 
+                    ...layer, 
+                    status: 'processed',
+                    imageUrl: result.imageUrl,
+                    bounds: result.bounds,
+                    width: result.width,
+                    height: result.height,
+                    crs: result.crs
+                  }
+                : layer
+            );
+            localStorage.setItem('gis-layers', JSON.stringify(updated));
+            return updated;
+          });
+          
+          toast({
+            title: "تمت معالجة الطبقة",
+            description: "الطبقة جاهزة للعرض على الخريطة",
+          });
+          
+          return;
+        }
+        
+        if (result.status === 'error') {
+          console.error(`❌ خطأ في معالجة الطبقة: ${layerId}`, result.error);
+          
+          setLayers(prev => prev.map(layer => 
+            layer.id === layerId 
+              ? { ...layer, status: 'error', error: result.error }
+              : layer
+          ));
+          
+          toast({
+            title: "خطأ في المعالجة",
+            description: result.error || "فشل في معالجة الطبقة",
+            variant: "destructive",
+          });
+          
+          return;
+        }
+        
+        // لا تزال قيد المعالجة، إعادة المحاولة
+        setTimeout(poll, 3000);
+        
+      } catch (error) {
+        console.error(`❌ خطأ في استقصاء الطبقة ${layerId}:`, error);
+        
+        // إعادة المحاولة في حالة خطأ الشبكة
+        setTimeout(poll, 5000);
+      }
+    };
+    
+    // بدء الاستقصاء بعد ثانية واحدة
+    setTimeout(poll, 1000);
+  }, [toast]);
+
   // معالج تحديث الإحداثيات
   const handleCoordinatesChange = useCallback((coords: { lat: number; lng: number }) => {
     setCoordinates(coords);
@@ -239,8 +326,8 @@ export default function SimpleDigitizationTool() {
       
       console.log('📤 إرسال الملف باستخدام FormData');
 
-      // رفع الملف
-      const response = await fetch('/api/gis/upload-geotiff-zip', {
+      // رفع الملف باستخدام النظام الجديد
+      const response = await fetch('/api/gis/upload', {
         method: 'POST',
         body: formData
       });
@@ -265,16 +352,15 @@ export default function SimpleDigitizationTool() {
         const layerData = await layerResponse.json();
         
         if (layerData.success) {
-          // إنشاء كائن طبقة جديدة مع معلومات الخريطة
+          // إنشاء كائن طبقة جديدة في حالة المعالجة
           const newLayer = {
             id: result.layerId,
             name: result.fileName.replace(/\.[^/.]+$/, ""), // إزالة امتداد الملف
             fileName: result.fileName,
-            status: 'processed',
+            status: 'processing',
             fileSize: result.fileSize,
             uploadDate: new Date().toISOString(),
             visible: true,
-            imageUrl: layerData.imageUrl,
             bounds: layerData.bounds
           };
           

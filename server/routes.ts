@@ -43,6 +43,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // GIS routes
   app.use("/api/gis", gisRoutes);
+  
+  // GIS upload routes (معالجة GeoTIFF الحقيقية)
+  const gisUploadRoutes = await import('./routes/gis-upload');
+  app.use('/api/gis', gisUploadRoutes.default);
 
   // APIs خاصة لطبقات الخرائط
   app.get('/api/gis/layers/:layerId', async (req, res) => {

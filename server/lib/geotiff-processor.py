@@ -29,6 +29,10 @@ def process_geotiff(input_path, output_dir):
             # قراءة البيانات
             data = src.read()
             
+            # التحقق من الأبعاد
+            if data.shape[0] == 0 or len(data.shape) < 2:
+                raise ValueError("البيانات غير صالحة أو فارغة")
+            
             # تحويل إلى WGS84 إذا لم تكن كذلك
             if src.crs and src.crs != 'EPSG:4326':
                 print("🔄 تحويل إلى WGS84...")
@@ -38,7 +42,7 @@ def process_geotiff(input_path, output_dir):
                 )
                 
                 # إنشاء مصفوفة جديدة
-                dst_data = np.zeros((src.count, height, width), dtype=src.dtypes[0])
+                dst_data = np.zeros((src.count, height, width), dtype=src.dtypes[0] if src.dtypes else np.uint8)
                 
                 reproject(
                     source=data,
