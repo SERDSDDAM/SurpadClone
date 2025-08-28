@@ -28,7 +28,7 @@ export interface GeoreferencedLayer {
   visible: boolean;
   opacity: number;
   bounds?: [[number, number], [number, number]]; // UTM bounds [[minX, minY], [maxX, maxY]]
-  url?: string;
+  url: string; // جعل url مطلوباً
   coordinateSystem?: string;
   originalBounds?: [[number, number], [number, number]]; // الحدود الأصلية قبل التحويل
 }
@@ -47,7 +47,7 @@ export function ProfessionalMapCanvas({
   onZoomToLayer 
 }: ProfessionalMapCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const imageCache = useRef(new Map<string, HTMLImageElement>());
+  const imageCache = useRef<Map<string, HTMLImageElement>>(new Map());
   
   // حالات التفاعل
   const [zoom, setZoom] = useState(1);

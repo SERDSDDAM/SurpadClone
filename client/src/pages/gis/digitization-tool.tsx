@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -491,7 +491,7 @@ export default function DigitizationTool() {
                           onClick={() => setActiveTool(tool.id)}
                           data-testid={`tool-${tool.id}`}
                         >
-                          <IconComponent className="ml-2 h-4 w-4" />
+                          {React.createElement(IconComponent, { className: "ml-2 h-4 w-4" })}
                           {tool.name}
                         </Button>
                       );
