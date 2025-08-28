@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import SimpleCRSMapCanvas, { type SimpleGeoreferencedLayer } from '@/components/SimpleCRSMapCanvas';
+import WorldFileMapCanvas, { type ProcessedLayer } from '@/components/WorldFileMapCanvas';
 
 interface DrawnFeature {
   id: string;
@@ -42,7 +43,7 @@ export default function SimpleDigitizationTool() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   
   // حالة الطبقات والأدوات
-  const [layers, setLayers] = useState<SimpleGeoreferencedLayer[]>([]);
+  const [layers, setLayers] = useState<ProcessedLayer[]>([]);
   const [activeTool, setActiveTool] = useState<string>('hand');
   const [drawnFeatures, setDrawnFeatures] = useState<DrawnFeature[]>([]);
   const [uploadProgress, setUploadProgress] = useState(0);
@@ -80,7 +81,7 @@ export default function SimpleDigitizationTool() {
       // الخطوة 3: تأكيد الرفع ومعالجة الملف
       const confirmResponse = await apiRequest<{
         success: boolean;
-        layer: SimpleGeoreferencedLayer;
+        layer: any;
       }>('/api/gis/layers/confirm', {
         method: 'POST',
         body: JSON.stringify({
@@ -104,15 +105,25 @@ export default function SimpleDigitizationTool() {
       return confirmResponse.layer;
     },
     onSuccess: (newLayer) => {
-      setLayers(prev => [
-        ...prev,
-        {
-          ...newLayer,
-          visible: true,
-          opacity: 1.0,
-          imageUrl: `/public-objects/gis-layers/${newLayer.id}.png`
+      // تحويل البيانات لتناسب مكون WorldFileMapCanvas
+      const processedLayer: ProcessedLayer = {
+        id: newLayer.id,
+        name: newLayer.name,
+        pngUrl: newLayer.preprocessingInfo?.pngUrl || `/public-objects/gis-layers/${newLayer.id}.png`,
+        pgwUrl: newLayer.preprocessingInfo?.pgwUrl || `/public-objects/gis-layers/${newLayer.id}.pgw`,
+        prjUrl: newLayer.preprocessingInfo?.prjUrl || `/public-objects/gis-layers/${newLayer.id}.prj`,
+        bounds: newLayer.bounds,
+        visible: true,
+        opacity: 1.0,
+        coordinateSystem: newLayer.coordinateSystem,
+        metadata: {
+          width: newLayer.geospatialInfo?.dimensions?.width || 2048,
+          height: newLayer.geospatialInfo?.dimensions?.height || 2048,
+          pixelSize: newLayer.geospatialInfo?.pixelSize || { x: 10, y: -10 }
         }
-      ]);
+      };
+      
+      setLayers(prev => [...prev, processedLayer]);
       
       toast({
         title: "تم رفع الملف بنجاح",
@@ -324,7 +335,7 @@ export default function SimpleDigitizationTool() {
 
       {/* منطقة الخريطة الرئيسية */}
       <div className="flex-1 relative">
-        <SimpleCRSMapCanvas
+        <WorldFileMapCanvas
           layers={layers}
           activeTool={activeTool}
           onPointClick={(x, y, utmX, utmY) => {

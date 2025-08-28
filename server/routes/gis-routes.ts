@@ -1,4 +1,4 @@
-import { Router, Request, Response } from 'express';
+import express, { Router, Request, Response } from 'express';
 import { db } from '../db';
 import { 
   governorates, 
@@ -21,8 +21,11 @@ import {
 import { eq, and, sql } from 'drizzle-orm';
 import { z } from 'zod';
 import { extractGeoTiffMetadataPython, createGeoTiffPreview } from '../lib/python-geotiff-wrapper';
+import { PreprocessingService } from '../lib/preprocessing-service';
 import path from 'path';
 import fs from 'fs/promises';
+
+const router = express.Router();
 
 // Mock authentication middleware for now
 const isAuthenticated = (req: any, res: any, next: any) => {
@@ -30,7 +33,64 @@ const isAuthenticated = (req: any, res: any, next: any) => {
   next();
 };
 
-const router = Router();
+// Static file serving for processed PNG/World files (محاكاة التخزين السحابي)
+router.get('/public-objects/gis-layers/:filename', async (req: Request, res: Response) => {
+  try {
+    const filename = req.params.filename;
+    const processedDir = path.join(process.cwd(), 'temp-uploads', 'processed');
+    
+    // البحث عن الملف في المجلدات المختلفة
+    const possiblePaths = [
+      path.join(processedDir, filename),
+      path.join(processedDir, '*', filename) // البحث في المجلدات الفرعية
+    ];
+    
+    let filePath = null;
+    for (const searchPath of possiblePaths) {
+      if (searchPath.includes('*')) {
+        // البحث في المجلدات الفرعية
+        const glob = require('glob');
+        const matches = glob.sync(searchPath);
+        if (matches.length > 0) {
+          filePath = matches[0];
+          break;
+        }
+      } else {
+        try {
+          await fs.access(searchPath);
+          filePath = searchPath;
+          break;
+        } catch (e) {
+          continue;
+        }
+      }
+    }
+    
+    if (!filePath) {
+      return res.status(404).json({ error: 'File not found' });
+    }
+    
+    // تحديد نوع المحتوى
+    const ext = path.extname(filename).toLowerCase();
+    const contentTypes = {
+      '.png': 'image/png',
+      '.pgw': 'text/plain',
+      '.prj': 'text/plain'
+    };
+    
+    const contentType = contentTypes[ext] || 'application/octet-stream';
+    res.setHeader('Content-Type', contentType);
+    res.setHeader('Cache-Control', 'public, max-age=3600');
+    
+    // إرسال الملف
+    const fileBuffer = await fs.readFile(filePath);
+    res.send(fileBuffer);
+    
+  } catch (error) {
+    console.error('Error serving processed file:', error);
+    res.status(500).json({ error: 'Failed to serve file' });
+  }
+});
 
 // ====== APIs للاستعلامات الجغرافية ======
 
@@ -511,8 +571,9 @@ router.post('/layers/confirm', isAuthenticated, async (req: Request, res: Respon
     let processedLayer;
     
     if (isZipFile) {
-      // معالجة خاصة لملفات ZIP باستخدام Python + rasterio
-      console.log('🔄 معالجة ملف ZIP بـ Python rasterio:', fileName);
+      // المعالجة المسبقة الجديدة: تحويل GeoTIFF إلى PNG + World Files
+      console.log('🔄 المعالجة المسبقة: GeoTIFF → PNG + World Files');
+      console.log('📁 معالجة الملف:', fileName);
       
       try {
         // إنشاء ملف مؤقت لمحاكاة التحميل
@@ -523,92 +584,80 @@ router.post('/layers/confirm', isAuthenticated, async (req: Request, res: Respon
         // محاكاة حفظ الملف - في التطبيق الحقيقي سيأتي من التخزين السحابي
         await fs.writeFile(tempFilePath, 'mock zip content - in production this comes from cloud storage');
         
-        // استخراج البيانات الوصفية الحقيقية باستخدام Python
-        let pythonMetadata;
-        try {
-          pythonMetadata = await extractGeoTiffMetadataPython(tempFilePath);
-          console.log('✅ Python metadata extracted:', pythonMetadata);
-        } catch (error) {
-          console.warn('⚠️ Python extraction failed, using fallback:', error);
-          // إذا فشل Python، استخدم بيانات افتراضية مؤقتة
-          pythonMetadata = {
-            filename: fileName.replace(/\.[^/.]+$/, ""),
-            width: 2048,
-            height: 2048,
-            crs: 'EPSG:32638',
-            bounds: {
-              minX: 400000,
-              minY: 1650000,
-              maxX: 420480,
-              maxY: 1670480
-            },
-            transform: [10, 0, 400000, 0, -10, 1670480],
-            pixel_size_x: 10,
-            pixel_size_y: 10,
-            band_count: 1,
-            dtype: 'uint8'
-          };
+        // استخدام خدمة المعالجة المسبقة الجديدة
+        const preprocessingService = new PreprocessingService();
+        const preprocessingResult = await preprocessingService.processZipFile(tempFilePath, layerId);
+        
+        if (!preprocessingResult.success) {
+          throw new Error(preprocessingResult.error || 'فشل في المعالجة المسبقة');
         }
         
-        // تنظيف الملف المؤقت
-        try {
-          await fs.unlink(tempFilePath);
-        } catch (e) {
-          console.warn('تعذر حذف الملف المؤقت:', e);
-        }
+        console.log('✅ المعالجة المسبقة مكتملة:', preprocessingResult.metadata);
+        
+        // رفع الملفات المعالجة للتخزين السحابي (محاكاة)
+        const cloudUrls = await preprocessingService.copyToCloudStorage(layerId, {
+          png: preprocessingResult.png_path!,
+          pgw: preprocessingResult.pgw_path!,
+          prj: preprocessingResult.prj_path!
+        });
+        
+        // تنظيف الملفات المؤقتة
+        await preprocessingService.cleanup(layerId);
+        await fs.unlink(tempFilePath).catch(e => console.warn('تعذر حذف الملف:', e));
       
+        const metadata_info = preprocessingResult.metadata!;
+        
         processedLayer = {
           id: layerId,
-          name: pythonMetadata.filename,
-          fileName,
-          objectPath,
+          name: metadata_info.filename,
+          fileName: `${metadata_info.filename}.png`, // اسم ملف PNG المُحول
+          objectPath: cloudUrls.pngUrl, // رابط الصورة PNG
           type: 'raster',
-          // تحويل bounds من UTM إلى تنسيق Leaflet [[minY,minX], [maxY,maxX]]
+          // تحويل bounds لنظام CRS.Simple في Leaflet
           bounds: [
-            [pythonMetadata.bounds.minY, pythonMetadata.bounds.minX], // SW corner
-            [pythonMetadata.bounds.maxY, pythonMetadata.bounds.maxX]  // NE corner
+            [metadata_info.bounds.minY, metadata_info.bounds.minX], // SW corner
+            [metadata_info.bounds.maxY, metadata_info.bounds.maxX]  // NE corner
           ],
-          coordinateSystem: pythonMetadata.crs,
-          sourceCoordinateSystem: pythonMetadata.crs,
-        uploadDate: new Date().toISOString(),
-        status: 'ready',
-        fileSize: metadata?.fileSize || 0,
-        // معلومات خاصة بملف ZIP
-        zipInfo: {
-          isMultiLayer: true,
-          hasProjectionFile: true,
-          hasWorldFile: true,
-          extractedLayers: 1, // في التطبيق الحقيقي سيتم حساب عدد الطبقات
-          coordinateTransformation: metadata?.needsReprojection ? 'UTM Zone 38N → WGS 84' : 'None'
-        },
+          coordinateSystem: metadata_info.crs,
+          sourceCoordinateSystem: metadata_info.crs,
+          uploadDate: new Date().toISOString(),
+          status: 'ready',
+          fileSize: metadata?.fileSize || 0,
+          // معلومات المعالجة المسبقة
+          preprocessingInfo: {
+            originalFormat: 'GeoTIFF',
+            processedFormat: 'PNG + World Files',
+            hasWorldFile: true,
+            hasProjectionFile: true,
+            pngUrl: cloudUrls.pngUrl,
+            pgwUrl: cloudUrls.pgwUrl,
+            prjUrl: cloudUrls.prjUrl,
+            processingMethod: 'Python + PIL + geotiff'
+          },
           geospatialInfo: {
             hasGeoreferencing: true,
-            spatialReference: pythonMetadata.crs,
-            needsReprojection: false, // نستخدم CRS.Simple الآن
-            originalUtmBounds: pythonMetadata.bounds,
-            projectionInfo: pythonMetadata.transform,
-            pythonMetadata: pythonMetadata // حفظ كامل البيانات
+            spatialReference: metadata_info.crs,
+            needsReprojection: false,
+            bounds: metadata_info.bounds,
+            pixelSize: metadata_info.pixel_size,
+            dimensions: {
+              width: metadata_info.width,
+              height: metadata_info.height
+            }
           }
         };
         
       } catch (processingError) {
-        console.error('❌ خطأ في معالجة Python:', processingError);
-        // fallback processing
-        processedLayer = {
-          id: layerId,
-          name: metadata?.name || fileName.replace(/\.[^/.]+$/, ""),
-          fileName,
-          objectPath,
-          type: 'raster',
-          bounds: [[1650000, 400000], [1670000, 420000]], // UTM coordinates as Y,X
-          coordinateSystem: 'EPSG:32638',
-          sourceCoordinateSystem: 'EPSG:32638',
-          uploadDate: new Date().toISOString(),
-          status: 'ready',
-          fileSize: metadata?.fileSize || 0,
-          error: 'Python processing failed, using fallback'
-        }
-      };
+        console.error('❌ خطأ في المعالجة المسبقة:', processingError);
+        
+        // في حالة فشل المعالجة، نعيد خطأ واضح للمستخدم
+        return res.status(500).json({ 
+          success: false,
+          error: 'فشل في المعالجة المسبقة للملف الجغرافي',
+          details: processingError.message,
+          suggestion: 'تأكد من أن الملف يحتوي على GeoTIFF صحيح مع ملفات الإسقاط المناسبة'
+        });
+      }
     } else {
       // معالجة عادية للصور المفردة
       processedLayer = {
