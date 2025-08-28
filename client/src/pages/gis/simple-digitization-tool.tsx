@@ -1,4 +1,5 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
+import { CleanLeafletMap } from '@/components/CleanLeafletMap';
 import { useMutation } from '@tanstack/react-query';
 import { MapContainer, TileLayer, useMapEvents, ImageOverlay, useMap } from 'react-leaflet';
 import { Map as MapIcon, Upload, Hand, MapPin, Route, Square } from 'lucide-react';
@@ -599,7 +600,7 @@ export default function SimpleDigitizationTool() {
                     fileSize: 1024000,
                     uploadDate: new Date().toISOString(),
                     visible: true,
-                    imageUrl: '/api/gis/layers/layer_1756416413136_0jzxl2mb1/image/test_geotiff.png',
+                    imageUrl: '/api/gis/layers/test_layer_demo/image/test_geotiff.png',
                     bounds: [[15.2, 44.0], [15.6, 44.4]]
                   };
                   
@@ -714,66 +715,27 @@ export default function SimpleDigitizationTool() {
 
       {/* منطقة الخريطة */}
       <div className="flex-1 relative">
-        <MapContainer
-          center={[15.3694, 44.1910]} // إحداثيات صنعاء
-          zoom={8}
-          className="w-full h-full"
-          zoomControl={true}
-          data-testid="leaflet-map"
-          style={{ height: '100vh', width: '100%' }}
-        >
-          {/* طبقة الأساس - OpenStreetMap للاختبار */}
-          {currentBasemap === 'osm' ? (
-            <TileLayer
-              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-              attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-              maxZoom={19}
-            />
-          ) : (
-            <TileLayer
-              url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
-              attribution='&copy; <a href="https://www.esri.com/">Esri</a>'
-              maxZoom={18}
-            />
-          )}
-
-          {/* عرض الطبقات المرفوعة */}
-          {layers.filter(layer => layer.visible && layer.imageUrl && layer.bounds).map(layer => {
-            console.log('🗺️ عرض الطبقة على الخريطة:', layer.name, layer.imageUrl, layer.bounds);
-            return (
-              <ImageOverlay
-                key={`${layer.id}-${layer.imageUrl}-${JSON.stringify(layer.bounds)}`}
-                url={layer.imageUrl}
-                bounds={layer.bounds}
-                opacity={0.85}
-                interactive={false}
-                zIndex={500}
-              />
-            );
-          })}
-          
-          {/* مؤشر المعالجة الدوار */}
-          {layers.some(layer => layer.status === 'processing' || layer.status === 'uploading') && (
-            <div className="absolute top-20 right-4 bg-blue-100 border border-blue-400 text-blue-800 px-4 py-3 rounded-md shadow-md z-[1000] flex items-center gap-3">
-              <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600"></div>
-              <div>
-                <div className="text-sm font-medium">معالجة الطبقات جارية...</div>
-                <div className="text-xs">
-                  {layers.filter(layer => layer.status === 'processing' || layer.status === 'uploading').length} طبقة قيد المعالجة
-                </div>
+        <CleanLeafletMap 
+          layers={layers}
+          onMapReady={(map) => {
+            mapRef.current = map;
+            console.log('🗺️ تم تهيئة الخريطة في الصفحة');
+          }}
+          onCoordinatesChange={handleCoordinatesChange}
+        />
+        
+        {/* مؤشر المعالجة الدوار */}
+        {layers.some(layer => layer.status === 'processing' || layer.status === 'uploading') && (
+          <div className="absolute top-20 right-4 bg-blue-100 border border-blue-400 text-blue-800 px-4 py-3 rounded-md shadow-md z-[1000] flex items-center gap-3">
+            <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600"></div>
+            <div>
+              <div className="text-sm font-medium">معالجة الطبقات جارية...</div>
+              <div className="text-xs">
+                {layers.filter(layer => layer.status === 'processing' || layer.status === 'uploading').length} طبقة قيد المعالجة
               </div>
             </div>
-          )}
-
-          {/* معالج الأحداث */}
-          <MapEvents onCoordinatesChange={handleCoordinatesChange} />
-          
-          {/* التكبير التلقائي على الطبقات المرئية */}
-          <AutoFitBounds layers={layers} />
-          
-          {/* إدارة حالة الخريطة */}
-          <MapStateManager />
-        </MapContainer>
+          </div>
+        )}
 
         {/* عرض الإحداثيات */}
         <CoordinateDisplay 

@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Progress } from '@/components/ui/progress';
-import { LeafletMap } from '@/components/LeafletMap';
+import { CleanLeafletMap as LeafletMap } from '@/components/CleanLeafletMap';
 import { Upload, FileImage, MapPin, CheckCircle, AlertCircle } from 'lucide-react';
 import { apiRequest } from '@/lib/queryClient';
 
@@ -14,10 +14,13 @@ interface GISLayer {
   id: string;
   name: string;
   fileName: string;
-  boundsWGS84: {
-    southwest: [number, number];
-    northeast: [number, number];
-  };
+  status: string;
+  visible: boolean;
+  imageUrl?: string;
+  bounds?: [[number, number], [number, number]];
+  width?: number;
+  height?: number;
+  crs?: string;
 }
 
 export default function QGISWebTool() {
