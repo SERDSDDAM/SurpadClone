@@ -47,7 +47,7 @@ export function ProfessionalMapCanvas({
   onZoomToLayer 
 }: ProfessionalMapCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const imageCache = useRef<Map<string, HTMLImageElement>>(new Map());
+  const imageCache = useRef(new Map<string, HTMLImageElement>());
   
   // حالات التفاعل
   const [zoom, setZoom] = useState(1);
