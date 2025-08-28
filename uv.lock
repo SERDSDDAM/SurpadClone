@@ -104,6 +104,15 @@ wheels = [
 ]
 
 [[package]]
+name = "leaflet"
+version = "0.0.3"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/d7/bd/928d5a5b61b68c967623fde446cde659bc7b96fddfcb35e35e4108c1f599/leaflet-0.0.3.tar.gz", hash = "sha256:f906a59a3e06b8d3f8b81eedfe30340187119bbef2dbaa73b79588c79be369c1", size = 8939 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/b4/f4/78fc5517099745c9d99a6a6afddd7a4d0d3f3c91c1be8710db392fc4a702/leaflet-0.0.3-py3-none-any.whl", hash = "sha256:654053f4728e8326a38a1e80ee6fbfdca30a2dbf388d27cefe55f5912e546fd7", size = 14446 },
+]
+
+[[package]]
 name = "numcodecs"
 version = "0.16.2"
 source = { registry = "https://pypi.org/simple" }
@@ -405,6 +414,7 @@ version = "0.1.0"
 source = { virtual = "." }
 dependencies = [
     { name = "geotiff" },
+    { name = "leaflet" },
     { name = "numpy" },
     { name = "pillow" },
     { name = "pyproj" },
@@ -414,6 +424,7 @@ dependencies = [
 [package.metadata]
 requires-dist = [
     { name = "geotiff", specifier = ">=0.2.10" },
+    { name = "leaflet", specifier = ">=0.0.3" },
     { name = "numpy", specifier = ">=2.3.2" },
     { name = "pillow", specifier = ">=11.3.0" },
     { name = "pyproj", specifier = ">=3.7.2" },

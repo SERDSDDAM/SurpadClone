@@ -48,6 +48,7 @@ import DigitalCertificates from "@/pages/digital-certificates";
 import NotificationsSystem from "@/pages/notifications-system";
 import { GISDataManagement, DigitizationTool } from "@/pages/gis";
 import SimpleDigitizationTool from "@/pages/gis/simple-digitization-tool";
+import QGISWebTool from "@/pages/gis/qgis-web-tool";
 import NotFound from "@/pages/not-found";
 
 function Navigation() {
@@ -191,6 +192,7 @@ function Router() {
           <Route path="/digitization-tool" component={DigitizationTool} />
           <Route path="/simple-digitization-tool" component={SimpleDigitizationTool} />
         <Route path="/simple-digitization" component={SimpleDigitizationTool} />
+          <Route path="/qgis-web-tool" component={QGISWebTool} />
           <Route path="/professionals" component={ProfessionalsManagement} />
           <Route path="/field-app" component={FieldApp} />
           <Route path="/clean-field-app" component={CleanFieldApp} />

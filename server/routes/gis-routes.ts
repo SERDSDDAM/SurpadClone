@@ -21,7 +21,7 @@ import {
 import { eq, and, sql } from 'drizzle-orm';
 import { z } from 'zod';
 import { extractGeoTiffMetadataPython, createGeoTiffPreview } from '../lib/python-geotiff-wrapper';
-import { PreprocessingService } from '../lib/preprocessing-service';
+import { WebGISService } from '../lib/web-gis-service';
 import gisFileServingRouter from './gis-file-serving';
 import path from 'path';
 import fs from 'fs/promises';
@@ -554,6 +554,32 @@ router.post('/layers/upload-url', isAuthenticated, async (req: Request, res: Res
   }
 });
 
+// GET /api/gis/layers/:layerId/files/:filename - تقديم ملفات الطبقة المعالجة
+router.get('/layers/:layerId/files/:filename', async (req: Request, res: Response) => {
+  try {
+    const { layerId, filename } = req.params;
+    
+    const webGISService = new WebGISService();
+    const fileBuffer = await webGISService.serveLayerFile(layerId, filename);
+    
+    if (!fileBuffer) {
+      return res.status(404).json({ error: 'ملف غير موجود' });
+    }
+    
+    // تحديد نوع المحتوى
+    const ext = path.extname(filename).toLowerCase();
+    const contentType = ext === '.png' ? 'image/png' : 'application/octet-stream';
+    
+    res.setHeader('Content-Type', contentType);
+    res.setHeader('Cache-Control', 'public, max-age=3600');
+    res.send(fileBuffer);
+    
+  } catch (error) {
+    console.error('Error serving layer file:', error);
+    res.status(500).json({ error: 'فشل في تقديم الملف' });
+  }
+});
+
 // POST /api/gis/layers/confirm - تأكيد اكتمال رفع الطبقة وحفظ البيانات الوصفية
 router.post('/layers/confirm', isAuthenticated, async (req: Request, res: Response) => {
   try {
@@ -595,15 +621,15 @@ router.post('/layers/confirm', isAuthenticated, async (req: Request, res: Respon
           throw new Error('ملف الاختبار غير متوفر - يرجى رفع ملف ZIP صالح');
         }
         
-        // استخدام خدمة المعالجة المسبقة المحسنة
-        const preprocessingService = new PreprocessingService();
-        const preprocessingResult = await preprocessingService.processZipFile(tempFilePath, layerId);
+        // استخدام خدمة WebGIS الجديدة
+        const webGISService = new WebGISService();
+        const result = await webGISService.processZipFile(tempFilePath, layerId);
         
-        if (!preprocessingResult.success) {
-          throw new Error(preprocessingResult.error || 'فشل في المعالجة المسبقة');
+        if (!result.success) {
+          throw new Error(result.error || 'فشل في معالجة WebGIS');
         }
         
-        console.log('✅ المعالجة المسبقة مكتملة مع سجل التدقيق:', preprocessingResult);
+        console.log('✅ معالجة WebGIS مكتملة:', result);
         
         // الملفات متوفرة في مجلد المعالجة وسيتم خدمتها مباشرة
         console.log('📁 الملفات المعالجة متوفرة في:', preprocessingResult.outputDirectory);
@@ -613,27 +639,15 @@ router.post('/layers/confirm', isAuthenticated, async (req: Request, res: Respon
       
         processedLayer = {
           id: layerId,
-          name: preprocessingResult.fileName.replace('.png', ''),
-          fileName: preprocessingResult.fileName,
-          objectPath: `/api/gis/public-objects/gis-layers/${preprocessingResult.fileName}`,
+          name: result.pngFile!.replace('.png', ''),
+          fileName: result.pngFile!,
+          boundsWGS84: result.boundsWGS84!,
+          originalCRS: result.originalCRS,
+          dimensions: result.dimensions,
           type: 'raster',
-          bounds: preprocessingResult.bounds,
-          coordinateSystem: preprocessingResult.coordinateSystem,
-          sourceCoordinateSystem: preprocessingResult.coordinateSystem,
           uploadDate: new Date().toISOString(),
           status: 'ready',
-          fileSize: metadata?.fileSize || 0,
-          // معلومات المعالجة المسبقة المحسنة
-          preprocessingInfo: {
-            originalFormat: 'GeoTIFF',
-            processedFormat: 'PNG + World Files + CRS',
-            hasWorldFile: true,
-            hasProjectionFile: true,
-            outputDirectory: preprocessingResult.outputDirectory,
-            processingTime: preprocessingResult.processingTime,
-            processingMethod: 'Enhanced Python Processor with Audit Logging'
-          },
-          geospatialInfo: preprocessingResult.geospatialInfo
+          fileSize: metadata?.fileSize || 0
         };
         
       } catch (processingError) {
