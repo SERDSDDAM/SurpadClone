@@ -17,6 +17,8 @@ import { authenticateToken, requireRole, requirePermission } from "./auth/auth-m
 import surveyRoutes from "./routes/survey-routes";
 import gisRoutes from "./routes/gis-routes";
 import helmet from "helmet";
+import path from "path";
+import fs from "fs";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Security middleware
