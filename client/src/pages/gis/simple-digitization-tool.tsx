@@ -1,6 +1,6 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { useMutation } from '@tanstack/react-query';
-import { MapContainer, TileLayer, useMapEvents } from 'react-leaflet';
+import { MapContainer, TileLayer, useMapEvents, ImageOverlay } from 'react-leaflet';
 import { Map as MapIcon, Upload, Hand, MapPin, Route, Square } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -64,6 +64,28 @@ export default function SimpleDigitizationTool() {
   const [isUploading, setIsUploading] = useState(false);
   const [layers, setLayers] = useState<any[]>([]);
 
+  // استرداد الطبقات المحفوظة عند تحميل الصفحة
+  useEffect(() => {
+    const savedLayers = localStorage.getItem('gis-layers');
+    if (savedLayers) {
+      try {
+        const parsedLayers = JSON.parse(savedLayers);
+        setLayers(parsedLayers);
+        console.log('✅ تم استرداد الطبقات المحفوظة:', parsedLayers);
+      } catch (error) {
+        console.error('❌ خطأ في استرداد الطبقات:', error);
+      }
+    }
+  }, []);
+
+  // حفظ الطبقات في localStorage عند تحديثها
+  useEffect(() => {
+    if (layers.length > 0) {
+      localStorage.setItem('gis-layers', JSON.stringify(layers));
+      console.log('💾 تم حفظ الطبقات:', layers);
+    }
+  }, [layers]);
+
   // معالج تحديث الإحداثيات
   const handleCoordinatesChange = useCallback((coords: { lat: number; lng: number }) => {
     setCoordinates(coords);
@@ -99,28 +121,77 @@ export default function SimpleDigitizationTool() {
 
       return result;
     },
-    onSuccess: (result) => {
+    onSuccess: async (result) => {
       console.log('✅ نجح رفع الملف:', result);
       
-      // إنشاء كائن طبقة جديدة للعرض في القائمة
-      const newLayer = {
-        id: result.layerId,
-        name: result.fileName.replace(/\.[^/.]+$/, ""), // إزالة امتداد الملف
-        fileName: result.fileName,
-        status: 'uploaded',
-        fileSize: result.fileSize,
-        uploadDate: new Date().toISOString(),
-        visible: true
-      };
+      // الحصول على معلومات الطبقة المفصلة من الخادم
+      try {
+        const layerResponse = await fetch(`/api/gis/layers/${result.layerId}`);
+        const layerData = await layerResponse.json();
+        
+        if (layerData.success) {
+          // إنشاء كائن طبقة جديدة مع معلومات الخريطة
+          const newLayer = {
+            id: result.layerId,
+            name: result.fileName.replace(/\.[^/.]+$/, ""), // إزالة امتداد الملف
+            fileName: result.fileName,
+            status: 'processed',
+            fileSize: result.fileSize,
+            uploadDate: new Date().toISOString(),
+            visible: true,
+            imageUrl: layerData.imageUrl,
+            bounds: layerData.bounds
+          };
+          
+          // إضافة الطبقة الجديدة إلى القائمة
+          setLayers(prevLayers => [...prevLayers, newLayer]);
+          console.log('📝 تمت إضافة الطبقة الجديدة مع بيانات الخريطة:', newLayer);
+          
+          toast({
+            title: "تم رفع ومعالجة الملف بنجاح",
+            description: `تمت إضافة الطبقة: ${newLayer.name}`,
+          });
+        } else {
+          // في حالة عدم توفر معلومات الطبقة، إضافة بيانات أساسية
+          const basicLayer = {
+            id: result.layerId,
+            name: result.fileName.replace(/\.[^/.]+$/, ""),
+            fileName: result.fileName,
+            status: 'uploaded',
+            fileSize: result.fileSize,
+            uploadDate: new Date().toISOString(),
+            visible: true
+          };
+          
+          setLayers(prevLayers => [...prevLayers, basicLayer]);
+          console.log('📝 تمت إضافة الطبقة الأساسية:', basicLayer);
+          
+          toast({
+            title: "تم رفع الملف بنجاح",
+            description: `تمت إضافة الطبقة: ${basicLayer.name}`,
+          });
+        }
+      } catch (error) {
+        console.error('❌ خطأ في الحصول على معلومات الطبقة:', error);
+        // إضافة الطبقة الأساسية في حالة الخطأ
+        const basicLayer = {
+          id: result.layerId,
+          name: result.fileName.replace(/\.[^/.]+$/, ""),
+          fileName: result.fileName,
+          status: 'uploaded',
+          fileSize: result.fileSize,
+          uploadDate: new Date().toISOString(),
+          visible: true
+        };
+        
+        setLayers(prevLayers => [...prevLayers, basicLayer]);
+        
+        toast({
+          title: "تم رفع الملف بنجاح",
+          description: `تمت إضافة الطبقة: ${basicLayer.name}`,
+        });
+      }
       
-      // إضافة الطبقة الجديدة إلى القائمة
-      setLayers(prevLayers => [...prevLayers, newLayer]);
-      console.log('📝 تمت إضافة الطبقة الجديدة إلى القائمة:', newLayer);
-      
-      toast({
-        title: "تم رفع الملف بنجاح",
-        description: `تمت إضافة الطبقة: ${newLayer.name}`,
-      });
       setIsUploading(false);
       setUploadProgress(0);
     },
@@ -307,6 +378,16 @@ export default function SimpleDigitizationTool() {
             attribution='&copy; <a href="https://www.esri.com/">Esri</a>'
             maxZoom={18}
           /> */}
+
+          {/* عرض الطبقات المرفوعة */}
+          {layers.filter(layer => layer.visible && layer.imageUrl && layer.bounds).map(layer => (
+            <ImageOverlay
+              key={layer.id}
+              url={layer.imageUrl}
+              bounds={layer.bounds}
+              opacity={0.7}
+            />
+          ))}
 
           {/* معالج الأحداث */}
           <MapEvents onCoordinatesChange={handleCoordinatesChange} />

@@ -41,6 +41,82 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // GIS routes
   app.use("/api/gis", gisRoutes);
+
+  // APIs خاصة لطبقات الخرائط
+  app.get('/api/gis/layers/:layerId', async (req, res) => {
+    try {
+      const { layerId } = req.params;
+      console.log('🔍 طلب معلومات الطبقة:', layerId);
+      
+      // التحقق من وجود الطبقة في مجلد المعالجة
+      const layerDir = path.join(process.cwd(), 'temp-uploads', 'processed', layerId);
+      
+      if (!fs.existsSync(layerDir)) {
+        return res.status(404).json({
+          success: false,
+          error: 'الطبقة غير موجودة'
+        });
+      }
+      
+      // البحث عن ملف PNG
+      const files = fs.readdirSync(layerDir);
+      const pngFile = files.find(file => file.endsWith('.png'));
+      
+      if (!pngFile) {
+        return res.status(404).json({
+          success: false,
+          error: 'ملف الصورة غير موجود'
+        });
+      }
+      
+      // إنشاء URL للصورة وإحداثيات افتراضية
+      const imageUrl = `/api/gis/layers/${layerId}/image/${pngFile}`;
+      
+      // إحداثيات افتراضية لصنعاء (يمكن تحسينها لاحقاً)
+      const bounds: [[number, number], [number, number]] = [
+        [15.2, 44.0], // الزاوية الجنوبية الغربية
+        [15.6, 44.4]  // الزاوية الشمالية الشرقية
+      ];
+      
+      res.json({
+        success: true,
+        layerId,
+        imageUrl,
+        bounds,
+        pngFile
+      });
+      
+    } catch (error) {
+      console.error('❌ خطأ في الحصول على معلومات الطبقة:', error);
+      res.status(500).json({
+        success: false,
+        error: 'خطأ في الخادم'
+      });
+    }
+  });
+
+  // GET /api/gis/layers/:layerId/image/:filename - تقديم ملف الصورة
+  app.get('/api/gis/layers/:layerId/image/:filename', (req, res) => {
+    try {
+      const { layerId, filename } = req.params;
+      const imagePath = path.join(process.cwd(), 'temp-uploads', 'processed', layerId, filename);
+      
+      if (!fs.existsSync(imagePath)) {
+        return res.status(404).json({ error: 'الصورة غير موجودة' });
+      }
+      
+      // تعيين headers مناسبة للصورة
+      res.setHeader('Content-Type', 'image/png');
+      res.setHeader('Cache-Control', 'public, max-age=3600');
+      
+      // إرسال الملف
+      res.sendFile(imagePath);
+      
+    } catch (error) {
+      console.error('❌ خطأ في تقديم الصورة:', error);
+      res.status(500).json({ error: 'خطأ في الخادم' });
+    }
+  });
   // Surveyors Management
   app.get("/api/surveyors", async (req, res) => {
     try {
