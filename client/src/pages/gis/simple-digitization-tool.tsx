@@ -322,6 +322,50 @@ export default function SimpleDigitizationTool() {
             </CardContent>
           </Card>
 
+          {/* إدارة مساحة التخزين */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">إدارة البيانات</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              <Button
+                variant="outline"
+                size="sm"
+                className="w-full"
+                onClick={() => {
+                  if (confirm('هل تريد مسح جميع البيانات المحفوظة؟')) {
+                    localStorage.removeItem('gis-layers');
+                    setLayers([]);
+                    toast({
+                      title: "تم مسح البيانات",
+                      description: "تم مسح جميع الطبقات المحفوظة",
+                    });
+                  }
+                }}
+              >
+                🗑️ مسح جميع البيانات
+              </Button>
+              
+              <Button
+                variant="outline"
+                size="sm"
+                className="w-full"
+                onClick={() => {
+                  const data = JSON.stringify(layers, null, 2);
+                  const blob = new Blob([data], { type: 'application/json' });
+                  const url = URL.createObjectURL(blob);
+                  const a = document.createElement('a');
+                  a.href = url;
+                  a.download = `gis-layers-${new Date().toISOString().split('T')[0]}.json`;
+                  a.click();
+                  URL.revokeObjectURL(url);
+                }}
+              >
+                💾 تصدير البيانات
+              </Button>
+            </CardContent>
+          </Card>
+
           {/* معلومات الطبقات */}
           <Card>
             <CardHeader>
@@ -335,14 +379,51 @@ export default function SimpleDigitizationTool() {
                   <>
                     <div className="text-sm text-gray-600 mb-2">{layers.length} طبقة محملة</div>
                     {layers.map((layer) => (
-                      <div key={layer.id} className="bg-gray-50 p-2 rounded border">
-                        <div className="text-sm font-medium text-gray-800">{layer.name}</div>
-                        <div className="text-xs text-gray-500">
-                          {layer.fileName} • {layer.status}
+                      <div key={layer.id} className="bg-gray-50 p-3 rounded border">
+                        <div className="flex justify-between items-start">
+                          <div className="flex-1">
+                            <div className="text-sm font-medium text-gray-800">{layer.name}</div>
+                            <div className="text-xs text-gray-500">
+                              {layer.fileName} • {layer.status}
+                            </div>
+                            {layer.fileSize && (
+                              <div className="text-xs text-gray-400">
+                                {(layer.fileSize / (1024 * 1024)).toFixed(1)} MB
+                              </div>
+                            )}
+                          </div>
+                          <div className="flex gap-1">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="h-6 w-6 p-0"
+                              onClick={() => {
+                                const newLayers = layers.map(l => 
+                                  l.id === layer.id ? { ...l, visible: !l.visible } : l
+                                );
+                                setLayers(newLayers);
+                              }}
+                              title={layer.visible ? "إخفاء الطبقة" : "إظهار الطبقة"}
+                            >
+                              {layer.visible ? "👁️" : "🚫"}
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="h-6 w-6 p-0 text-red-500"
+                              onClick={() => {
+                                const newLayers = layers.filter(l => l.id !== layer.id);
+                                setLayers(newLayers);
+                              }}
+                              title="حذف الطبقة"
+                            >
+                              🗑️
+                            </Button>
+                          </div>
                         </div>
-                        {layer.fileSize && (
-                          <div className="text-xs text-gray-400">
-                            {(layer.fileSize / (1024 * 1024)).toFixed(1)} MB
+                        {layer.status === 'processed' && layer.bounds && (
+                          <div className="mt-2 text-xs text-blue-600">
+                            ✅ جاهز للعرض على الخريطة
                           </div>
                         )}
                       </div>
@@ -385,9 +466,20 @@ export default function SimpleDigitizationTool() {
               key={layer.id}
               url={layer.imageUrl}
               bounds={layer.bounds}
-              opacity={0.7}
+              opacity={0.8}
+              interactive={false}
             />
           ))}
+          
+          {/* عرض مؤشر للطبقات التي لم تتم معالجتها بعد */}
+          {layers.filter(layer => layer.visible && !layer.imageUrl).length > 0 && (
+            <div className="absolute top-20 right-4 bg-yellow-100 border border-yellow-400 text-yellow-800 px-3 py-2 rounded-md shadow-md z-[1000]">
+              <div className="text-sm font-medium">معالجة الطبقات جارية...</div>
+              <div className="text-xs">
+                {layers.filter(layer => layer.visible && !layer.imageUrl).length} طبقة في انتظار المعالجة
+              </div>
+            </div>
+          )}
 
           {/* معالج الأحداث */}
           <MapEvents onCoordinatesChange={handleCoordinatesChange} />
@@ -397,10 +489,51 @@ export default function SimpleDigitizationTool() {
         <CoordinateDisplay coordinates={coordinates} />
 
         {/* شريط الأدوات العلوي */}
-        <div className="absolute top-4 right-4 bg-white/90 backdrop-blur-sm p-2 rounded-md shadow-md z-[1000]">
-          <div className="text-sm text-gray-600">
+        <div className="absolute top-4 right-4 bg-white/90 backdrop-blur-sm p-3 rounded-md shadow-md z-[1000]">
+          <div className="text-sm text-gray-600 mb-2">
             الأداة النشطة: <span className="font-medium">{activeTool}</span>
           </div>
+          {layers.filter(layer => layer.visible).length > 0 && (
+            <div className="text-xs text-green-600">
+              {layers.filter(layer => layer.visible).length} طبقة مرئية
+            </div>
+          )}
+        </div>
+
+        {/* أزرار التحكم بالخريطة */}
+        <div className="absolute bottom-20 right-4 space-y-2 z-[1000]">
+          <Button
+            variant="outline"
+            size="sm"
+            className="bg-white/90 backdrop-blur-sm"
+            onClick={() => {
+              // إعادة تعيين عرض الخريطة لليمن
+              const map = document.querySelector('[data-testid="leaflet-map"]');
+              if (map) {
+                // هذا مثال - يمكن تحسينه لاحقاً
+                console.log('🔄 إعادة تعيين عرض الخريطة');
+              }
+            }}
+            title="إعادة تعيين العرض"
+          >
+            🌍 إعادة التعيين
+          </Button>
+          
+          {layers.length > 0 && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="bg-white/90 backdrop-blur-sm"
+              onClick={() => {
+                const allVisible = layers.every(layer => layer.visible);
+                const newLayers = layers.map(layer => ({ ...layer, visible: !allVisible }));
+                setLayers(newLayers);
+              }}
+              title={layers.every(layer => layer.visible) ? "إخفاء جميع الطبقات" : "إظهار جميع الطبقات"}
+            >
+              {layers.every(layer => layer.visible) ? "🚫 إخفاء الكل" : "👁️ إظهار الكل"}
+            </Button>
+          )}
         </div>
       </div>
     </div>

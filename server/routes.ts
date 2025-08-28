@@ -61,8 +61,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // البحث عن ملف PNG
-      const files = fs.readdirSync(layerDir);
-      const pngFile = files.find(file => file.endsWith('.png'));
+      let files, pngFile;
+      try {
+        files = fs.readdirSync(layerDir);
+        pngFile = files.find(file => file.endsWith('.png'));
+      } catch (readError) {
+        console.error('❌ خطأ في قراءة مجلد الطبقة:', readError);
+        return res.status(500).json({
+          success: false,
+          error: 'خطأ في قراءة مجلد الطبقة'
+        });
+      }
       
       if (!pngFile) {
         return res.status(404).json({
