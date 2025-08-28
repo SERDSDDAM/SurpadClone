@@ -20,15 +20,48 @@ interface CoordinateDisplayProps {
   coordinates: { lat: number; lng: number } | null;
 }
 
-function CoordinateDisplay({ coordinates }: CoordinateDisplayProps) {
+function CoordinateDisplay({ coordinates, format, onFormatChange }: { 
+  coordinates: { lat: number; lng: number } | null;
+  format: 'wgs84' | 'utm';
+  onFormatChange: (format: 'wgs84' | 'utm') => void;
+}) {
+  // تحويل للإحداثيات UTM (مبسط للمنطقة 38N)
+  const toUTM = (lat: number, lng: number) => {
+    // تحويل تقريبي للمنطقة 38N في اليمن
+    const x = ((lng - 45) * 111320 * Math.cos(lat * Math.PI / 180)) + 500000;
+    const y = (lat * 111320) + 10000000;
+    return { x: Math.round(x), y: Math.round(y) };
+  };
+
   return (
     <div className="absolute bottom-4 left-4 bg-white/90 backdrop-blur-sm px-3 py-2 rounded-md shadow-md z-[1000] border" dir="ltr">
+      <div className="flex items-center gap-2 mb-1">
+        <button
+          onClick={() => onFormatChange(format === 'wgs84' ? 'utm' : 'wgs84')}
+          className="text-xs bg-blue-100 hover:bg-blue-200 px-2 py-1 rounded"
+          title="تبديل نظام الإحداثيات"
+        >
+          {format === 'wgs84' ? 'WGS84' : 'UTM 38N'}
+        </button>
+      </div>
       <div className="text-sm font-mono">
         {coordinates ? (
-          <>
-            <div>خط العرض: {coordinates.lat.toFixed(6)}</div>
-            <div>خط الطول: {coordinates.lng.toFixed(6)}</div>
-          </>
+          format === 'wgs84' ? (
+            <>
+              <div>خط العرض: {coordinates.lat.toFixed(6)}</div>
+              <div>خط الطول: {coordinates.lng.toFixed(6)}</div>
+            </>
+          ) : (
+            (() => {
+              const utm = toUTM(coordinates.lat, coordinates.lng);
+              return (
+                <>
+                  <div>X (شرق): {utm.x.toLocaleString()}</div>
+                  <div>Y (شمال): {utm.y.toLocaleString()}</div>
+                </>
+              );
+            })()
+          )
         ) : (
           <div>حرك الماوس فوق الخريطة</div>
         )}
@@ -57,6 +90,9 @@ function AutoFitBounds({ layers }: { layers: any[] }) {
   const map = useMap();
   
   useEffect(() => {
+    // حفظ مرجع الخريطة للوصول إليها من الخارج
+    (window as any).__leafletMap = map;
+    
     if (layers.length === 0) return;
     
     const visibleLayers = layers.filter(l => l.visible && l.bounds);
@@ -71,10 +107,42 @@ function AutoFitBounds({ layers }: { layers: any[] }) {
       
       if (groupBounds.isValid()) {
         console.log('🗺️ تكبير تلقائي على الطبقات المرئية');
-        map.fitBounds(groupBounds, { padding: [10, 10] });
+        map.fitBounds(groupBounds, { padding: [40, 40] });
       }
     }
   }, [layers, map]);
+
+  return null;
+}
+
+// مكون لحفظ واستعادة حالة الخريطة
+function MapStateManager() {
+  const map = useMap();
+  
+  useEffect(() => {
+    // استعادة الحالة المحفوظة
+    const savedView = localStorage.getItem('map-view');
+    if (savedView) {
+      try {
+        const { center, zoom } = JSON.parse(savedView);
+        map.setView([center.lat, center.lng], zoom);
+      } catch (e) {
+        console.log('⚠️ خطأ في استعادة حالة الخريطة');
+      }
+    }
+    
+    // حفظ الحالة عند التحرك
+    const handleMoveEnd = () => {
+      const state = {
+        center: map.getCenter(),
+        zoom: map.getZoom()
+      };
+      localStorage.setItem('map-view', JSON.stringify(state));
+    };
+    
+    map.on('moveend', handleMoveEnd);
+    return () => map.off('moveend', handleMoveEnd);
+  }, [map]);
 
   return null;
 }
@@ -89,8 +157,16 @@ export default function SimpleDigitizationTool() {
   const [uploadProgress, setUploadProgress] = useState(0);
   const [isUploading, setIsUploading] = useState(false);
   const [layers, setLayers] = useState<any[]>([]);
-  const [currentBasemap, setCurrentBasemap] = useState('osm');
+  const [currentBasemap, setCurrentBasemap] = useState(() => 
+    localStorage.getItem('basemap') || 'osm'
+  );
+  const [coordinateFormat, setCoordinateFormat] = useState<'wgs84' | 'utm'>('wgs84');
   const mapRef = useRef<L.Map | null>(null);
+
+  // حفظ نوع طبقة الأساس عند التغيير
+  useEffect(() => {
+    localStorage.setItem('basemap', currentBasemap);
+  }, [currentBasemap]);
 
   // استرداد الطبقات المحفوظة عند تحميل الصفحة
   useEffect(() => {
@@ -493,6 +569,22 @@ export default function SimpleDigitizationTool() {
                             >
                               {layer.visible ? "👁️" : "🚫"}
                             </Button>
+                            {layer.bounds && (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="h-6 w-6 p-0"
+                                onClick={() => {
+                                  const map = (window as any).__leafletMap as L.Map | undefined;
+                                  if (!map || !layer.bounds) return;
+                                  const bounds = L.latLngBounds(layer.bounds);
+                                  map.fitBounds(bounds, { padding: [40, 40] });
+                                }}
+                                title="تكبير إلى الطبقة"
+                              >
+                                🔍
+                              </Button>
+                            )}
                             <Button
                               variant="outline"
                               size="sm"
@@ -562,11 +654,12 @@ export default function SimpleDigitizationTool() {
             console.log('🗺️ عرض الطبقة على الخريطة:', layer.name, layer.imageUrl, layer.bounds);
             return (
               <ImageOverlay
-                key={layer.id}
+                key={`${layer.id}-${layer.imageUrl}-${JSON.stringify(layer.bounds)}`}
                 url={layer.imageUrl}
                 bounds={layer.bounds}
-                opacity={0.8}
+                opacity={0.85}
                 interactive={false}
+                zIndex={500}
               />
             );
           })}
@@ -586,15 +679,25 @@ export default function SimpleDigitizationTool() {
           
           {/* التكبير التلقائي على الطبقات المرئية */}
           <AutoFitBounds layers={layers} />
+          
+          {/* إدارة حالة الخريطة */}
+          <MapStateManager />
         </MapContainer>
 
         {/* عرض الإحداثيات */}
-        <CoordinateDisplay coordinates={coordinates} />
+        <CoordinateDisplay 
+          coordinates={coordinates} 
+          format={coordinateFormat}
+          onFormatChange={setCoordinateFormat}
+        />
 
         {/* شريط الأدوات العلوي */}
         <div className="absolute top-4 right-4 bg-white/90 backdrop-blur-sm p-3 rounded-md shadow-md z-[1000]">
           <div className="text-sm text-gray-600 mb-2">
             الأداة النشطة: <span className="font-medium">{activeTool}</span>
+          </div>
+          <div className="text-xs text-blue-600 mb-1">
+            طبقة الأساس: {currentBasemap === 'osm' ? 'خريطة الشوارع' : 'صور الأقمار الصناعية'}
           </div>
           {layers.filter(layer => layer.visible).length > 0 && (
             <div className="text-xs text-green-600">
@@ -622,12 +725,36 @@ export default function SimpleDigitizationTool() {
             size="sm"
             className="bg-white/90 backdrop-blur-sm"
             onClick={() => {
-              // إعادة تعيين عرض الخريطة لليمن
-              window.location.reload();
+              const map = (window as any).__leafletMap as L.Map | undefined;
+              if (!map) return;
+              const yemenBounds = L.latLngBounds([[12.0, 42.0], [19.5, 55.0]]);
+              map.fitBounds(yemenBounds, { padding: [40, 40] });
             }}
-            title="إعادة تعيين العرض"
+            title="إعادة التعيين إلى حدود اليمن"
           >
-            🔄 إعادة التعيين
+            🌍 إعادة التعيين
+          </Button>
+          
+          <Button
+            variant="outline"
+            size="sm"
+            className="bg-white/90 backdrop-blur-sm"
+            onClick={() => {
+              const visibleLayers = layers.filter(l => l.visible && l.bounds);
+              if (visibleLayers.length === 0) return;
+              const map = (window as any).__leafletMap as L.Map | undefined;
+              if (!map) return;
+              const groupBounds = L.latLngBounds([]);
+              visibleLayers.forEach(layer => {
+                if (layer.bounds) groupBounds.extend(layer.bounds);
+              });
+              if (groupBounds.isValid()) {
+                map.fitBounds(groupBounds, { padding: [40, 40] });
+              }
+            }}
+            title="تكبير إلى جميع الطبقات المرئية"
+          >
+            🎯 تكبير للكل
           </Button>
           
           {layers.length > 0 && (

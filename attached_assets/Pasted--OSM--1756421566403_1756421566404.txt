@@ -1,0 +1,234 @@
+ممتاز جداً! واضح من الصورة واللوجات أن:
+
+- طبقة الأساس (OSM/الأقمار الصناعية) تعمل وتبديلها سلس
+- الطبقة التجريبية تظهر/تختفي بنجاح
+- الرفع عبر ZIP يعمل وحالة الطبقات تُدار بشكل صحيح
+
+لنكمل الإحكام النهائي عبر خطة قصيرة ومركزة مع ترقيعات عملية للكود.
+
+ خطة الإحكام النهائي لإصلاح الرفع والخريطة (v2)
+
+الهدف: ضمان عرض أي طبقة معالجة فوراً في موقعها الصحيح، مع أدوات “تكبير إلى الطبقة/جميع الطبقات”، وحفظ حالة العرض، وUX واضح أثناء المعالجة.
+
+1) ضبط عرض الطبقات وملاءمة الإطار
+- أضف مرجع للخريطة واستخدمه للتركيز على طبقة أو على جميع الطبقات المرئية.
+- تأكد أن bounds تُمرَّر كـ L.latLngBounds وأن ترتيبها [SouthWest, NorthEast].
+
+مثال عملي (ترقيع مباشر):
+
+```tsx
+// أعلى الملف
+import { useMap } from 'react-leaflet';
+import type { LatLngBoundsExpression } from 'leaflet';
+
+// مكوّن صغير للتكبير إلى جميع الطبقات المرئية عند التغيير
+function FitVisibleLayers({ layers }: { layers: any[] }) {
+  const map = useMap();
+  useEffect(() => {
+    const visible = layers.filter(l => l.visible && l.bounds);
+    if (!visible.length) return;
+    let bounds = L.latLngBounds(visible[0].bounds as LatLngBoundsExpression);
+    visible.slice(1).forEach(l => bounds = bounds.extend(l.bounds));
+    map.fitBounds(bounds, { padding: [40, 40] });
+  }, [layers, map]);
+  return null;
+}
+```
+
+الاستخدام داخل MapContainer:
+```tsx
+<MapContainer
+  center={[15.3694, 44.1910]}
+  zoom={8}
+  scrollWheelZoom={true}
+  whenCreated={(m) => (window.__leafletMap = m)}  // مرجع بسيط للوصول من أزرار خارج الخريطة
+  className="w-full h-full"
+>
+  {/* ... */}
+  <FitVisibleLayers layers={layers} />
+</MapContainer>
+```
+
+زر “تكبير إلى الطبقة” في بطاقة كل طبقة:
+```tsx
+<Button
+  variant="outline"
+  size="sm"
+  className="h-6 w-6 p-0"
+  onClick={() => {
+    const map = (window as any).__leafletMap as L.Map | undefined;
+    if (!map || !layer.bounds) return;
+    const b = L.latLngBounds(layer.bounds as LatLngBoundsExpression);
+    map.fitBounds(b, { padding: [40, 40] });
+  }}
+  title="تكبير إلى الطبقة"
+>
+  🔍
+</Button>
+```
+
+نصيحة: اجعل مفتاح ImageOverlay يتغير عند تحديث الطبقة لتجبر إعادة الرسم:
+```tsx
+<ImageOverlay
+  key={`${layer.id}-${layer.imageUrl}-${JSON.stringify(layer.bounds)}`}
+  url={layer.imageUrl}
+  bounds={layer.bounds}
+  opacity={0.85}
+  zIndex={500}
+/>
+```
+
+2) حفظ حالة الخريطة وقاعدة الطبقات
+- خزّن في localStorage:
+  - نوع طبقة الأساس المختارة ('osm' | 'sat')
+  - مركز الخريطة والمستوى (center, zoom)
+  - حالة الرؤية والشفافية لكل طبقة
+
+ترقيع سريع:
+```tsx
+// حفظ واستعادة حالة الخريطة
+useEffect(() => {
+  const map = (window as any).__leafletMap as L.Map | undefined;
+  if (!map) return;
+  const onMove = () => {
+    const s = { center: map.getCenter(), zoom: map.getZoom() };
+    localStorage.setItem('map-view', JSON.stringify(s));
+  };
+  map.on('moveend', onMove);
+  const saved = localStorage.getItem('map-view');
+  if (saved) {
+    const v = JSON.parse(saved);
+    map.setView(v.center, v.zoom);
+  }
+  return () => map.off('moveend', onMove);
+}, []);
+```
+
+3) تحسين تجربة الانتظار والمعالجة
+- عند رفع ZIP، اعرض Badge “قيد المعالجة” مع مؤقت بسيط.
+- نفّذ polling كل 3–5 ثوانٍ لـ GET /api/gis/layers/:id حتى success أو error.
+- عند success: أضف الطبقة وافعل fitBounds تلقائياً.
+
+مثال polling بسيط:
+```tsx
+async function pollLayer(layerId: string, onReady: (data:any)=>void) {
+  const start = Date.now();
+  const poll = async () => {
+    const res = await fetch(`/api/gis/layers/${layerId}`);
+    const j = await res.json();
+    if (j.success && j.imageUrl && j.bounds) return onReady(j);
+    if (Date.now() - start < 60000) setTimeout(poll, 3000);
+  };
+  poll();
+}
+```
+
+استدعاؤه بعد الرفع:
+```tsx
+onSuccess: async (result) => {
+  // ...
+  pollLayer(result.layerId, (layerData) => {
+    const newLayer = { id: result.layerId, name: result.fileName.replace(/\.[^/.]+$/, ""), status:'processed', visible:true, imageUrl: layerData.imageUrl, bounds: layerData.bounds, fileSize: result.fileSize, uploadDate: new Date().toISOString() };
+    setLayers(prev => [...prev, newLayer]);
+    const map = (window as any).__leafletMap as L.Map | undefined;
+    if (map && newLayer.bounds) map.fitBounds(L.latLngBounds(newLayer.bounds), { padding: [40, 40] });
+  });
+}
+```
+
+4) ضبط طبقة الأساس والخرائط الفضائية
+- فعّل مفتاح لتبديل طبقة الأساس واحفظ الاختيار.
+- استخدم Esri World Imagery كبديل للأقمار الصناعية (كما أضفت في التعليق) أو Maptiler/Mapbox مع مفتاح.
+- تذكير: التراخيص! في الإنتاج استخدم مصدر خرائط مرخّصاً.
+
+مثال مبسّط:
+```tsx
+const [base, setBase] = useState(() => localStorage.getItem('basemap') || 'sat');
+useEffect(() => localStorage.setItem('basemap', base), [base]);
+
+{base === 'osm' ? (
+  <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" maxZoom={19} />
+) : (
+  <TileLayer url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}" maxZoom={18} />
+)}
+```
+
+5) ضبط الإحداثيات المعروضة
+- أضف زر تبديل العرض بين:
+  - Lat/Lon (WGS84)
+  - UTM Zone 38N (X,Y) باستخدام proj4
+
+ترقيع سريع:
+```tsx
+import proj4 from 'proj4';
+// تعريف UTM38N WGS84
+proj4.defs('EPSG:32638', '+proj=utm +zone=38 +datum=WGS84 +units=m +no_defs');
+
+function toUTM38(lat: number, lon: number) {
+  const [x, y] = proj4('EPSG:4326','EPSG:32638',[lon, lat]);
+  return { x, y };
+}
+```
+
+ثم في CoordinateDisplay أضف toggle لإظهار X/Y أو Lat/Lon.
+
+6) تحسينات الرفع (Backend) لضمان bounds صحيحة
+- عند المعالجة بـ rasterio:
+  - إذا كان CRS للصورة UTM 38N، حوّل bounds إلى WGS84 قبل إرجاعها للواجهة الأمامية ليستخدمها ImageOverlay مباشرة.
+  - تأكّد أن ترتيب bounds في الاستجابة هو [[south, west],[north, east]].
+
+بايثون (إرجاع bounds بالدرجات):
+```python
+import rasterio
+from rasterio.warp import transform_bounds
+
+with rasterio.open(tif_path) as src:
+    b = src.bounds  # left, bottom, right, top
+    crs_src = src.crs.to_string()
+    wgs84_bounds = transform_bounds(crs_src, 'EPSG:4326', b.left, b.bottom, b.right, b.top, densify_pts=21)
+    # أعد [[south, west],[north, east]]
+    bounds = [[wgs84_bounds[1], wgs84_bounds[0]], [wgs84_bounds[3], wgs84_bounds[2]]]
+```
+
+7) زر “إعادة التعيين” و”إظهار/إخفاء الكل”
+- اجعل “إعادة التعيين” يطير إلى حدود اليمن.
+```tsx
+const YEMEN_BOUNDS: LatLngBoundsExpression = [[12.0, 42.0],[19.5, 55.0]];
+<Button onClick={() => (window as any).__leafletMap?.fitBounds(L.latLngBounds(YEMEN_BOUNDS), { padding:[40,40] })}>
+  🌍 إعادة التعيين
+</Button>
+```
+
+8) تحضير الخطوة القادمة: أداة القص (Clipping Tool)
+- خيار واجهة أمامية (قص بصري فقط): طبّق قناع clipPath على ImageOverlay باستخدام SVG.
+- خيار واجهة خلفية (موصى به للدقة): استخدم rasterio.mask لقص الصورة حسب مضلع مرسوم وأعد طبقة جديدة (PNG + PGW).
+
+بايثون (قص فعلي):
+```python
+import rasterio, json
+from rasterio.mask import mask
+from shapely.geometry import shape
+
+def clip_geotiff(tif_path, geojson_polygon, out_tif):
+  geom = shape(geojson_polygon['features'][0]['geometry'])
+  with rasterio.open(tif_path) as src:
+      out_image, out_transform = mask(src, [geom.__geo_interface__], crop=True)
+      out_meta = src.meta.copy()
+      out_meta.update({"driver":"GTiff","height":out_image.shape[1],"width":out_image.shape[2],"transform":out_transform})
+      with rasterio.open(out_tif, "w", **out_meta) as dest:
+          dest.write(out_image)
+```
+
+ تقسيم العمل المقترح (48 ساعة)
+
+- اليوم 1:
+  - [FRONT] FitVisibleLayers + ZoomToLayer + حفظ حالة الخريطة/الأساس
+  - [BACK] إرجاع bounds بالدرجات [[south, west],[north, east]] والتأكد من ترتيبها
+  - [FRONT] scrollWheelZoom + تحسين مؤشر قيد المعالجة (polling)
+
+- اليوم 2:
+  - [FRONT] Toggle عرض الإحداثيات (Lat/Lon ↔ UTM38N)
+  - [BACK] endpoint أولي للقص مع rasterio.mask (يتلقى GeoJSON ويعيد طبقة جديدة)
+  - [FRONT] زر “قص” يرسل المضلع للـ backend ويضيف الطبقة الناتجة تلقائياً
+
+هل تريد أن أرسل لك Patch جاهز يضيف FitVisibleLayers + ZoomToLayer وحفظ حالة الخريطة الآن، أم نبدأ مباشرة بتوصيل القص على الواجهة الخلفية؟
