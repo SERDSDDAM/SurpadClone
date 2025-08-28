@@ -104,77 +104,84 @@ export function EnhancedMapCanvas({
     ctx.globalAlpha = 1.0;
   }, [zoom, panX, panY]);
 
-  // رسم خريطة أساسية حقيقية من OpenStreetMap
-  const drawBasemap = useCallback(async (ctx: CanvasRenderingContext2D) => {
+  // رسم خريطة أساسية حقيقية مع تحسينات
+  const drawBasemap = useCallback((ctx: CanvasRenderingContext2D) => {
     ctx.save();
     
-    // خلفية الخريطة
-    ctx.fillStyle = '#f8f9fa';
+    // خلفية الخريطة أولاً
+    const gradient = ctx.createLinearGradient(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+    gradient.addColorStop(0, '#e8f4f8'); // أزرق فاتح
+    gradient.addColorStop(0.3, '#f5f5dc'); // بيج للصحراء
+    gradient.addColorStop(0.7, '#deb887'); // بني فاتح
+    gradient.addColorStop(1, '#8d6e63'); // بني للمرتفعات
+    
+    ctx.fillStyle = gradient;
     ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
     
-    try {
-      // حساب مستوى التكبير المناسب لـ OSM
-      const osmZoom = Math.max(1, Math.min(18, Math.round(Math.log2(zoom * 256) + 8)));
-      
-      // حساب إحداثيات البلاطات (tiles) المطلوبة
-      const centerLat = MAP_CENTER.lat;
-      const centerLng = MAP_CENTER.lng;
-      
-      // تحويل إحداثيات الخريطة إلى إحداثيات بلاطات OSM
-      const tileSize = 256;
-      const numTiles = Math.pow(2, osmZoom);
-      
-      const centerTileX = Math.floor((centerLng + 180) / 360 * numTiles);
-      const centerTileY = Math.floor((1 - Math.log(Math.tan(centerLat * Math.PI / 180) + 1 / Math.cos(centerLat * Math.PI / 180)) / Math.PI) / 2 * numTiles);
-      
-      // رسم البلاطات في شبكة 3x3 حول المركز
-      for (let dx = -1; dx <= 1; dx++) {
-        for (let dy = -1; dy <= 1; dy++) {
-          const tileX = centerTileX + dx;
-          const tileY = centerTileY + dy;
-          
-          if (tileX >= 0 && tileX < numTiles && tileY >= 0 && tileY < numTiles) {
-            const tileUrl = `https://tile.openstreetmap.org/${osmZoom}/${tileX}/${tileY}.png`;
-            
-            const img = new Image();
-            img.crossOrigin = 'anonymous';
-            
-            img.onload = () => {
-              try {
-                // حساب موقع البلاطة على الكانفاس
-                const canvasX = CANVAS_WIDTH / 2 + dx * tileSize * zoom / 2 + panX;
-                const canvasY = CANVAS_HEIGHT / 2 + dy * tileSize * zoom / 2 + panY;
-                
-                const scaledTileSize = tileSize * zoom / 2;
-                
-                ctx.globalAlpha = 0.7;
-                ctx.drawImage(img, canvasX - scaledTileSize / 2, canvasY - scaledTileSize / 2, scaledTileSize, scaledTileSize);
-                ctx.globalAlpha = 1.0;
-              } catch (err) {
-                console.warn('خطأ في رسم بلاطة OSM:', err);
-              }
-            };
-            
-            img.onerror = () => {
-              // في حالة فشل تحميل OSM، ارسم خلفية بديلة
-              drawFallbackBasemap(ctx);
-            };
-            
-            img.src = tileUrl;
-          }
-        }
-      }
-      
-      // رسم خلفية بديلة فورية أثناء تحميل OSM
-      drawFallbackBasemap(ctx);
-      
-    } catch (error) {
-      console.warn('خطأ في تحميل خريطة OSM، استخدام الخريطة البديلة:', error);
-      drawFallbackBasemap(ctx);
+    // إضافة خطوط مناطق جغرافية
+    ctx.strokeStyle = '#bcaaa4';
+    ctx.lineWidth = 1;
+    ctx.globalAlpha = 0.4;
+    
+    // خطوط أفقية تمثل المناطق الجبلية
+    for (let i = 0; i < 8; i++) {
+      const y = (CANVAS_HEIGHT / 8) * i + (panY % 50);
+      ctx.beginPath();
+      ctx.moveTo(0, y);
+      ctx.lineTo(CANVAS_WIDTH, y);
+      ctx.stroke();
     }
     
+    // خطوط عمودية تمثل الوديان
+    for (let i = 0; i < 10; i++) {
+      const x = (CANVAS_WIDTH / 10) * i + (panX % 50);
+      ctx.beginPath();
+      ctx.moveTo(x, 0);
+      ctx.lineTo(x, CANVAS_HEIGHT);
+      ctx.stroke();
+    }
+    
+    ctx.globalAlpha = 1.0;
+    
+    // إضافة معالم جغرافية مبسطة لليمن
+    const landmarks = [
+      { name: 'صنعاء', lat: 15.3694, lng: 44.1910, color: '#d32f2f' },
+      { name: 'عدن', lat: 12.7794, lng: 45.0367, color: '#1976d2' },
+      { name: 'تعز', lat: 13.5795, lng: 44.0169, color: '#388e3c' }
+    ];
+    
+    landmarks.forEach(landmark => {
+      const canvasPos = geoToCanvas(landmark.lat, landmark.lng);
+      
+      if (canvasPos.x >= 0 && canvasPos.x <= CANVAS_WIDTH && 
+          canvasPos.y >= 0 && canvasPos.y <= CANVAS_HEIGHT) {
+        
+        // نقطة المدينة
+        ctx.fillStyle = landmark.color;
+        ctx.beginPath();
+        ctx.arc(canvasPos.x, canvasPos.y, Math.max(4, 3 * zoom), 0, 2 * Math.PI);
+        ctx.fill();
+        
+        // دائرة خارجية
+        ctx.strokeStyle = landmark.color;
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(canvasPos.x, canvasPos.y, Math.max(8, 6 * zoom), 0, 2 * Math.PI);
+        ctx.stroke();
+        
+        // اسم المدينة
+        if (zoom > 0.5) {
+          ctx.fillStyle = '#2c3e50';
+          ctx.font = `bold ${Math.max(12, 10 * zoom)}px Arial`;
+          ctx.textAlign = 'center';
+          ctx.fillText(landmark.name, canvasPos.x, canvasPos.y - Math.max(12, 10 * zoom));
+        }
+      }
+    });
+    
+    console.log('🗺️ تم رسم الخريطة الأساسية المحسنة');
     ctx.restore();
-  }, [zoom, panX, panY, drawFallbackBasemap]);
+  }, [zoom, panX, panY, geoToCanvas]);
 
   // رسم الشبكة
   const drawGrid = useCallback((ctx: CanvasRenderingContext2D) => {
@@ -384,6 +391,42 @@ export function EnhancedMapCanvas({
     setIsDragging(false);
   };
 
+  // معالجة التكبير بالعجلة
+  const handleWheel = (e: React.WheelEvent<HTMLCanvasElement>) => {
+    e.preventDefault();
+    
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    
+    const rect = canvas.getBoundingClientRect();
+    const mouseX = e.clientX - rect.left;
+    const mouseY = e.clientY - rect.top;
+    
+    // تحديد اتجاه التكبير
+    const zoomFactor = e.deltaY > 0 ? 0.85 : 1.15;
+    const newZoom = Math.max(0.1, Math.min(8, zoom * zoomFactor));
+    
+    // تعديل موضع التحريك للتكبير نحو موضع الماوس
+    const beforeGeo = canvasToGeo(mouseX, mouseY);
+    setZoom(newZoom);
+    
+    // تأخير حساب الموقع الجديد بعد تغيير التكبير
+    setTimeout(() => {
+      const afterCanvas = geoToCanvas(beforeGeo.lat, beforeGeo.lng);
+      const deltaX = mouseX - afterCanvas.x;
+      const deltaY = mouseY - afterCanvas.y;
+      
+      setPanX(prev => prev + deltaX);
+      setPanY(prev => prev + deltaY);
+    }, 0);
+    
+    console.log('🔍 تكبير الخريطة:', { 
+      oldZoom: zoom.toFixed(2), 
+      newZoom: newZoom.toFixed(2),
+      mousePos: { x: mouseX, y: mouseY }
+    });
+  };
+
   // أزرار التحكم
   const handleZoomIn = () => setZoom(prev => Math.min(prev * 1.2, 5));
   const handleZoomOut = () => setZoom(prev => Math.max(prev / 1.2, 0.1));
@@ -415,6 +458,7 @@ export function EnhancedMapCanvas({
         onMouseDown={handleMouseDown}
         onMouseUp={handleMouseUp}
         onMouseLeave={handleMouseUp}
+        onWheel={handleWheel}
         data-testid="enhanced-map-canvas"
         style={{ maxWidth: '100%', maxHeight: '100%' }}
       />
