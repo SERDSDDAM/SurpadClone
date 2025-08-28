@@ -1,6 +1,6 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { useMutation } from '@tanstack/react-query';
-import { MapContainer, TileLayer, useMapEvents, ImageOverlay } from 'react-leaflet';
+import { MapContainer, TileLayer, useMapEvents, ImageOverlay, useMap } from 'react-leaflet';
 import { Map as MapIcon, Upload, Hand, MapPin, Route, Square } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -53,6 +53,32 @@ function MapEvents({ onCoordinatesChange }: { onCoordinatesChange: (coords: { la
   return null;
 }
 
+function AutoFitBounds({ layers }: { layers: any[] }) {
+  const map = useMap();
+  
+  useEffect(() => {
+    if (layers.length === 0) return;
+    
+    const visibleLayers = layers.filter(l => l.visible && l.bounds);
+    if (visibleLayers.length > 0) {
+      const groupBounds = L.latLngBounds([]);
+      visibleLayers.forEach(layer => {
+        if (layer.bounds && Array.isArray(layer.bounds)) {
+          console.log('🎯 إضافة bounds للطبقة:', layer.name, layer.bounds);
+          groupBounds.extend(layer.bounds);
+        }
+      });
+      
+      if (groupBounds.isValid()) {
+        console.log('🗺️ تكبير تلقائي على الطبقات المرئية');
+        map.fitBounds(groupBounds, { padding: [10, 10] });
+      }
+    }
+  }, [layers, map]);
+
+  return null;
+}
+
 export default function SimpleDigitizationTool() {
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -63,6 +89,8 @@ export default function SimpleDigitizationTool() {
   const [uploadProgress, setUploadProgress] = useState(0);
   const [isUploading, setIsUploading] = useState(false);
   const [layers, setLayers] = useState<any[]>([]);
+  const [currentBasemap, setCurrentBasemap] = useState('osm');
+  const mapRef = useRef<L.Map | null>(null);
 
   // استرداد الطبقات المحفوظة عند تحميل الصفحة
   useEffect(() => {
@@ -479,9 +507,19 @@ export default function SimpleDigitizationTool() {
                             </Button>
                           </div>
                         </div>
-                        {layer.status === 'processed' && layer.bounds && (
+                        {layer.status === 'processed' && layer.bounds && layer.imageUrl && (
                           <div className="mt-2 text-xs text-blue-600">
                             ✅ جاهز للعرض على الخريطة
+                          </div>
+                        )}
+                        {layer.status === 'uploaded' && !layer.imageUrl && (
+                          <div className="mt-2 text-xs text-orange-600">
+                            ⏳ في انتظار معلومات العرض
+                          </div>
+                        )}
+                        {layer.status === 'uploading' && (
+                          <div className="mt-2 text-xs text-gray-600">
+                            📤 جاري الرفع...
                           </div>
                         )}
                       </div>
@@ -505,18 +543,19 @@ export default function SimpleDigitizationTool() {
           style={{ height: '100vh', width: '100%' }}
         >
           {/* طبقة الأساس - OpenStreetMap للاختبار */}
-          <TileLayer
-            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-            maxZoom={19}
-          />
-          
-          {/* طبقة الأساس - صور الأقمار الصناعية احتياطي */}
-          {/* <TileLayer
-            url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
-            attribution='&copy; <a href="https://www.esri.com/">Esri</a>'
-            maxZoom={18}
-          /> */}
+          {currentBasemap === 'osm' ? (
+            <TileLayer
+              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+              attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+              maxZoom={19}
+            />
+          ) : (
+            <TileLayer
+              url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
+              attribution='&copy; <a href="https://www.esri.com/">Esri</a>'
+              maxZoom={18}
+            />
+          )}
 
           {/* عرض الطبقات المرفوعة */}
           {layers.filter(layer => layer.visible && layer.imageUrl && layer.bounds).map(layer => {
@@ -544,6 +583,9 @@ export default function SimpleDigitizationTool() {
 
           {/* معالج الأحداث */}
           <MapEvents onCoordinatesChange={handleCoordinatesChange} />
+          
+          {/* التكبير التلقائي على الطبقات المرئية */}
+          <AutoFitBounds layers={layers} />
         </MapContainer>
 
         {/* عرض الإحداثيات */}
@@ -568,16 +610,24 @@ export default function SimpleDigitizationTool() {
             size="sm"
             className="bg-white/90 backdrop-blur-sm"
             onClick={() => {
+              setCurrentBasemap(prev => prev === 'osm' ? 'satellite' : 'osm');
+            }}
+            title={currentBasemap === 'osm' ? "تبديل إلى صور الأقمار الصناعية" : "تبديل إلى خريطة الشوارع"}
+          >
+            {currentBasemap === 'osm' ? "🛰️ أقمار صناعية" : "🗺️ خريطة شوارع"}
+          </Button>
+          
+          <Button
+            variant="outline"
+            size="sm"
+            className="bg-white/90 backdrop-blur-sm"
+            onClick={() => {
               // إعادة تعيين عرض الخريطة لليمن
-              const map = document.querySelector('[data-testid="leaflet-map"]');
-              if (map) {
-                // هذا مثال - يمكن تحسينه لاحقاً
-                console.log('🔄 إعادة تعيين عرض الخريطة');
-              }
+              window.location.reload();
             }}
             title="إعادة تعيين العرض"
           >
-            🌍 إعادة التعيين
+            🔄 إعادة التعيين
           </Button>
           
           {layers.length > 0 && (
