@@ -27,6 +27,14 @@ import { v4 as uuidv4 } from 'uuid';
 import gisFileServingRouter from './gis-file-serving';
 import path from 'path';
 import fs from 'fs/promises';
+import AdmZip from 'adm-zip';
+import { exec } from 'child_process';
+import { promisify } from 'util';
+
+const execAsync = promisify(exec);
+
+// مخزن حالة الطبقات
+const layerStates = new Map<string, any>();
 
 const router = express.Router();
 

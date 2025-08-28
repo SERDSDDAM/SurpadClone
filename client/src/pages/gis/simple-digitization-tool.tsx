@@ -161,6 +161,8 @@ export default function SimpleDigitizationTool() {
     localStorage.getItem('basemap') || 'osm'
   );
   const [coordinateFormat, setCoordinateFormat] = useState<'wgs84' | 'utm'>('wgs84');
+  const [layerPanelCollapsed, setLayerPanelCollapsed] = useState(false);
+  const [processingLayers, setProcessingLayers] = useState<Set<string>>(new Set());
   const mapRef = useRef<L.Map | null>(null);
 
   // حفظ نوع طبقة الأساس عند التغيير
@@ -664,12 +666,15 @@ export default function SimpleDigitizationTool() {
             );
           })}
           
-          {/* عرض مؤشر للطبقات التي لم تتم معالجتها بعد */}
-          {layers.filter(layer => layer.visible && !layer.imageUrl).length > 0 && (
-            <div className="absolute top-20 right-4 bg-yellow-100 border border-yellow-400 text-yellow-800 px-3 py-2 rounded-md shadow-md z-[1000]">
-              <div className="text-sm font-medium">معالجة الطبقات جارية...</div>
-              <div className="text-xs">
-                {layers.filter(layer => layer.visible && !layer.imageUrl).length} طبقة في انتظار المعالجة
+          {/* مؤشر المعالجة الدوار */}
+          {layers.some(layer => layer.status === 'processing' || layer.status === 'uploading') && (
+            <div className="absolute top-20 right-4 bg-blue-100 border border-blue-400 text-blue-800 px-4 py-3 rounded-md shadow-md z-[1000] flex items-center gap-3">
+              <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600"></div>
+              <div>
+                <div className="text-sm font-medium">معالجة الطبقات جارية...</div>
+                <div className="text-xs">
+                  {layers.filter(layer => layer.status === 'processing' || layer.status === 'uploading').length} طبقة قيد المعالجة
+                </div>
               </div>
             </div>
           )}
@@ -691,7 +696,25 @@ export default function SimpleDigitizationTool() {
           onFormatChange={setCoordinateFormat}
         />
 
-        {/* شريط الأدوات العلوي */}
+        {/* شريط أدوات مصغر يطفو */}
+        <div className="absolute top-4 left-4 bg-white/90 backdrop-blur-sm p-2 rounded-md shadow-md z-[1000] flex gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-8 w-8 p-0"
+            onClick={() => setLayerPanelCollapsed(!layerPanelCollapsed)}
+            title={layerPanelCollapsed ? "إظهار لوحة الطبقات" : "إخفاء لوحة الطبقات"}
+          >
+            {layerPanelCollapsed ? '📋' : '🔙'}
+          </Button>
+          
+          <div className="flex items-center gap-1 text-xs bg-gray-100 px-2 py-1 rounded">
+            <span>{layers.filter(layer => layer.visible).length}</span>
+            <span>طبقة</span>
+          </div>
+        </div>
+
+        {/* معلومات النظام العلوية */}
         <div className="absolute top-4 right-4 bg-white/90 backdrop-blur-sm p-3 rounded-md shadow-md z-[1000]">
           <div className="text-sm text-gray-600 mb-2">
             الأداة النشطة: <span className="font-medium">{activeTool}</span>
