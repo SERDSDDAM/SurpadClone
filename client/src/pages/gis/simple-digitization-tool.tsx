@@ -1,147 +1,110 @@
-import React, { useState, useRef, useCallback } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
-import { useToast } from "@/hooks/use-toast";
-import { 
-  Upload, 
-  Map, 
-  MapPin, 
-  Route, 
-  Square, 
-  Hand, 
-  Save, 
-  Eye, 
-  EyeOff,
-  ZoomIn,
-  ZoomOut,
-  LocateFixed
-} from "lucide-react";
-import { apiRequest } from "@/lib/queryClient";
-import { SimpleMapCanvas } from '@/components/SimpleMapCanvas';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
+import { useMutation } from '@tanstack/react-query';
+import { MapContainer, TileLayer, useMapEvents } from 'react-leaflet';
+import { Map as MapIcon, Upload, Hand, MapPin, Route, Square } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { useToast } from '@/hooks/use-toast';
+import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
 
-interface ProcessedLayer {
-  id: string;
-  name: string;
-  fileName: string;
-  objectPath: string;
-  bounds: [[number, number], [number, number]];
-  coordinateSystem: string;
-  geospatialInfo?: any;
-  visible?: boolean;
-  type?: string;
+// إصلاح أيقونات Leaflet الافتراضية
+delete (L.Icon.Default.prototype as any)._getIconUrl;
+L.Icon.Default.mergeOptions({
+  iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
+  iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
+  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
+});
+
+interface CoordinateDisplayProps {
+  coordinates: { lat: number; lng: number } | null;
 }
 
-interface DrawnFeature {
-  id: string;
-  type: 'point' | 'line' | 'polygon';
-  geometry: {
-    type: 'Point' | 'LineString' | 'Polygon';
-    coordinates: number[] | number[][] | number[][][];
-  };
-  properties: {
-    name: string;
-    timestamp: number;
-  };
+function CoordinateDisplay({ coordinates }: CoordinateDisplayProps) {
+  return (
+    <div className="absolute bottom-4 left-4 bg-white/90 backdrop-blur-sm px-3 py-2 rounded-md shadow-md z-[1000] border" dir="ltr">
+      <div className="text-sm font-mono">
+        {coordinates ? (
+          <>
+            <div>خط العرض: {coordinates.lat.toFixed(6)}</div>
+            <div>خط الطول: {coordinates.lng.toFixed(6)}</div>
+          </>
+        ) : (
+          <div>حرك الماوس فوق الخريطة</div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function MapEvents({ onCoordinatesChange }: { onCoordinatesChange: (coords: { lat: number; lng: number }) => void }) {
+  useMapEvents({
+    mousemove: (e) => {
+      onCoordinatesChange({
+        lat: e.latlng.lat,
+        lng: e.latlng.lng
+      });
+    },
+    mouseout: () => {
+      onCoordinatesChange({ lat: 0, lng: 0 });
+    }
+  });
+
+  return null;
 }
 
 export default function SimpleDigitizationTool() {
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
   
-  // حالة الطبقات والأدوات
-  const [layers, setLayers] = useState<ProcessedLayer[]>([]);
+  // حالة الواجهة
+  const [coordinates, setCoordinates] = useState<{ lat: number; lng: number } | null>(null);
   const [activeTool, setActiveTool] = useState<string>('hand');
-  const [drawnFeatures, setDrawnFeatures] = useState<DrawnFeature[]>([]);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [isUploading, setIsUploading] = useState(false);
+  const [layers, setLayers] = useState<any[]>([]);
 
-  // تحديث الطبقات
-  const handleLayersUpdate = useCallback((updatedLayers: ProcessedLayer[]) => {
-    setLayers(updatedLayers);
+  // معالج تحديث الإحداثيات
+  const handleCoordinatesChange = useCallback((coords: { lat: number; lng: number }) => {
+    setCoordinates(coords);
   }, []);
 
-  // رفع الملفات
+  // معالج رفع الملفات
   const uploadMutation = useMutation({
     mutationFn: async (file: File) => {
       console.log('📤 بدء رفع الملف:', file.name, 'حجم:', file.size);
       setIsUploading(true);
-      setUploadProgress(0);
+      setUploadProgress(10);
 
-      // الخطوة 1: رفع الملف مباشرة باستخدام FormData
+      // إنشاء FormData
       const formData = new FormData();
       formData.append('file', file);
       
-      const uploadResponse = await fetch('/api/gis/upload-geotiff-zip', {
+      console.log('📤 إرسال الملف باستخدام FormData');
+
+      // رفع الملف
+      const response = await fetch('/api/gis/upload-geotiff-zip', {
         method: 'POST',
         body: formData
       });
 
-      if (!uploadResponse.ok) {
-        const errorText = await uploadResponse.text();
-        throw new Error(`فشل في رفع الملف: ${uploadResponse.status} - ${errorText}`);
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`فشل في رفع الملف: ${response.status} - ${errorText}`);
       }
 
-      const uploadResult = await uploadResponse.json();
-      setUploadProgress(30);
-
-      console.log('✅ تم رفع الملف:', uploadResult);
-      setUploadProgress(50);
-
-      // الخطوة 2: تأكيد المعالجة
-      const confirmResponse = await apiRequest('/api/gis/layers/confirm', {
-        method: 'POST',
-        body: JSON.stringify({
-          layerId: uploadResult.layerId,
-          fileName: file.name,
-          metadata: {
-            name: file.name.replace(/\.[^/.]+$/, ""),
-            fileType: file.type,
-            fileSize: file.size,
-            isZipFile: file.name.toLowerCase().endsWith('.zip')
-          }
-        })
-      });
-
+      const result = await response.json();
+      console.log('✅ تم رفع الملف بنجاح:', result);
       setUploadProgress(100);
-      console.log('✅ تم تأكيد الرفع والمعالجة:', confirmResponse);
 
-      return confirmResponse.layer;
+      return result;
     },
-    onSuccess: (newLayer) => {
-      // تحويل البيانات لتناسب المكون الاحترافي الجديد
-      const processedLayer: ProcessedLayer = {
-        id: newLayer.id,
-        name: newLayer.name,
-        fileName: newLayer.fileName,
-        objectPath: newLayer.objectPath,
-        type: 'raster',
-        bounds: newLayer.bounds,
-        coordinateSystem: newLayer.coordinateSystem,
-        uploadDate: new Date().toISOString(),
-        status: 'ready',
-        visible: true,
-        opacity: 1.0,
-        zIndex: layers.length + 1000,
-        geospatialInfo: {
-          hasGeoreferencing: true,
-          spatialReference: newLayer.coordinateSystem,
-          pixelSize: newLayer.geospatialInfo?.pixelSize || [10, 10],
-          transform: newLayer.geospatialInfo?.transform || null
-        }
-      };
-      
-      setLayers(prev => [...prev, processedLayer]);
-      
+    onSuccess: (result) => {
+      console.log('✅ نجح رفع الملف:', result);
       toast({
         title: "تم رفع الملف بنجاح",
-        description: `تمت إضافة الطبقة: ${newLayer.name}`,
+        description: `تم رفع الملف: ${result.fileName}`,
       });
-      
       setIsUploading(false);
       setUploadProgress(0);
     },
@@ -157,6 +120,7 @@ export default function SimpleDigitizationTool() {
     }
   });
 
+  // معالج اختيار الملف
   const handleFileSelect = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -165,31 +129,17 @@ export default function SimpleDigitizationTool() {
     uploadMutation.mutate(file);
   }, [uploadMutation]);
 
-  const toggleLayerVisibility = (layerId: string) => {
-    // في المستقبل سيتم دمج هذا مع AdvancedMapCanvas
-    console.log('تبديل رؤية الطبقة:', layerId);
-    toast({
-      title: "تحديث الطبقة",
-      description: `تم تحديث رؤية الطبقة: ${layerId}`,
-    });
-  };
-
-  const handleFeatureDrawn = useCallback((feature: any) => {
-    setDrawnFeatures(prev => [...prev, feature]);
-    console.log('🎨 تم رسم شكل جديد:', feature);
-  }, []);
-
   return (
     <div className="flex h-screen bg-gray-100" dir="rtl">
-      {/* الشريط الجانبي الأيمن */}
+      {/* الشريط الجانبي */}
       <div className="w-80 bg-white shadow-lg flex flex-col">
         <div className="p-6 border-b">
           <h1 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
-            <Map className="w-6 h-6 text-blue-600" />
+            <MapIcon className="w-6 h-6 text-blue-600" />
             أداة الرقمنة البسيطة
           </h1>
           <p className="text-gray-600 text-sm mt-2">
-            نظام إحداثيات بسيط مع دعم CRS.Simple
+            خريطة تفاعلية مع أدوات الرقمنة
           </p>
         </div>
 
@@ -213,12 +163,14 @@ export default function SimpleDigitizationTool() {
                   onChange={handleFileSelect}
                   accept=".zip,.tif,.tiff"
                   className="hidden"
+                  data-testid="file-input"
                 />
                 <Button 
                   onClick={() => fileInputRef.current?.click()}
                   disabled={isUploading}
                   className="w-full"
                   variant="outline"
+                  data-testid="button-upload"
                 >
                   {isUploading ? `رفع... ${uploadProgress}%` : 'اختر ملف ZIP'}
                 </Button>
@@ -228,6 +180,7 @@ export default function SimpleDigitizationTool() {
                     <div 
                       className="bg-blue-600 h-2 rounded-full transition-all duration-300"
                       style={{ width: `${uploadProgress}%` }}
+                      data-testid="progress-bar"
                     />
                   </div>
                 )}
@@ -246,6 +199,7 @@ export default function SimpleDigitizationTool() {
                   variant={activeTool === 'hand' ? 'default' : 'outline'}
                   onClick={() => setActiveTool('hand')}
                   className="flex items-center gap-2"
+                  data-testid="button-tool-hand"
                 >
                   <Hand className="w-4 h-4" />
                   تحريك
@@ -254,6 +208,7 @@ export default function SimpleDigitizationTool() {
                   variant={activeTool === 'point' ? 'default' : 'outline'}
                   onClick={() => setActiveTool('point')}
                   className="flex items-center gap-2"
+                  data-testid="button-tool-point"
                 >
                   <MapPin className="w-4 h-4" />
                   نقطة
@@ -262,6 +217,7 @@ export default function SimpleDigitizationTool() {
                   variant={activeTool === 'line' ? 'default' : 'outline'}
                   onClick={() => setActiveTool('line')}
                   className="flex items-center gap-2"
+                  data-testid="button-tool-line"
                 >
                   <Route className="w-4 h-4" />
                   خط
@@ -270,6 +226,7 @@ export default function SimpleDigitizationTool() {
                   variant={activeTool === 'polygon' ? 'default' : 'outline'}
                   onClick={() => setActiveTool('polygon')}
                   className="flex items-center gap-2"
+                  data-testid="button-tool-polygon"
                 >
                   <Square className="w-4 h-4" />
                   مضلع
@@ -278,95 +235,48 @@ export default function SimpleDigitizationTool() {
             </CardContent>
           </Card>
 
-          {/* قسم الطبقات */}
+          {/* معلومات الطبقات */}
           <Card>
             <CardHeader>
-              <CardTitle className="text-lg">الطبقات ({layers.length})</CardTitle>
+              <CardTitle className="text-lg">الطبقات المحملة</CardTitle>
             </CardHeader>
             <CardContent>
-              {layers.length === 0 ? (
-                <p className="text-gray-500 text-center py-4">
-                  لا توجد طبقات محملة
-                </p>
-              ) : (
-                <div className="space-y-2">
-                  {layers.map((layer) => (
-                    <div key={layer.id} className="flex items-center justify-between p-2 bg-gray-50 rounded">
-                      <div className="flex items-center gap-2">
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => toggleLayerVisibility(layer.id)}
-                        >
-                          <Eye className="w-4 h-4 text-blue-600" />
-                        </Button>
-                        <span className="text-sm font-medium">{layer.name}</span>
-                      </div>
-                      <Badge variant="secondary" className="text-xs">
-                        {layer.coordinateSystem}
-                      </Badge>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* قسم الأشكال المرسومة */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">المعالم المرسومة ({drawnFeatures.length})</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {drawnFeatures.length === 0 ? (
-                <p className="text-gray-500 text-center py-4">
-                  لم يتم رسم معالم بعد
-                </p>
-              ) : (
-                <div className="space-y-2">
-                  {drawnFeatures.slice(-5).map((feature) => (
-                    <div key={feature.id} className="flex items-center justify-between p-2 bg-gray-50 rounded">
-                      <div className="flex items-center gap-2">
-                        <div className="w-3 h-3 rounded-full bg-red-500" />
-                        <span className="text-sm">{feature.properties.name}</span>
-                      </div>
-                      <Badge variant="outline" className="text-xs">
-                        {feature.type}
-                      </Badge>
-                    </div>
-                  ))}
-                </div>
-              )}
+              <div className="text-sm text-gray-600">
+                {layers.length === 0 ? 'لا توجد طبقات محملة' : `${layers.length} طبقة محملة`}
+              </div>
             </CardContent>
           </Card>
         </div>
       </div>
 
-      {/* منطقة الخريطة الرئيسية */}
+      {/* منطقة الخريطة */}
       <div className="flex-1 relative">
-        <SimpleMapCanvas
-          layers={layers}
-          onLayerSelect={(layerId) => {
-            console.log('تم اختيار الطبقة:', layerId);
-            toast({
-              title: "تم اختيار الطبقة",
-              description: `تم اختيار الطبقة: ${layerId}`,
-            });
-          }}
-          className="w-full h-[600px]"
-        />
-        
-        {/* أزرار التحكم المباشر */}
-        <div className="absolute bottom-6 left-6 bg-white rounded-lg shadow-lg p-2 flex gap-2">
-          <Button size="sm" variant="outline" title="تكبير">
-            <ZoomIn className="w-4 h-4" />
-          </Button>
-          <Button size="sm" variant="outline" title="تصغير">
-            <ZoomOut className="w-4 h-4" />
-          </Button>
-          <Button size="sm" variant="outline" title="تمركز">
-            <LocateFixed className="w-4 h-4" />
-          </Button>
+        <MapContainer
+          center={[15.3694, 44.1910]} // إحداثيات صنعاء
+          zoom={8}
+          className="w-full h-full"
+          zoomControl={true}
+          data-testid="leaflet-map"
+        >
+          {/* طبقة الأساس - صور الأقمار الصناعية */}
+          <TileLayer
+            url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
+            attribution='&copy; <a href="https://www.esri.com/">Esri</a> &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community'
+            maxZoom={18}
+          />
+
+          {/* معالج الأحداث */}
+          <MapEvents onCoordinatesChange={handleCoordinatesChange} />
+        </MapContainer>
+
+        {/* عرض الإحداثيات */}
+        <CoordinateDisplay coordinates={coordinates} />
+
+        {/* شريط الأدوات العلوي */}
+        <div className="absolute top-4 right-4 bg-white/90 backdrop-blur-sm p-2 rounded-md shadow-md z-[1000]">
+          <div className="text-sm text-gray-600">
+            الأداة النشطة: <span className="font-medium">{activeTool}</span>
+          </div>
         </div>
       </div>
     </div>
