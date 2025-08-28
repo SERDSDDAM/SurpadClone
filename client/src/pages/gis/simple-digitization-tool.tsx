@@ -101,9 +101,25 @@ export default function SimpleDigitizationTool() {
     },
     onSuccess: (result) => {
       console.log('✅ نجح رفع الملف:', result);
+      
+      // إنشاء كائن طبقة جديدة للعرض في القائمة
+      const newLayer = {
+        id: result.layerId,
+        name: result.fileName.replace(/\.[^/.]+$/, ""), // إزالة امتداد الملف
+        fileName: result.fileName,
+        status: 'uploaded',
+        fileSize: result.fileSize,
+        uploadDate: new Date().toISOString(),
+        visible: true
+      };
+      
+      // إضافة الطبقة الجديدة إلى القائمة
+      setLayers(prevLayers => [...prevLayers, newLayer]);
+      console.log('📝 تمت إضافة الطبقة الجديدة إلى القائمة:', newLayer);
+      
       toast({
         title: "تم رفع الملف بنجاح",
-        description: `تم رفع الملف: ${result.fileName}`,
+        description: `تمت إضافة الطبقة: ${newLayer.name}`,
       });
       setIsUploading(false);
       setUploadProgress(0);
@@ -241,8 +257,27 @@ export default function SimpleDigitizationTool() {
               <CardTitle className="text-lg">الطبقات المحملة</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-sm text-gray-600">
-                {layers.length === 0 ? 'لا توجد طبقات محملة' : `${layers.length} طبقة محملة`}
+              <div className="space-y-2">
+                {layers.length === 0 ? (
+                  <div className="text-sm text-gray-600">لا توجد طبقات محملة</div>
+                ) : (
+                  <>
+                    <div className="text-sm text-gray-600 mb-2">{layers.length} طبقة محملة</div>
+                    {layers.map((layer) => (
+                      <div key={layer.id} className="bg-gray-50 p-2 rounded border">
+                        <div className="text-sm font-medium text-gray-800">{layer.name}</div>
+                        <div className="text-xs text-gray-500">
+                          {layer.fileName} • {layer.status}
+                        </div>
+                        {layer.fileSize && (
+                          <div className="text-xs text-gray-400">
+                            {(layer.fileSize / (1024 * 1024)).toFixed(1)} MB
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </>
+                )}
               </div>
             </CardContent>
           </Card>
