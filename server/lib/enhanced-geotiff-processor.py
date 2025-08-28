@@ -352,8 +352,8 @@ def main():
     try:
         result = processor.process_zip_file(input_zip, output_dir)
         
-        # طباعة النتيجة كـ JSON
-        print(json.dumps(result, ensure_ascii=False, indent=2))
+        # طباعة النتيجة كـ JSON صحيح بدون مسافات
+        print(json.dumps(result, ensure_ascii=False))
         
     except Exception as e:
         error_result = {
@@ -361,7 +361,7 @@ def main():
             "error": str(e),
             "timestamp": datetime.now().isoformat()
         }
-        print(json.dumps(error_result, ensure_ascii=False, indent=2))
+        print(json.dumps(error_result, ensure_ascii=False))
         sys.exit(1)
 
 

@@ -43,7 +43,7 @@ export class PreprocessingService {
     const layerOutputDir = path.join(this.outputDir, layerId);
     await fs.mkdir(layerOutputDir, { recursive: true });
     
-    const pythonScript = path.join(process.cwd(), 'server/lib/enhanced-geotiff-processor.py');
+    const pythonScript = path.join(process.cwd(), 'server/lib/simple-geotiff-processor.py');
     
     return new Promise((resolve, reject) => {
       console.log('🐍 استدعاء معالج Python المحسن...');
