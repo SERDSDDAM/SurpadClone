@@ -257,13 +257,21 @@ export default function SimpleDigitizationTool() {
           className="w-full h-full"
           zoomControl={true}
           data-testid="leaflet-map"
+          style={{ height: '100vh', width: '100%' }}
         >
-          {/* طبقة الأساس - صور الأقمار الصناعية */}
+          {/* طبقة الأساس - OpenStreetMap للاختبار */}
           <TileLayer
-            url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
-            attribution='&copy; <a href="https://www.esri.com/">Esri</a> &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community'
-            maxZoom={18}
+            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+            maxZoom={19}
           />
+          
+          {/* طبقة الأساس - صور الأقمار الصناعية احتياطي */}
+          {/* <TileLayer
+            url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
+            attribution='&copy; <a href="https://www.esri.com/">Esri</a>'
+            maxZoom={18}
+          /> */}
 
           {/* معالج الأحداث */}
           <MapEvents onCoordinatesChange={handleCoordinatesChange} />

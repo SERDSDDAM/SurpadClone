@@ -59,8 +59,16 @@ export class WebGISService {
       pythonProcess.on('close', (code) => {
         if (code === 0) {
           try {
-            // تحليل النتيجة من Python
-            const pythonResult = JSON.parse(stdoutData.trim());
+            // استخراج JSON من المخرجات المختلطة
+            const jsonStartIndex = stdoutData.lastIndexOf('{');
+            if (jsonStartIndex === -1) {
+              throw new Error('لم يتم العثور على JSON في المخرجات');
+            }
+            
+            const jsonStr = stdoutData.substring(jsonStartIndex);
+            console.log('📋 JSON المستخرج:', jsonStr.substring(0, 200) + '...');
+            
+            const pythonResult = JSON.parse(jsonStr);
             
             if (pythonResult.success) {
               const result: WebGISResult = {
