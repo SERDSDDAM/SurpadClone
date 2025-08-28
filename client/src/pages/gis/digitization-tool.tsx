@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from "react";
 import LeafletMapCanvas from '@/components/LeafletMapCanvas';
+import SimpleCRSMapCanvas, { type SimpleGeoreferencedLayer } from '@/components/SimpleCRSMapCanvas';
 import { extractGeoTiffFromZip } from '@/lib/geotiff-reader-v2';
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -683,10 +684,18 @@ export default function DigitizationTool() {
 
         {/* منطقة الخريطة الاحترافية */}
         <div className="flex-1 relative">
-          <LeafletMapCanvas
-            layers={layers}
+          <SimpleCRSMapCanvas
+            layers={layers.map(layer => ({
+              id: layer.id,
+              name: layer.name,
+              imageUrl: layer.imageUrl,
+              bounds: layer.bounds,
+              visible: layer.visible,
+              opacity: layer.opacity,
+              metadata: layer.metadata
+            }))}
             activeTool={activeTool}
-            onPointClick={(lat, lng, utmX, utmY) => {
+            onPointClick={(x, y, utmX, utmY) => {
               console.log('🗺️ نقر على الخريطة:', { 
                 lat: lat.toFixed(6), 
                 lng: lng.toFixed(6), 

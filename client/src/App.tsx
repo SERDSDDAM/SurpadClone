@@ -47,6 +47,7 @@ import InspectorFieldApp from "@/pages/inspector-field-app";
 import DigitalCertificates from "@/pages/digital-certificates";
 import NotificationsSystem from "@/pages/notifications-system";
 import { GISDataManagement, DigitizationTool } from "@/pages/gis";
+import SimpleDigitizationTool from "@/pages/gis/simple-digitization-tool";
 import NotFound from "@/pages/not-found";
 
 function Navigation() {
@@ -64,6 +65,7 @@ function Navigation() {
     { name: "نظام الإشعارات", href: "/notifications", icon: MessageSquare },
     { name: "إدارة البيانات الجغرافية", href: "/gis-management", icon: MapPin },
     { name: "أداة رقمنة المخططات", href: "/digitization-tool", icon: Layers },
+    { name: "الرقمنة البسيطة (CRS.Simple)", href: "/simple-digitization", icon: Layers },
     { name: "إدارة المهنيين", href: "/professionals", icon: Users },
     { name: "تطبيق المساح", href: "/field-app", icon: Smartphone },
     { name: "التطبيق النظيف", href: "/clean-field-app", icon: MapPin },
@@ -187,6 +189,7 @@ function Router() {
           <Route path="/notifications" component={NotificationsSystem} />
           <Route path="/gis-management" component={GISDataManagement} />
           <Route path="/digitization-tool" component={DigitizationTool} />
+          <Route path="/simple-digitization" component={SimpleDigitizationTool} />
           <Route path="/professionals" component={ProfessionalsManagement} />
           <Route path="/field-app" component={FieldApp} />
           <Route path="/clean-field-app" component={CleanFieldApp} />
