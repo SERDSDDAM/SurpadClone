@@ -43,7 +43,7 @@ import {
   YEMEN_UTM_REFERENCES 
 } from "@/lib/coordinate-transform";
 import { AdvancedLayersPanel } from "@/components/AdvancedLayersPanel";
-import { RealMapCanvas, GeoreferencedLayer } from "@/components/RealMapCanvas";
+import { ProfessionalMapCanvas, GeoreferencedLayer } from "@/components/ProfessionalMapCanvas";
 
 // استخدام GeoreferencedLayer من المكون الاحترافي
 // interface GeoreferencedLayer محذوف لأنه موجود في ProfessionalMapView
@@ -681,7 +681,7 @@ export default function DigitizationTool() {
 
         {/* منطقة الخريطة الاحترافية */}
         <div className="flex-1 relative">
-          <RealMapCanvas
+          <ProfessionalMapCanvas
             layers={layers}
             activeTool={activeTool}
             onPointClick={(lat, lng, utmX, utmY) => {
