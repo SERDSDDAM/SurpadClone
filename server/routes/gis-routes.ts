@@ -584,7 +584,7 @@ router.post('/layers/confirm', isAuthenticated, async (req: Request, res: Respon
         // محاكاة حفظ الملف - في التطبيق الحقيقي سيأتي من التخزين السحابي
         await fs.writeFile(tempFilePath, 'mock zip content - in production this comes from cloud storage');
         
-        // استخدام خدمة المعالجة المسبقة الجديدة
+        // استخدام خدمة المعالجة المسبقة المحسنة
         const preprocessingService = new PreprocessingService();
         const preprocessingResult = await preprocessingService.processZipFile(tempFilePath, layerId);
         
@@ -592,59 +592,37 @@ router.post('/layers/confirm', isAuthenticated, async (req: Request, res: Respon
           throw new Error(preprocessingResult.error || 'فشل في المعالجة المسبقة');
         }
         
-        console.log('✅ المعالجة المسبقة مكتملة:', preprocessingResult.metadata);
+        console.log('✅ المعالجة المسبقة مكتملة مع سجل التدقيق:', preprocessingResult);
         
-        // رفع الملفات المعالجة للتخزين السحابي (محاكاة)
-        const cloudUrls = await preprocessingService.copyToCloudStorage(layerId, {
-          png: preprocessingResult.png_path!,
-          pgw: preprocessingResult.pgw_path!,
-          prj: preprocessingResult.prj_path!
-        });
+        // الملفات متوفرة في مجلد المعالجة وسيتم خدمتها مباشرة
+        console.log('📁 الملفات المعالجة متوفرة في:', preprocessingResult.outputDirectory);
         
-        // تنظيف الملفات المؤقتة
-        await preprocessingService.cleanup(layerId);
+        // تنظيف الملف المؤقت
         await fs.unlink(tempFilePath).catch(e => console.warn('تعذر حذف الملف:', e));
       
-        const metadata_info = preprocessingResult.metadata!;
-        
         processedLayer = {
           id: layerId,
-          name: metadata_info.filename,
-          fileName: `${metadata_info.filename}.png`, // اسم ملف PNG المُحول
-          objectPath: cloudUrls.pngUrl, // رابط الصورة PNG
+          name: preprocessingResult.fileName.replace('.png', ''),
+          fileName: preprocessingResult.fileName,
+          objectPath: `/api/gis/public-objects/gis-layers/${preprocessingResult.fileName}`,
           type: 'raster',
-          // تحويل bounds لنظام CRS.Simple في Leaflet
-          bounds: [
-            [metadata_info.bounds.minY, metadata_info.bounds.minX], // SW corner
-            [metadata_info.bounds.maxY, metadata_info.bounds.maxX]  // NE corner
-          ],
-          coordinateSystem: metadata_info.crs,
-          sourceCoordinateSystem: metadata_info.crs,
+          bounds: preprocessingResult.bounds,
+          coordinateSystem: preprocessingResult.coordinateSystem,
+          sourceCoordinateSystem: preprocessingResult.coordinateSystem,
           uploadDate: new Date().toISOString(),
           status: 'ready',
           fileSize: metadata?.fileSize || 0,
-          // معلومات المعالجة المسبقة
+          // معلومات المعالجة المسبقة المحسنة
           preprocessingInfo: {
             originalFormat: 'GeoTIFF',
-            processedFormat: 'PNG + World Files',
+            processedFormat: 'PNG + World Files + CRS',
             hasWorldFile: true,
             hasProjectionFile: true,
-            pngUrl: cloudUrls.pngUrl,
-            pgwUrl: cloudUrls.pgwUrl,
-            prjUrl: cloudUrls.prjUrl,
-            processingMethod: 'Python + PIL + geotiff'
+            outputDirectory: preprocessingResult.outputDirectory,
+            processingTime: preprocessingResult.processingTime,
+            processingMethod: 'Enhanced Python Processor with Audit Logging'
           },
-          geospatialInfo: {
-            hasGeoreferencing: true,
-            spatialReference: metadata_info.crs,
-            needsReprojection: false,
-            bounds: metadata_info.bounds,
-            pixelSize: metadata_info.pixel_size,
-            dimensions: {
-              width: metadata_info.width,
-              height: metadata_info.height
-            }
-          }
+          geospatialInfo: preprocessingResult.geospatialInfo
         };
         
       } catch (processingError) {

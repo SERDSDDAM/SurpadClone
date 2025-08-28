@@ -4,25 +4,19 @@ import fs from 'fs/promises';
 
 export interface PreprocessingResult {
   success: boolean;
-  png_path?: string;
-  pgw_path?: string;
-  prj_path?: string;
-  metadata?: {
-    filename: string;
-    width: number;
-    height: number;
-    crs: string;
-    bounds: {
-      minX: number;
-      minY: number;
-      maxX: number;
-      maxY: number;
-    };
-    pixel_size: {
-      x: number;
-      y: number;
-    };
+  layerId: string;
+  fileName: string;
+  bounds: [[number, number], [number, number]]; // [[minY, minX], [maxY, maxX]]
+  coordinateSystem: string;
+  geospatialInfo: {
+    hasGeoreferencing: boolean;
+    dimensions?: { width: number; height: number };
+    pixelSize?: [number, number];
+    transform?: number[];
+    crsWkt?: string;
   };
+  outputDirectory?: string;
+  processingTime?: string;
   error?: string;
 }
 
@@ -49,7 +43,7 @@ export class PreprocessingService {
     const layerOutputDir = path.join(this.outputDir, layerId);
     await fs.mkdir(layerOutputDir, { recursive: true });
     
-    const pythonScript = path.join(process.cwd(), 'server/lib/geotiff-preprocessor.py');
+    const pythonScript = path.join(process.cwd(), 'server/lib/enhanced-geotiff-processor.py');
     
     return new Promise((resolve, reject) => {
       console.log('🐍 استدعاء معالج Python المحسن...');
@@ -73,11 +67,39 @@ export class PreprocessingService {
       pythonProcess.on('close', (code) => {
         if (code === 0) {
           try {
-            const result = JSON.parse(stdoutData.trim()) as PreprocessingResult;
-            console.log('✅ المعالجة المسبقة مكتملة:', result);
-            resolve(result);
+            // استخراج آخر سطر JSON من المخرجات
+            const lines = stdoutData.trim().split('\n');
+            const lastLine = lines[lines.length - 1];
+            const pythonResult = JSON.parse(lastLine);
+            
+            if (pythonResult.success) {
+              // تحويل نتيجة Python إلى تنسيق PreprocessingResult
+              const result: PreprocessingResult = {
+                success: true,
+                layerId: layerId,
+                fileName: pythonResult.png_file,
+                bounds: pythonResult.bounds,
+                coordinateSystem: pythonResult.coordinate_system,
+                geospatialInfo: {
+                  hasGeoreferencing: true,
+                  dimensions: pythonResult.geospatial_info.dimensions,
+                  pixelSize: pythonResult.geospatial_info.pixel_size,
+                  transform: pythonResult.geospatial_info.transform,
+                  crsWkt: pythonResult.geospatial_info.crs_wkt
+                },
+                outputDirectory: pythonResult.output_directory,
+                processingTime: new Date().toISOString()
+              };
+              
+              console.log('✅ المعالجة المسبقة مكتملة مع سجل التدقيق:', result);
+              resolve(result);
+            } else {
+              console.error('❌ فشل في المعالجة:', pythonResult.error);
+              reject(new Error(`فشل في المعالجة: ${pythonResult.error}`));
+            }
           } catch (error) {
             console.error('❌ خطأ في تحليل نتيجة المعالجة:', error);
+            console.error('📄 المخرجات الخام:', stdoutData);
             reject(new Error(`خطأ في تحليل النتيجة: ${error}`));
           }
         } else {
