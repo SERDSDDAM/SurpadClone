@@ -44,15 +44,60 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // GIS routes
   app.use("/api/gis", gisRoutes);
   
-  // GIS upload routes (معالجة GeoTIFF الحقيقية)
+  // Enhanced GIS upload routes
+  const enhancedUploadRoutes = await import('./routes/enhanced-upload');
+  app.use('/api/gis', enhancedUploadRoutes.default);
+  
+  // Legacy GIS upload routes (for backward compatibility)
   const gisUploadRoutes = await import('./routes/gis-upload');
-  app.use('/api/gis', gisUploadRoutes.default);
+  app.use('/api/gis/legacy', gisUploadRoutes.default);
+  
+  // Enable CORS and increase limits FIRST
+  app.use((req, res, next) => {
+    res.header('Access-Control-Allow-Origin', '*');
+    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+    res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
+    if (req.method === 'OPTIONS') {
+      res.sendStatus(200);
+    } else {
+      next();
+    }
+  });
+
+  // Serve processed layers as static files
+  app.use('/layers', (req, res, next) => {
+    const filePath = path.join(process.cwd(), 'temp-uploads', 'processed', req.path);
+    if (fs.existsSync(filePath)) {
+      res.sendFile(filePath);
+    } else {
+      next();
+    }
+  });
 
   // APIs خاصة لطبقات الخرائط
   app.get('/api/gis/layers/:layerId', async (req, res) => {
     try {
       const { layerId } = req.params;
       console.log('🔍 طلب معلومات الطبقة:', layerId);
+      
+      // Handle test layer specifically
+      if (layerId === 'test_layer_demo') {
+        return res.json({
+          success: true,
+          id: 'test_layer_demo',
+          name: 'طبقة تجريبية - خريطة اليمن',
+          fileName: 'yemen_test.png',
+          status: 'processed',
+          fileSize: 1024000,
+          uploadDate: new Date().toISOString(),
+          visible: true,
+          imageUrl: '/api/gis/layers/test_layer_demo/image/test_geotiff.png',
+          bounds: [[15.2, 44.0], [15.6, 44.4]],
+          width: 800,
+          height: 600,
+          crs: 'EPSG:4326'
+        });
+      }
       
       // التحقق من وجود الطبقة في مجلد المعالجة
       const layerDir = path.join(process.cwd(), 'temp-uploads', 'processed', layerId);

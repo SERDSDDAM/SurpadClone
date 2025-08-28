@@ -1,5 +1,6 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { CleanLeafletMap } from '@/components/CleanLeafletMap';
+import { AdvancedFileUploader } from '@/components/AdvancedFileUploader';
 import { useMutation } from '@tanstack/react-query';
 import { MapContainer, TileLayer, useMapEvents, ImageOverlay, useMap } from 'react-leaflet';
 import { Map as MapIcon, Upload, Hand, MapPin, Route, Square } from 'lucide-react';
@@ -586,34 +587,46 @@ export default function SimpleDigitizationTool() {
                 💾 تصدير البيانات
               </Button>
               
-              <Button
-                variant="outline"
-                size="sm"
-                className="w-full"
-                onClick={() => {
-                  // إضافة طبقة تجريبية تعمل
-                  const testLayer = {
-                    id: 'test_layer_demo',
-                    name: 'طبقة تجريبية - خريطة اليمن',
-                    fileName: 'yemen_test.png',
-                    status: 'processed',
-                    fileSize: 1024000,
-                    uploadDate: new Date().toISOString(),
-                    visible: true,
-                    imageUrl: '/api/gis/layers/test_layer_demo/image/test_geotiff.png',
-                    bounds: [[15.2, 44.0], [15.6, 44.4]]
-                  };
-                  
-                  setLayers(prev => [...prev.filter(l => l.id !== 'test_layer_demo'), testLayer]);
-                  
-                  toast({
-                    title: "تمت إضافة طبقة تجريبية",
-                    description: "طبقة تجريبية للاختبار",
-                  });
-                }}
-              >
-                🧪 إضافة طبقة تجريبية
-              </Button>
+              <div className="space-y-3">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full"
+                  onClick={() => {
+                    // إضافة طبقة تجريبية تعمل
+                    const testLayer = {
+                      id: 'test_layer_demo',
+                      name: 'طبقة تجريبية - خريطة اليمن',
+                      fileName: 'yemen_test.png',
+                      status: 'processed',
+                      fileSize: 1024000,
+                      uploadDate: new Date().toISOString(),
+                      visible: true,
+                      imageUrl: '/api/gis/layers/test_layer_demo/image/test_geotiff.png',
+                      bounds: [[15.2, 44.0], [15.6, 44.4]],
+                      width: 800,
+                      height: 600,
+                      crs: 'EPSG:4326'
+                    };
+                    
+                    setLayers(prev => [...prev.filter(l => l.id !== 'test_layer_demo'), testLayer]);
+                    
+                    toast({
+                      title: "تمت إضافة طبقة تجريبية",
+                      description: "طبقة تجريبية للاختبار",
+                    });
+                  }}
+                >
+                  🧪 إضافة طبقة تجريبية
+                </Button>
+                
+                {/* Advanced File Uploader */}
+                <AdvancedFileUploader 
+                  onLayerAdded={(layer) => {
+                    setLayers(prev => [...prev, layer]);
+                  }}
+                />
+              </div>
             </CardContent>
           </Card>
 
