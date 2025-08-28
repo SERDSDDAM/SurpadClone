@@ -22,6 +22,8 @@ import { eq, and, sql } from 'drizzle-orm';
 import { z } from 'zod';
 import { extractGeoTiffMetadataPython, createGeoTiffPreview } from '../lib/python-geotiff-wrapper';
 import { WebGISService } from '../lib/web-gis-service';
+import multer from 'multer';
+import { v4 as uuidv4 } from 'uuid';
 import gisFileServingRouter from './gis-file-serving';
 import path from 'path';
 import fs from 'fs/promises';
@@ -551,6 +553,53 @@ router.post('/layers/upload-url', isAuthenticated, async (req: Request, res: Res
   } catch (error) {
     console.error('Error generating upload URL:', error);
     res.status(500).json({ error: 'Failed to generate upload URL' });
+  }
+});
+
+// إعداد multer لرفع الملفات
+const upload = multer({
+  dest: path.join(process.cwd(), 'temp-uploads'),
+  fileFilter: (req, file, cb) => {
+    const allowedTypes = ['.zip', '.tif', '.tiff'];
+    const fileExt = path.extname(file.originalname).toLowerCase();
+    if (allowedTypes.includes(fileExt)) {
+      cb(null, true);
+    } else {
+      cb(new Error('نوع ملف غير مدعوم. الأنواع المدعومة: ZIP, TIF, TIFF'));
+    }
+  },
+  limits: {
+    fileSize: 100 * 1024 * 1024 // 100MB
+  }
+});
+
+// POST /api/gis/upload-geotiff-zip - رفع ملف GeoTIFF مباشرة
+router.post('/upload-geotiff-zip', upload.single('file'), async (req: Request, res: Response) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: 'لم يتم رفع ملف' });
+    }
+
+    const layerId = `layer_${Date.now()}_${uuidv4().substr(0, 8)}`;
+    
+    console.log('📤 تم استقبال ملف:', req.file.originalname);
+    console.log('🆔 معرف الطبقة:', layerId);
+
+    // نقل الملف إلى المجلد المطلوب
+    const targetPath = path.join(process.cwd(), 'temp-uploads', req.file.originalname);
+    await fs.rename(req.file.path, targetPath);
+
+    res.json({
+      success: true,
+      layerId,
+      fileName: req.file.originalname,
+      fileSize: req.file.size,
+      message: 'تم رفع الملف بنجاح'
+    });
+
+  } catch (error) {
+    console.error('❌ خطأ في رفع الملف:', error);
+    res.status(500).json({ error: 'فشل في رفع الملف' });
   }
 });
 

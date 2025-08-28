@@ -72,42 +72,37 @@ export default function SimpleDigitizationTool() {
       setIsUploading(true);
       setUploadProgress(0);
 
-      // الخطوة 1: طلب URL للرفع
-      const uploadResponse = await apiRequest<{
-        layerId: string;
-        uploadUrl: string;
-        objectPath: string;
-        fileName: string;
-        fileType: string;
-      }>('/api/gis/layers/upload-url', {
+      // الخطوة 1: رفع الملف مباشرة باستخدام FormData
+      const formData = new FormData();
+      formData.append('file', file);
+      
+      const uploadResponse = await fetch('/api/gis/upload-geotiff-zip', {
         method: 'POST',
-        body: JSON.stringify({
-          fileName: file.name,
-          fileType: file.type || 'application/zip'
-        })
+        body: formData
       });
 
-      console.log('✅ تم الحصول على رابط الرفع:', uploadResponse);
+      if (!uploadResponse.ok) {
+        const errorText = await uploadResponse.text();
+        throw new Error(`فشل في رفع الملف: ${uploadResponse.status} - ${errorText}`);
+      }
+
+      const uploadResult = await uploadResponse.json();
       setUploadProgress(30);
 
-      // الخطوة 2: محاكاة رفع الملف
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      setUploadProgress(70);
+      console.log('✅ تم رفع الملف:', uploadResult);
+      setUploadProgress(50);
 
-      // الخطوة 3: تأكيد الرفع ومعالجة الملف
+      // الخطوة 2: تأكيد المعالجة
       const confirmResponse = await apiRequest('/api/gis/layers/confirm', {
         method: 'POST',
         body: JSON.stringify({
-          layerId: uploadResponse.layerId,
-          objectPath: uploadResponse.objectPath,
+          layerId: uploadResult.layerId,
           fileName: file.name,
           metadata: {
             name: file.name.replace(/\.[^/.]+$/, ""),
             fileType: file.type,
             fileSize: file.size,
-            isZipFile: file.name.toLowerCase().endsWith('.zip'),
-            coordinateSystem: 'EPSG:32638',
-            sourceCoordinateSystem: 'UTM Zone 38N'
+            isZipFile: file.name.toLowerCase().endsWith('.zip')
           }
         })
       });
