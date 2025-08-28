@@ -93,7 +93,25 @@ export function calculateImageBounds(
     [Math.max(upperLeftX, lowerRightX), Math.max(upperLeftY, lowerRightY)]
   ];
   
-  console.log('📐 حساب حدود الصورة:', { bounds });
+  console.log('📐 حساب حدود الصورة:', { 
+    bounds,
+    upperLeft: [upperLeftX, upperLeftY],
+    lowerRight: [lowerRightX, lowerRightY],
+    imageSize: [imageWidth, imageHeight],
+    pixelSize: [pixelSizeX, pixelSizeY]
+  });
+  
+  // التحقق من أن القيم منطقية لليمن (UTM Zone 38N)
+  const isWithinYemenBounds = 
+    bounds[0][0] >= 200000 && bounds[1][0] <= 800000 && // X في حدود اليمن
+    bounds[0][1] >= 1200000 && bounds[1][1] <= 1900000;   // Y في حدود اليمن
+    
+  if (!isWithinYemenBounds) {
+    console.warn('⚠️ تحذير: حدود الصورة خارج نطاق اليمن المتوقع:', bounds);
+  } else {
+    console.log('✅ حدود الصورة ضمن نطاق اليمن الطبيعي');
+  }
+  
   return bounds;
 }
 

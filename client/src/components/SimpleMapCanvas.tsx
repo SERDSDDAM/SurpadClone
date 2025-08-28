@@ -41,6 +41,9 @@ export function SimpleMapCanvas({
   onPointClick,
   onZoomToLayer 
 }: SimpleMapCanvasProps) {
+  
+  // إضافة ref للوصول لوظائف المكون من الخارج
+  const componentRef = useRef<{ zoomToLayer: (layerId: string) => void }>();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   
   // حالات التفاعل
@@ -52,6 +55,9 @@ export function SimpleMapCanvas({
   const [cursorPosition, setCursorPosition] = useState({
     x: 0, y: 0, lat: 15.3694, lng: 44.1910, utmX: 400000, utmY: 1700000
   });
+  
+  // مركز الخريطة الحالي
+  const [mapCenter, setMapCenter] = useState(MAP_CENTER);
 
   // رسم خريطة أساسية بسيطة
   const drawBasemap = useCallback((ctx: CanvasRenderingContext2D) => {
@@ -92,46 +98,142 @@ export function SimpleMapCanvas({
     ctx.restore();
   }, [zoom, panX, panY]);
 
-  // رسم الطبقات
+  // وظيفة التكبير إلى الطبقة - الأولوية القصوى
+  const zoomToLayer = useCallback((layerId: string) => {
+    const layer = layers.find(l => l.id === layerId);
+    if (!layer || !layer.bounds) {
+      console.warn(`❌ لا يمكن التكبير للطبقة ${layerId} - لا توجد حدود محددة`);
+      return;
+    }
+    
+    const [[minX, minY], [maxX, maxY]] = layer.bounds;
+    
+    console.log(`🔍 تكبير للطبقة:`, layerId, [[minX, minY], [maxX, maxY]]);
+    
+    // تحويل حدود UTM إلى WGS84 للعرض
+    const minWgs = convertUtmToWgs84(minX, minY);
+    const maxWgs = convertUtmToWgs84(maxX, maxY);
+    
+    console.log(`🌍 حدود WGS84:`, {
+      min: [minWgs.latitude, minWgs.longitude],
+      max: [maxWgs.latitude, maxWgs.longitude]
+    });
+    
+    // حساب مركز الطبقة
+    const centerLat = (minWgs.latitude + maxWgs.latitude) / 2;
+    const centerLng = (minWgs.longitude + maxWgs.longitude) / 2;
+    
+    // حساب حجم الطبقة
+    const latSpan = Math.abs(maxWgs.latitude - minWgs.latitude);
+    const lngSpan = Math.abs(maxWgs.longitude - minWgs.longitude);
+    
+    // حساب التكبير المناسب بناءً على حجم الطبقة
+    const maxSpan = Math.max(latSpan, lngSpan);
+    let newZoom = 1;
+    
+    if (maxSpan > 0) {
+      // تحويل من درجات إلى مستوى تكبير مناسب
+      const zoomFactor = 0.1 / maxSpan; // عامل تجريبي
+      newZoom = Math.max(0.5, Math.min(8, zoomFactor));
+    }
+    
+    // تحديث مركز الخريطة وجعل الطبقة في المنتصف
+    const newMapCenter = { lat: centerLat, lng: centerLng };
+    setMapCenter(newMapCenter);
+    
+    // إعادة تعيين panX و panY إلى الصفر لتمركز الطبقة في وسط الشاشة
+    setPanX(0);
+    setPanY(0);
+    setZoom(newZoom);
+    
+    console.log(`✅ تم التمركز على الطبقة:`, {
+      layer: layer.name,
+      center: [centerLat, centerLng],
+      zoom: newZoom,
+      bounds: layer.bounds
+    });
+    
+    // استدعاء callback إذا كان موجوداً
+    if (onZoomToLayer) {
+      onZoomToLayer(layerId);
+    }
+  }, [layers, onZoomToLayer]);
+
+  // رسم الطبقات مع التمركز الصحيح
   const drawLayers = useCallback((ctx: CanvasRenderingContext2D) => {
     for (const layer of layers.filter(l => l.visible)) {
       ctx.save();
       ctx.globalAlpha = layer.opacity;
       
-      if (!layer.bounds) continue;
+      if (!layer.bounds) {
+        console.warn(`⚠️ الطبقة ${layer.name} ليس لها حدود محددة`);
+        continue;
+      }
       
-      // رسم مستطيل للطبقة
+      // رسم مستطيل للطبقة بالتحويل الصحيح
       const [[minX, minY], [maxX, maxY]] = layer.bounds;
-      const centerUtm = { x: (minX + maxX) / 2, y: (minY + maxY) / 2 };
-      const sizeUtm = { width: maxX - minX, height: maxY - minY };
       
-      // تحويل الحجم للعرض
-      const scale = zoom * 0.0001; // مقياس للتحويل
-      const centerX = CANVAS_WIDTH / 2 + (centerUtm.x - 400000) * scale + panX;
-      const centerY = CANVAS_HEIGHT / 2 - (centerUtm.y - 1700000) * scale + panY;
-      const width = sizeUtm.width * scale;
-      const height = sizeUtm.height * scale;
+      // تحويل حدود UTM إلى WGS84 للعرض
+      const minWgs = convertUtmToWgs84(minX, minY);
+      const maxWgs = convertUtmToWgs84(maxX, maxY);
+      
+      // حساب موقع الطبقة على الكانفاس بالنسبة للمركز الحالي
+      const layerCenterLat = (minWgs.latitude + maxWgs.latitude) / 2;
+      const layerCenterLng = (minWgs.longitude + maxWgs.longitude) / 2;
+      
+      // المسافة من مركز الخريطة الحالي إلى مركز الطبقة
+      const latDiff = layerCenterLat - mapCenter.lat;
+      const lngDiff = layerCenterLng - mapCenter.lng;
+      
+      // تحويل إلى بكسل للعرض
+      const pixelsPerDegree = zoom * 10000; // عامل التحويل
+      
+      const centerX = CANVAS_WIDTH / 2 + (lngDiff * pixelsPerDegree) + panX;
+      const centerY = CANVAS_HEIGHT / 2 - (latDiff * pixelsPerDegree) + panY;
+      
+      // حساب حجم الطبقة بالبكسل
+      const latSpan = Math.abs(maxWgs.latitude - minWgs.latitude);
+      const lngSpan = Math.abs(maxWgs.longitude - minWgs.longitude);
+      
+      const width = lngSpan * pixelsPerDegree;
+      const height = latSpan * pixelsPerDegree;
       
       // رسم الطبقة
       if (layer.type === 'raster') {
-        ctx.fillStyle = 'rgba(76, 175, 80, 0.3)';
+        // خلفية الطبقة
+        ctx.fillStyle = 'rgba(76, 175, 80, 0.4)';
         ctx.fillRect(centerX - width/2, centerY - height/2, width, height);
         
+        // إطار الطبقة
         ctx.strokeStyle = '#4CAF50';
-        ctx.lineWidth = 2;
+        ctx.lineWidth = 3;
         ctx.strokeRect(centerX - width/2, centerY - height/2, width, height);
         
-        // اسم الطبقة
+        // معلومات الطبقة
         ctx.fillStyle = '#2e7d32';
-        ctx.font = '12px Arial';
+        ctx.font = 'bold 14px Arial';
         ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        
+        // خلفية النص
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+        const textWidth = ctx.measureText(layer.name).width;
+        ctx.fillRect(centerX - textWidth/2 - 5, centerY - 10, textWidth + 10, 20);
+        
+        // النص
+        ctx.fillStyle = '#2e7d32';
         ctx.fillText(layer.name, centerX, centerY);
-        ctx.fillText('📷 صورة مرفوعة', centerX, centerY + 15);
+        
+        // معلومات إضافية
+        ctx.font = '10px Arial';
+        ctx.fillStyle = '#4a4a4a';
+        ctx.fillText(`UTM: ${minX.toFixed(0)}, ${minY.toFixed(0)}`, centerX, centerY + 20);
+        ctx.fillText(`الحجم: ${width.toFixed(0)} × ${height.toFixed(0)} بكسل`, centerX, centerY + 35);
       }
       
       ctx.restore();
     }
-  }, [layers, zoom, panX, panY]);
+  }, [layers, zoom, panX, panY, mapCenter]);
 
   // الرسم الرئيسي
   const draw = useCallback(() => {
@@ -228,6 +330,17 @@ export function SimpleMapCanvas({
   useEffect(() => {
     draw();
   }, [draw]);
+  
+  // تفعيل التكبير التلقائي عند إضافة طبقة جديدة
+  useEffect(() => {
+    if (layers.length > 0) {
+      const latestLayer = layers[layers.length - 1];
+      if (latestLayer.bounds && latestLayer.visible) {
+        console.log(`🚀 تكبير تلقائي للطبقة الجديدة: ${latestLayer.name}`);
+        zoomToLayer(latestLayer.id);
+      }
+    }
+  }, [layers.length]); // يتفعل عند إضافة طبقة جديدة
 
   return (
     <div className="relative w-full h-full overflow-hidden bg-gray-50 dark:bg-gray-900">
