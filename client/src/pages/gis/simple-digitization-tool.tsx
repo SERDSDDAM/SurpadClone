@@ -22,8 +22,7 @@ import {
   LocateFixed
 } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
-import SimpleCRSMapCanvas, { type SimpleGeoreferencedLayer } from '@/components/SimpleCRSMapCanvas';
-import WorldFileMapCanvas, { type ProcessedLayer } from '@/components/WorldFileMapCanvas';
+import ProfessionalGISCanvas, { type ProcessedLayer } from '@/components/ProfessionalGISCanvas';
 
 interface DrawnFeature {
   id: string;
@@ -48,6 +47,11 @@ export default function SimpleDigitizationTool() {
   const [drawnFeatures, setDrawnFeatures] = useState<DrawnFeature[]>([]);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [isUploading, setIsUploading] = useState(false);
+
+  // تحديث الطبقات
+  const handleLayersUpdate = useCallback((updatedLayers: ProcessedLayer[]) => {
+    setLayers(updatedLayers);
+  }, []);
 
   // رفع الملفات
   const uploadMutation = useMutation({
@@ -105,21 +109,25 @@ export default function SimpleDigitizationTool() {
       return confirmResponse.layer;
     },
     onSuccess: (newLayer) => {
-      // تحويل البيانات لتناسب مكون WorldFileMapCanvas
+      // تحويل البيانات لتناسب المكون الاحترافي الجديد
       const processedLayer: ProcessedLayer = {
         id: newLayer.id,
         name: newLayer.name,
-        pngUrl: newLayer.preprocessingInfo?.pngUrl || `/public-objects/gis-layers/${newLayer.id}.png`,
-        pgwUrl: newLayer.preprocessingInfo?.pgwUrl || `/public-objects/gis-layers/${newLayer.id}.pgw`,
-        prjUrl: newLayer.preprocessingInfo?.prjUrl || `/public-objects/gis-layers/${newLayer.id}.prj`,
+        fileName: newLayer.fileName,
+        objectPath: newLayer.objectPath,
+        type: 'raster',
         bounds: newLayer.bounds,
+        coordinateSystem: newLayer.coordinateSystem,
+        uploadDate: new Date().toISOString(),
+        status: 'ready',
         visible: true,
         opacity: 1.0,
-        coordinateSystem: newLayer.coordinateSystem,
-        metadata: {
-          width: newLayer.geospatialInfo?.dimensions?.width || 2048,
-          height: newLayer.geospatialInfo?.dimensions?.height || 2048,
-          pixelSize: newLayer.geospatialInfo?.pixelSize || { x: 10, y: -10 }
+        zIndex: layers.length + 1000,
+        geospatialInfo: {
+          hasGeoreferencing: true,
+          spatialReference: newLayer.coordinateSystem,
+          pixelSize: newLayer.geospatialInfo?.pixelSize || [10, 10],
+          transform: newLayer.geospatialInfo?.transform || null
         }
       };
       
@@ -335,18 +343,10 @@ export default function SimpleDigitizationTool() {
 
       {/* منطقة الخريطة الرئيسية */}
       <div className="flex-1 relative">
-        <WorldFileMapCanvas
+        <ProfessionalGISCanvas
           layers={layers}
+          onLayersUpdate={handleLayersUpdate}
           activeTool={activeTool}
-          onPointClick={(x, y, utmX, utmY) => {
-            console.log('🗺️ نقر على الخريطة:', { 
-              x: x.toFixed(2), 
-              y: y.toFixed(2), 
-              utmX: utmX.toFixed(2), 
-              utmY: utmY.toFixed(2),
-              activeTool 
-            });
-          }}
           onFeatureDrawn={handleFeatureDrawn}
           className="w-full h-full"
         />

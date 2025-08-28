@@ -41,15 +41,39 @@ class GeoTIFFPreprocessor:
         with zipfile.ZipFile(zip_path, 'r') as zip_ref:
             zip_ref.extractall(extracted_dir)
             
-        # البحث عن ملفات الصور (GeoTIFF أو PNG أو JPG للاختبار)
-        image_files = []
+        # فحص شامل لمحتويات الـ ZIP
+        all_files = []
+        geotiff_files = []
+        reference_files = []
+        
         for root, dirs, files in os.walk(extracted_dir):
             for file in files:
-                if file.lower().endswith(('.tif', '.tiff', '.png', '.jpg', '.jpeg')):
-                    image_files.append(os.path.join(root, file))
+                file_path = os.path.join(root, file)
+                file_lower = file.lower()
+                all_files.append(file)
+                
+                # البحث عن ملفات GeoTIFF
+                if file_lower.endswith(('.tif', '.tiff')):
+                    geotiff_files.append(file_path)
                     
-        if not image_files:
-            raise ValueError("لم يتم العثور على ملفات صور مدعومة في الـ ZIP")
+                # البحث عن ملفات الإسناد الجغرافي
+                if file_lower.endswith(('.tfw', '.tifw', '.prj', '.wld')):
+                    reference_files.append(file_path)
+        
+        print(f"📋 محتويات الـ ZIP: {', '.join(all_files)}", file=sys.stderr)
+        print(f"📍 ملفات GeoTIFF: {len(geotiff_files)}", file=sys.stderr)
+        print(f"🗺️ ملفات الإسناد: {len(reference_files)}", file=sys.stderr)
+        
+        # التحقق من وجود ملفات GeoTIFF
+        if not geotiff_files:
+            raise ValueError("خطأ: ملف الـ ZIP المرفوع لا يحتوي على صورة بصيغة GeoTIFF (.tif/.tiff)")
+        
+        # التحقق من وجود ملفات الإسناد الجغرافي (اختياري للاختبار)
+        if not reference_files:
+            print("⚠️ تحذير: لم يتم العثور على ملفات الإسناد الجغرافي (.prj/.tfw) - سيتم إنشاء ملف افتراضي", file=sys.stderr)
+                    
+        # اختيار أول ملف GeoTIFF
+        image_files = geotiff_files
             
         # معالجة أول ملف صورة
         image_path = image_files[0]
@@ -109,28 +133,58 @@ class GeoTIFFPreprocessor:
         
     def _extract_geo_info_with_geotiff(self, tiff_path):
         """استخراج المعلومات الجغرافية باستخدام geotiff library"""
-        with GeoTiff(tiff_path) as geo_tiff:
+        try:
+            from geotiff import GeoTiff
+            geo_tiff = GeoTiff(tiff_path)
+            
             # استخراج التحويل الجغرافي
-            transform = geo_tiff.tif_bounding_box
-            crs_info = geo_tiff.crs_code
-            
-            # حساب bounds
-            x_min, y_max = transform[0], transform[1]  # Upper-left corner
-            x_max, y_min = transform[2], transform[3]  # Lower-right corner
-            
-            return {
-                'crs': f'EPSG:{crs_info}' if crs_info else 'EPSG:32638',
-                'bounds': {
-                    'minX': x_min,
-                    'minY': y_min, 
-                    'maxX': x_max,
-                    'maxY': y_max
-                },
-                'pixel_size': {
-                    'x': (x_max - x_min) / geo_tiff.tif_shape[1],
-                    'y': (y_max - y_min) / geo_tiff.tif_shape[0]
+            try:
+                # محاولة استخراج Bounding Box
+                if hasattr(geo_tiff, 'tif_bBox'):
+                    bbox = geo_tiff.tif_bBox
+                    x_min, y_min, x_max, y_max = bbox[0], bbox[1], bbox[2], bbox[3]
+                elif hasattr(geo_tiff, 'tif_bounding_box'):
+                    bbox = geo_tiff.tif_bounding_box
+                    x_min, y_max, x_max, y_min = bbox[0], bbox[1], bbox[2], bbox[3]
+                else:
+                    raise ValueError("لا يمكن استخراج Bounding Box من ملف GeoTIFF")
+                
+                # استخراج نظام الإحداثيات
+                crs_info = getattr(geo_tiff, 'crs_code', None)
+                if not crs_info and hasattr(geo_tiff, 'epsg'):
+                    crs_info = geo_tiff.epsg
+                
+                # حساب حجم البكسل
+                if hasattr(geo_tiff, 'tif_shape'):
+                    height, width = geo_tiff.tif_shape[:2]
+                    pixel_x = (x_max - x_min) / width
+                    pixel_y = (y_max - y_min) / height
+                else:
+                    pixel_x, pixel_y = 10, 10  # قيمة افتراضية
+                
+                return {
+                    'crs': f'EPSG:{crs_info}' if crs_info else 'EPSG:32638',
+                    'bounds': {
+                        'minX': x_min,
+                        'minY': y_min, 
+                        'maxX': x_max,
+                        'maxY': y_max
+                    },
+                    'pixel_size': {
+                        'x': pixel_x,
+                        'y': -pixel_y  # سالب لأن Y ينقص نحو الأسفل
+                    }
                 }
-            }
+            except Exception as extract_error:
+                print(f"⚠️ خطأ في استخراج البيانات من GeoTIFF: {extract_error}", file=sys.stderr)
+                raise
+                
+        except ImportError:
+            print("❌ مكتبة geotiff غير متوفرة", file=sys.stderr)
+            raise
+        except Exception as e:
+            print(f"❌ خطأ في قراءة GeoTIFF: {e}", file=sys.stderr)
+            raise
             
     def _create_default_geo_info(self, width, height):
         """إنشاء معلومات جغرافية افتراضية لليمن (UTM Zone 38N)"""
