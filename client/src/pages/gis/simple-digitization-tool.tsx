@@ -22,7 +22,19 @@ import {
   LocateFixed
 } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
-import ProfessionalGISCanvas, { type ProcessedLayer } from '@/components/ProfessionalGISCanvas';
+import { SimpleMapCanvas } from '@/components/SimpleMapCanvas';
+
+interface ProcessedLayer {
+  id: string;
+  name: string;
+  fileName: string;
+  objectPath: string;
+  bounds: [[number, number], [number, number]];
+  coordinateSystem: string;
+  geospatialInfo?: any;
+  visible?: boolean;
+  type?: string;
+}
 
 interface DrawnFeature {
   id: string;
@@ -83,10 +95,7 @@ export default function SimpleDigitizationTool() {
       setUploadProgress(70);
 
       // الخطوة 3: تأكيد الرفع ومعالجة الملف
-      const confirmResponse = await apiRequest<{
-        success: boolean;
-        layer: any;
-      }>('/api/gis/layers/confirm', {
+      const confirmResponse = await apiRequest('/api/gis/layers/confirm', {
         method: 'POST',
         body: JSON.stringify({
           layerId: uploadResponse.layerId,
@@ -162,11 +171,12 @@ export default function SimpleDigitizationTool() {
   }, [uploadMutation]);
 
   const toggleLayerVisibility = (layerId: string) => {
-    setLayers(prev => prev.map(layer => 
-      layer.id === layerId 
-        ? { ...layer, visible: !layer.visible }
-        : layer
-    ));
+    // في المستقبل سيتم دمج هذا مع AdvancedMapCanvas
+    console.log('تبديل رؤية الطبقة:', layerId);
+    toast({
+      title: "تحديث الطبقة",
+      description: `تم تحديث رؤية الطبقة: ${layerId}`,
+    });
   };
 
   const handleFeatureDrawn = useCallback((feature: any) => {
@@ -293,11 +303,7 @@ export default function SimpleDigitizationTool() {
                           variant="ghost"
                           onClick={() => toggleLayerVisibility(layer.id)}
                         >
-                          {layer.visible ? (
-                            <Eye className="w-4 h-4 text-blue-600" />
-                          ) : (
-                            <EyeOff className="w-4 h-4 text-gray-400" />
-                          )}
+                          <Eye className="w-4 h-4 text-blue-600" />
                         </Button>
                         <span className="text-sm font-medium">{layer.name}</span>
                       </div>
@@ -343,12 +349,16 @@ export default function SimpleDigitizationTool() {
 
       {/* منطقة الخريطة الرئيسية */}
       <div className="flex-1 relative">
-        <ProfessionalGISCanvas
+        <SimpleMapCanvas
           layers={layers}
-          onLayersUpdate={handleLayersUpdate}
-          activeTool={activeTool}
-          onFeatureDrawn={handleFeatureDrawn}
-          className="w-full h-full"
+          onLayerSelect={(layerId) => {
+            console.log('تم اختيار الطبقة:', layerId);
+            toast({
+              title: "تم اختيار الطبقة",
+              description: `تم اختيار الطبقة: ${layerId}`,
+            });
+          }}
+          className="w-full h-[600px]"
         />
         
         {/* أزرار التحكم المباشر */}

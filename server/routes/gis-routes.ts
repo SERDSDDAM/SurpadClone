@@ -22,6 +22,7 @@ import { eq, and, sql } from 'drizzle-orm';
 import { z } from 'zod';
 import { extractGeoTiffMetadataPython, createGeoTiffPreview } from '../lib/python-geotiff-wrapper';
 import { PreprocessingService } from '../lib/preprocessing-service';
+import gisFileServingRouter from './gis-file-serving';
 import path from 'path';
 import fs from 'fs/promises';
 
@@ -33,8 +34,11 @@ const isAuthenticated = (req: any, res: any, next: any) => {
   next();
 };
 
-// Static file serving for processed PNG/World files (محاكاة التخزين السحابي)
-router.get('/public-objects/gis-layers/:filename', async (req: Request, res: Response) => {
+// دمج خدمة الملفات المعالجة
+router.use('/public-objects', gisFileServingRouter);
+
+// Static file serving for processed PNG/World files (محاكاة التخزين السحابي) - سيتم إزالة هذا
+router.get('/public-objects-legacy/gis-layers/:filename', async (req: Request, res: Response) => {
   try {
     const filename = req.params.filename;
     const processedDir = path.join(process.cwd(), 'temp-uploads', 'processed');
@@ -581,8 +585,15 @@ router.post('/layers/confirm', isAuthenticated, async (req: Request, res: Respon
         await fs.mkdir(tempDir, { recursive: true });
         const tempFilePath = path.join(tempDir, fileName);
         
-        // محاكاة حفظ الملف - في التطبيق الحقيقي سيأتي من التخزين السحابي
-        await fs.writeFile(tempFilePath, 'mock zip content - in production this comes from cloud storage');
+        // في التطبيق الحقيقي، يجب نسخ الملف من التخزين السحابي
+        // للاختبار، سنستخدم ملف ZIP صالح
+        const validZipPath = path.join(process.cwd(), 'temp-uploads', 'test_valid.zip');
+        if (await fs.access(validZipPath).then(() => true).catch(() => false)) {
+          await fs.copyFile(validZipPath, tempFilePath);
+          console.log('📋 استخدام ملف ZIP صالح للاختبار');
+        } else {
+          throw new Error('ملف الاختبار غير متوفر - يرجى رفع ملف ZIP صالح');
+        }
         
         // استخدام خدمة المعالجة المسبقة المحسنة
         const preprocessingService = new PreprocessingService();

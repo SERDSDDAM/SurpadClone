@@ -189,7 +189,8 @@ function Router() {
           <Route path="/notifications" component={NotificationsSystem} />
           <Route path="/gis-management" component={GISDataManagement} />
           <Route path="/digitization-tool" component={DigitizationTool} />
-          <Route path="/simple-digitization" component={SimpleDigitizationTool} />
+          <Route path="/simple-digitization-tool" component={SimpleDigitizationTool} />
+        <Route path="/simple-digitization" component={SimpleDigitizationTool} />
           <Route path="/professionals" component={ProfessionalsManagement} />
           <Route path="/field-app" component={FieldApp} />
           <Route path="/clean-field-app" component={CleanFieldApp} />
