@@ -70,7 +70,36 @@ export default function SimpleDigitizationTool() {
     if (savedLayers) {
       try {
         const parsedLayers = JSON.parse(savedLayers);
-        setLayers(parsedLayers);
+        // التحقق من معلومات الطبقات وتحديثها من الخادم
+        const updateLayersWithServerData = async () => {
+          const updatedLayers = await Promise.all(
+            parsedLayers.map(async (layer: any) => {
+              if (layer.status === 'uploaded' && !layer.imageUrl) {
+                try {
+                  const response = await fetch(`/api/gis/layers/${layer.id}`);
+                  if (response.ok) {
+                    const serverData = await response.json();
+                    if (serverData.success) {
+                      return {
+                        ...layer,
+                        status: 'processed',
+                        imageUrl: serverData.imageUrl,
+                        bounds: serverData.bounds
+                      };
+                    }
+                  }
+                } catch (error) {
+                  console.warn(`فشل في جلب بيانات الطبقة ${layer.id}:`, error);
+                }
+              }
+              return layer;
+            })
+          );
+          
+          setLayers(updatedLayers);
+        };
+        
+        updateLayersWithServerData();
         console.log('✅ تم استرداد الطبقات المحفوظة:', parsedLayers);
       } catch (error) {
         console.error('❌ خطأ في استرداد الطبقات:', error);
@@ -363,6 +392,35 @@ export default function SimpleDigitizationTool() {
               >
                 💾 تصدير البيانات
               </Button>
+              
+              <Button
+                variant="outline"
+                size="sm"
+                className="w-full"
+                onClick={() => {
+                  // إضافة طبقة تجريبية تعمل
+                  const testLayer = {
+                    id: 'test_layer_demo',
+                    name: 'طبقة تجريبية - خريطة اليمن',
+                    fileName: 'yemen_test.png',
+                    status: 'processed',
+                    fileSize: 1024000,
+                    uploadDate: new Date().toISOString(),
+                    visible: true,
+                    imageUrl: '/api/gis/layers/layer_1756416413136_0jzxl2mb1/image/test_geotiff.png',
+                    bounds: [[15.2, 44.0], [15.6, 44.4]]
+                  };
+                  
+                  setLayers(prev => [...prev.filter(l => l.id !== 'test_layer_demo'), testLayer]);
+                  
+                  toast({
+                    title: "تمت إضافة طبقة تجريبية",
+                    description: "طبقة تجريبية للاختبار",
+                  });
+                }}
+              >
+                🧪 إضافة طبقة تجريبية
+              </Button>
             </CardContent>
           </Card>
 
@@ -461,15 +519,18 @@ export default function SimpleDigitizationTool() {
           /> */}
 
           {/* عرض الطبقات المرفوعة */}
-          {layers.filter(layer => layer.visible && layer.imageUrl && layer.bounds).map(layer => (
-            <ImageOverlay
-              key={layer.id}
-              url={layer.imageUrl}
-              bounds={layer.bounds}
-              opacity={0.8}
-              interactive={false}
-            />
-          ))}
+          {layers.filter(layer => layer.visible && layer.imageUrl && layer.bounds).map(layer => {
+            console.log('🗺️ عرض الطبقة على الخريطة:', layer.name, layer.imageUrl, layer.bounds);
+            return (
+              <ImageOverlay
+                key={layer.id}
+                url={layer.imageUrl}
+                bounds={layer.bounds}
+                opacity={0.8}
+                interactive={false}
+              />
+            );
+          })}
           
           {/* عرض مؤشر للطبقات التي لم تتم معالجتها بعد */}
           {layers.filter(layer => layer.visible && !layer.imageUrl).length > 0 && (
