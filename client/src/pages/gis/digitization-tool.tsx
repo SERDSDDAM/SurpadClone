@@ -1,4 +1,6 @@
 import React, { useState, useRef, useEffect } from "react";
+import LeafletMapCanvas from '@/components/LeafletMapCanvas';
+import { extractGeoTiffFromZip } from '@/lib/geotiff-reader-v2';
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -681,7 +683,7 @@ export default function DigitizationTool() {
 
         {/* منطقة الخريطة الاحترافية */}
         <div className="flex-1 relative">
-          <SimpleMapCanvas
+          <LeafletMapCanvas
             layers={layers}
             activeTool={activeTool}
             onPointClick={(lat, lng, utmX, utmY) => {
