@@ -91,29 +91,55 @@ function MapEvents({ onCoordinatesChange }: { onCoordinatesChange: (coords: { la
 
 function AutoFitBounds({ layers }: { layers: any[] }) {
   const map = useMap();
+  const [hasUserInteracted, setHasUserInteracted] = useState(false);
+  const [hasInitialFit, setHasInitialFit] = useState(false);
   
   useEffect(() => {
     // حفظ مرجع الخريطة للوصول إليها من الخارج
     (window as any).__leafletMap = map;
     
-    if (layers.length === 0) return;
+    // إعداد مستمعات لتتبع تفاعل المستخدم
+    const onUserInteraction = () => {
+      setHasUserInteracted(true);
+    };
+    
+    map.on('dragstart', onUserInteraction);
+    map.on('zoomstart', onUserInteraction);
+    map.on('movestart', onUserInteraction);
+    
+    return () => {
+      map.off('dragstart', onUserInteraction);
+      map.off('zoomstart', onUserInteraction);
+      map.off('movestart', onUserInteraction);
+    };
+  }, [map]);
+  
+  useEffect(() => {
+    // فقط تطبيق AutoFit إذا لم يتفاعل المستخدم مع الخريطة بعد
+    if (hasUserInteracted || layers.length === 0) return;
     
     const visibleLayers = layers.filter(l => l.visible && l.bounds);
-    if (visibleLayers.length > 0) {
+    if (visibleLayers.length > 0 && !hasInitialFit) {
       const groupBounds = L.latLngBounds([]);
       visibleLayers.forEach(layer => {
         if (layer.bounds && Array.isArray(layer.bounds)) {
-          console.log('🎯 إضافة bounds للطبقة:', layer.name, layer.bounds);
-          groupBounds.extend(layer.bounds);
+          const sw = L.latLng(layer.bounds[0][0], layer.bounds[0][1]);
+          const ne = L.latLng(layer.bounds[1][0], layer.bounds[1][1]);
+          groupBounds.extend(sw);
+          groupBounds.extend(ne);
         }
       });
       
       if (groupBounds.isValid()) {
-        console.log('🗺️ تكبير تلقائي على الطبقات المرئية');
-        map.fitBounds(groupBounds, { padding: [40, 40] });
+        map.fitBounds(groupBounds, { 
+          padding: [20, 20],
+          maxZoom: 10
+        });
+        setHasInitialFit(true);
+        console.log(`📍 تم تطبيق العرض التلقائي الأولي على ${visibleLayers.length} طبقة`);
       }
     }
-  }, [layers, map]);
+  }, [layers, map, hasUserInteracted, hasInitialFit]);
 
   return null;
 }
@@ -144,7 +170,9 @@ function MapStateManager() {
     };
     
     map.on('moveend', handleMoveEnd);
-    return () => map.off('moveend', handleMoveEnd);
+    return () => {
+      map.off('moveend', handleMoveEnd);
+    };
   }, [map]);
 
   return null;
