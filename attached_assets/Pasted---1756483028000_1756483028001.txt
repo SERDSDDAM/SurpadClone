@@ -1,0 +1,354 @@
+جميل — يمكنك قراه الخطة الآن واعداد خطة بديلة اوتحويلها  إلى خطة تنفيذية نهائية، قابلة للتسليم والتتبع، مع المهام التفصيلية لكل سباق (sprint)، نماذج API/DB/ملفات ميتاداتا، مقترح بنية infra (Docker Compose) وأمثلة كود جاهزة للـ Phase 0 (الـ Hotfixs) حتى يمكنك تشغيل PR سريع على Replit أو أي بيئة أخرى.
+
+أقسام الخطة التي سأعرضها:
+1. لمحة سريعة وأهداف نهائية (واجب التنفيذ الآن)  
+2. الخطة النهائية المطوَّرة — مراحل + سباقات (sprints) مفصّلة مع مخرجات وقبول لكل مرحلة  
+3. قائمة مهام قابلة للتنفيذ (Backlog) + تذاكر مقترحة لكل sprint (PRs/Tickets)  
+4. مواصفات تقنية / API / DB / ملفات metadata (نماذج جاهزة)  
+5. بنية مقترحة للـ infra (docker-compose مثال + ملاحظات Celery/Redis/MinIO)  
+6. اختبارات قبول (end-to-end) وQA checklist  
+7. مخاطر رئيسية ووسائل التخفيف  
+8. ما سأفعله فور موافقتك (عرض تنفيذ Phase 0: PR جاهز)
+
+1) لمحة سريعة — أولويات فورية (لماذا ننفّذ Phase 0 فورًا)
+- الهدف الآن: تثبيت الأساس (reliability) قبل إضافة أي ميزات كبيرة. حل مشكلة “الطفاء ↔ الرجوع” (flicker) وحفظ تفضيلات الرؤية، توحيد مخرجات المعالجات، واستعادة الطبقات بعد إعادة تشغيل الخدمة.
+- نتيجة مرغوبة بعد الأسبوع الأول: مستخدم يستطيع إخفاء/إظهار طبقة وتبقى الحالة محفوظة بعد إعادة التحميل وإعادة تشغيل الخادم؛ كل طبقة معالجة لديها metadata موحَّدة وخزن حالة مرجعية على القرص أو DB.
+
+2) الخطة النهائية المطوَّرة — مراحل وسباقات (Sprint-by-sprint)
+تنظيمنا سيكون بسبرينتات (2 أسابيع)؛ كل سبرينت يحتوي مهام قابلة للتسليم (deliverables).
+
+Sprint 0 — Phase 0: Hotfixs & Stabilization (1 أسبوع)
+- أهداف: visibility persistence، توحيد metadata، hydrate from disk، endpoint للحفظ، client merge overrides.
+- مهام تفصيلية:
+  1. توحيد صيغة metadata.json في كل معالج Python (المفتاح: imageFile, bbox, leaflet_bounds, width, height, crs, original_name, success, processed_at). (Python changes)
+  2. Node: كتابة finalizeLayerStateFromOutput(outputDir) التي تقرأ metadata.json وتكتب layer-state.json وتحدّث layerStates Map. (server change)
+  3. إضافة endpoint PATCH /api/gis/layers/:id/visibility (يحفظ visible في layer-state.json ويحدّث in-memory). (server change)
+  4. Client: إضافة local overrides (localStorage) ودمجها – عند toggle: update UI فوري + POST PATCH. (client change)
+  5. تغيير default visible بعد finalization → false (أو flag georef_required). (server change)
+- مخرجات: PRs لملفات server/client/Python، اختبار E2E: upload -> processed -> show -> hide -> reload => يظل مخفي.
+- معايير قبول:
+  - عند إخفاء طبقة ثم إعادة تحميل الصفحة أو إعادة تشغيل السيرفر تبقى مخفية.
+  - metadata.json موجود لكل طبقة معالجة.
+
+Sprint 1 — Phase 1: Processing Pipeline Basic (2 سبرينت = Weeks 1–3)
+- أهداف: queue أساسي + Python worker skeleton + تخزين النتائج في S3/MinIO أو local + تسجيل metadata في DB.
+- مهام:
+  1. إضافة Redis broker + إختيار Celery (Python) كـworker runner. إعداد container للـworker مع GDAL/rasterio.
+  2. تحويل المعالجة الحالية لعمل كـ Celery task (enqueue from Node, worker runs Python script).
+  3. Job status endpoints (GET /api/jobs/:id) + retries + dead-letter logging.
+  4. إضافة جدول gis.layers في DB أو حقل مرجعي لربط layerId مع storage_path وmetadata.
+- مخرجات: queue + worker جاهز، jobs dashboard بسيط.
+- معايير قبول:
+  - رفع ملف 100MB → job queued → processing → done → metadata موجود في DB وملف في S3/MinIO.
+
+Sprint 2–3 — Phase 2: Digitization MVP (Weeks 4–8)
+- أهداف: أدوات رسم أساسية (point/line/polygon)، حفظ features في PostGIS، attribute editor، measurement tool.
+- مهام:
+  1. Implement leaflet-draw integrations + snapping + attribute modal.
+  2. Endpoints: POST /features, GET /features?requestId=..., DELETE /features/:id.
+  3. Server-side validation (topology checks, area/length calc).
+  4. UI for layer manager: visibility, opacity, z-order (drag & drop).
+- مخرجات: المستخدم يرسم ويحفظ هندسياً في PostGIS، يمكن التراجع/تعديل.
+- معايير قبول:
+  - حفظ واسترجاع feature يعمل بدقة، area/length تحسب بقيمة مقبولة.
+
+Sprint 4 — Phase 3: Interactive Mapping & UX (Weeks 9–10)
+- أهداف: search/geocoding، swipe/compare، improved layer composer.
+- مهام:
+  1. Implement leaflet-side-by-side (compare) UI.
+  2. Add geo-search endpoint (simple reverse geocode with Nominatim or local index).
+  3. Improve layer composer: group layers, drag reorder (persist z-index).
+- مخرجات: swipe tool يعمل، search يعمل، opacity slider وظيفي.
+- معايير قبول:
+  - Swipe بين طبقتين يعمل سلساً <200ms.
+
+Sprint 5 — Phase 4: Survey Decision Integration (Weeks 11–14)
+- أهداف: end-to-end Survey Decision workflow ملحقة ببيانات الميدان.
+- مهام:
+  1. Implement APIs for survey-requests lifecycle (assign, upload-field-data, generate-decision).
+  2. Decision generator: use PostGIS area/perimeter and produce PDF + QR (Wkhtmltopdf / Puppeteer).
+  3. Admin UI for reviewing & issuing decisions.
+- مخرجات: قانونياً قابلة للاستخدام (PDF + QR + DB record).
+- معايير قبول:
+  - إجراء end-to-end scenario ناجح (create -> assign -> survey -> decision PDF).
+
+Sprint 6 — Phase 5: Analytics & Dashboard (Weeks 15–16)
+- أهداف: admin dashboards, metrics, scheduled reports.
+- مهام:
+  1. Build KPIs widgets (requests per region, processing times).
+  2. Heatmaps و export functions.
+- مخرجات: Admin dashboard مع تقارير قابلة للجدولة.
+- معايير قبول:
+  - Generating a monthly report, scheduled email / download.
+
+Sprint 7 — Phase 6: Mobile & Offline POC (Weeks 17–20)
+- أهداف: mobile app PWA/native مع offline sync.
+- مهام:
+  1. Choose React Native (أنصح) وابدأ POC لــ offline sync (SQLite + sync engine).
+  2. GPS data collection UI + photo geotagging.
+- مخرجات: POC mobile app capable of offline collect & sync.
+- معايير قبول:
+  - Sync of points collected offline to server without data loss.
+
+Sprint 8–10 — Phase 7: AI R&D + Scale (Weeks 21–30)
+- أهداف: building/road detection، change detection.
+- مهام:
+  1. Collect labeled dataset, train baseline models (U-Net, Mask-RCNN).
+  2. Integrate inference as suggestion pipeline (no auto-commit).
+  3. Productionize retraining & monitoring.
+- مخرجات: prototype auto-vector suggestions + retrain pipeline.
+- معايير قبول:
+  - Model produces suggestions with precision/recall مقبولتين للتحقق اليدوي.
+
+3) Backlog / تذاكر مقترحة (عناوين وصيغ للتذاكر)
+سأبيّن أهمّ التذاكر لكل sprint (يمكن تحويلها لـ GitHub Issues / Jira):
+
+Sprint 0 tickets (priority: high)
+- TKT-0001: standardize-metadata-json (Python) — update processors to write metadata.json schema
+- TKT-0002: finalize-layer-state (Node) — read metadata.json & write layer-state.json
+- TKT-0003: patch-layer-visibility (Node) — PATCH /api/gis/layers/:id/visibility
+- TKT-0004: client-visibility-overrides (React) — localStorage overrides + optimistic UI
+- TKT-0005: hydrate-on-boot (Node) — hydrateLayersFromDisk uses layer-state.json visible
+
+Sprint 1 tickets
+- TKT-0101: infra-redis-celery (DevOps) — add Redis, Celery infra + Dockerfile for worker
+- TKT-0102: enqueue-processing-job (Node) — send job to queue when upload endpoint returns
+- TKT-0103: celery-worker-runner (Python) — worker wrapper to run processors and write metadata.json
+
+... وهكذا لباقي السبرينتات (أجهز لك كامل backlog لو أردت).
+
+4) مواصفات تقنية / API / DB / metadata (نماذج جاهزة)
+
+A) نموذج metadata.json (معياري — كل المعالجات تكتب مثله)
+```json
+{
+  "success": true,
+  "imageFile": "processed.png",
+  "bbox": [42.250912507311455, 15.257872558444266, 44.26027519012907, 15.265464410927567], 
+  "leaflet_bounds": [[15.257872558444266, 42.250912507311455], [15.265464410927567, 44.26027519012907]],
+  "width": 6048,
+  "height": 4904,
+  "crs": "EPSG:4326",
+  "original_name": "2A1.tif",
+  "processed_at": "2025-08-29T01:10:00Z"
+}
+```
+- ملاحظة: bbox هنا بصيغة [west, south, east, north] (GeoJSON-style نافعة للـtransform) — واحفظ أيضاً leaflet_bounds بصيغة [[south,west],[north,east]] جاهزة للعرض.
+
+B) نموذج layer-state.json (per-layer persistent state)
+```json
+{
+  "id": "layer_1756429692013_m86tij",
+  "imageFile": "processed.png",
+  "imageUrl": "/api/gis/layers/layer_1756429692013_m86tij/image/processed.png",
+  "leaflet_bounds": [[15.257872558444266, 42.250912507311455], [15.265464410927567, 44.26027519012907]],
+  "bbox": [42.250912507311455, 15.257872558444266, 44.26027519012907, 15.265464410927567],
+  "width": 6048,
+  "height": 4904,
+  "crs": "EPSG:4326",
+  "visible": false,
+  "z_index": 0,
+  "opacity": 1.0,
+  "status": "processed",
+  "updatedAt": "2025-08-29T01:12:00Z"
+}
+```
+
+C) مثال TypeScript: PATCH visibility endpoint (Express)
+```ts
+import express from 'express';
+import fs from 'fs/promises';
+import path from 'path';
+import { layerStates } from './enhanced-upload';
+
+const router = express.Router();
+
+router.patch('/layers/:layerId/visibility', async (req, res) => {
+  const { layerId } = req.params;
+  const { visible } = req.body;
+  const layerDir = path.join(process.cwd(), 'temp-uploads', 'processed', layerId);
+  const statePath = path.join(layerDir, 'layer-state.json');
+
+  try {
+    await fs.mkdir(layerDir, { recursive: true });
+    let state = {};
+    try {
+      state = JSON.parse(await fs.readFile(statePath, 'utf8'));
+    } catch { }
+    state = { ...state, visible: !!visible, updatedAt: new Date().toISOString() };
+    await fs.writeFile(statePath, JSON.stringify(state, null, 2), 'utf8');
+    const inMem = layerStates.get(layerId) || {};
+    layerStates.set(layerId, { ...inMem, visible: !!visible });
+    res.json({ success: true, visible: !!visible });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ success: false, error: 'Failed to persist visibility' });
+  }
+});
+
+export default router;
+```
+
+D) toLeafletBounds utility (client)
+```js
+export function toLeafletBounds(raw) {
+  if (!raw) return null;
+  // bbox [w,s,e,n]
+  if (Array.isArray(raw) && raw.length === 4 && typeof raw[0] === 'number') {
+    const [w,s,e,n] = raw;
+    return [[s,w],[n,e]];
+  }
+  // [[s,w],[n,e]] already
+  if (Array.isArray(raw[0]) && Array.isArray(raw[1])) return raw;
+  return null;
+}
+```
+
+E) SQL migration (layers table)
+```sql
+CREATE SCHEMA IF NOT EXISTS gis;
+
+CREATE TABLE IF NOT EXISTS gis.layers (
+  id VARCHAR(255) PRIMARY KEY,
+  name TEXT,
+  original_filename TEXT,
+  owner_id UUID,
+  status VARCHAR(20) DEFAULT 'processing',
+  image_url TEXT,
+  storage_path TEXT,
+  leaflet_bounds JSONB,
+  metadata JSONB,
+  visible BOOLEAN DEFAULT FALSE,
+  z_index INTEGER DEFAULT 0,
+  opacity NUMERIC DEFAULT 1.0,
+  is_public BOOLEAN DEFAULT FALSE,
+  created_at TIMESTAMP DEFAULT now(),
+  processed_at TIMESTAMP NULL,
+  updated_at TIMESTAMP DEFAULT now()
+);
+
+-- create geometry column optional if you want bounding geometry:
+ALTER TABLE gis.layers ADD COLUMN IF NOT EXISTS geom_bounds geometry(POLYGON,4326);
+CREATE INDEX IF NOT EXISTS idx_layers_geom ON gis.layers USING GIST (geom_bounds);
+```
+
+5) Infra example — docker-compose (مبسط للـdev)
+ملف docker-compose.yml مثال لتشغيل: postgres, redis, minio, node-api, python-worker, celery-beat/flower اختياري:
+
+```yaml
+version: '3.8'
+services:
+  postgres:
+    image: postgis/postgis:14-3.3
+    environment:
+      POSTGRES_USER: gis
+      POSTGRES_PASSWORD: gis
+      POSTGRES_DB: binaa
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    ports: ["5432:5432"]
+
+  redis:
+    image: redis:6-alpine
+    ports: ["6379:6379"]
+
+  minio:
+    image: minio/minio
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    command: server /data
+    ports: ["9000:9000"]
+
+  api:
+    build: ./server
+    depends_on: [postgres, redis, minio]
+    environment:
+      DATABASE_URL: postgres://gis:gis@postgres:5432/binaa
+      REDIS_URL: redis://redis:6379/0
+      S3_ENDPOINT: http://minio:9000
+      S3_ACCESS_KEY: minioadmin
+      S3_SECRET_KEY: minioadmin
+    ports: ["5000:5000"]
+
+  worker:
+    build: ./worker
+    depends_on: [redis, minio, postgres]
+    environment:
+      REDIS_URL: redis://redis:6379/0
+      DATABASE_URL: postgres://gis:gis@postgres:5432/binaa
+      S3_ENDPOINT: http://minio:9000
+    command: celery -A tasks worker --loglevel=info
+
+volumes:
+  pgdata:
+```
+
+ملاحظة: image `./worker` يجب أن يتضمن تثبيت rasterio/GDAL؛ أبني Dockerfile يستخدم osgeo/gdal images أو conda env.
+
+6) مثال Celery task (Python) لإنفاذ عملية المعالجة
+```python
+# tasks.py
+from celery import Celery
+import subprocess
+import json
+import os
+
+app = Celery('tasks', broker='redis://redis:6379/0', backend='redis://redis:6379/1')
+
+@app.task(bind=True, max_retries=3)
+def process_layer(self, layer_id, input_path, output_dir, original_name):
+    try:
+        # استدعاء سكربت المعالجة (zip-processor.py)
+        cmd = ["python3", "/app/zip-processor.py", input_path, output_dir, original_name]
+        result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True, text=True)
+        # بعد نجاح المعالجة: نقرأ metadata.json من output_dir
+        meta_path = os.path.join(output_dir, 'metadata.json')
+        with open(meta_path, 'r') as f:
+            meta = json.load(f)
+        # هنا يمكن رفع الملفات لـS3 وكتابة DB state
+        return {"success": True, "meta": meta}
+    except subprocess.CalledProcessError as e:
+        self.retry(exc=e, countdown=30)
+```
+
+7) QA / اختبارات قبول (نماذج)
+- اختبار visibility persistence:
+  - curl -X PATCH /api/gis/layers/:id/visibility -d '{"visible":false}'
+  - reload page, restart server, GET /api/gis/layers/:id returns visible:false
+- اختبار pipeline:
+  - Upload test file via POST /api/gis/upload -> response layerId
+  - Poll /api/jobs/:jobId until status done
+  - GET metadata file (temp-uploads/processed/<layerId>/metadata.json) and validate fields
+- اختبار overlay load:
+  - Open map in browser, Network tab -> processed.png request returns 200 and image displays at leaflet_bounds
+- performance:
+  - Process 100MB sample and assert job finishes within SLA (or measure baseline).
+
+8) مخاطر وتخفيفها (موجز)
+- مشكلة توافق GDAL/rasterio: استخدم Docker image موحّد للأعمال (pinned versions).  
+- ملفات كبيرة جداً: multipart upload to S3 + streaming processing.  
+- فقدان states: persist layer-state.json + record in DB.  
+- استرجاع الوضع المحلي للمستخدم vs server: local overrides + server-stored default; clear precedence rules.
+
+9) ماذا سأفعل فور موافقتك (اقتراح عملي)
+أقترح البدء فوراً بـ Phase 0. أقدّم لك أحد الخيارين (اختر واحد):
+- خيار A (مقترح مُوصى به الآن): أجهّز PR/patch كامل للـPhase 0 ويحتوي:
+  - تعديل Python processors لكتابة metadata.json.
+  - تعديل server/routes/enhanced-upload.ts لإضافة finalizeLayerStateFromOutput وhydrateLayersFromDisk.
+  - إضافة endpoint PATCH /api/gis/layers/:id/visibility.
+  - Client changes: merge local overrides، optimistic toggle (نسخة جاهزة لـ simple-digitization-tool.tsx و CleanLeafletMap).
+  - توثيق خطوات الاختبار وملفات curl.
+  - مدة تنفيذ متوقعة: 1–3 أيام (أضع PR على فرع جديد، تختبره على Replit).
+- خيار B: أجهّز ADR + docker-compose + Celery example + design doc للـProcessing Pipeline (مستعد خلال 2 أيام).
+- خيار C: أجهّز Sprint-by-sprint backlog بصيغة جدول جاهز لـJira/Trello + تعريف مهام ووقت وتوابُع لكل تذكرة (2 يوم).
+
+سؤالان تحتاجان قرارك الآن (أؤثر مباشرة على التنفيذ):
+1. Infra: S3 (AWS) أم MinIO محلي (أو كلاهما مع MinIO في Dev وS3 في Prod)؟ (أنصح: MinIO dev / S3 prod)  
+2. Queue choice: Celery (Python) أم BullMQ (Node)? (أرشح Celery — لأن المعالجة Python-heavy)
+
+أختم بعرض عملي
+- أستطيع بدء تنفيذ Phase 0 فور موافقتك. أقدّم PR جاهز يحتوي كل التغييرات الضرورية للـserver + client + Python processors + اختبارات E2E.  
+- هل أبدأ الآن بـ PR لـPhase 0؟ وهل تختار S3 أم MinIO وCelery أم BullMQ؟
+
+أنت فقط اختر: (A) فرع PR Phase 0 الآن، أو (B) أضع المستندات ADR + docker-compose وCelery example، أو (C) أجهز backlog تفصيلي جاهز للـJira.
