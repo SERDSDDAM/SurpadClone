@@ -77,7 +77,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // صفحة تسجيل دخول ثابتة (HTML فقط)  
   app.get('/login', (req, res) => {
-    res.sendFile(path.join(__dirname, 'static-login.html'));
+    res.sendFile(path.resolve(process.cwd(), 'server', 'static-login.html'));
   });
   
   // Survey routes
