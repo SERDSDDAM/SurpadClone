@@ -6,6 +6,7 @@ import { Progress } from '@/components/ui/progress';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Upload, FileImage, CheckCircle, AlertCircle, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { uploadFile, APIError } from '@/lib/api';
 
 interface GISLayer {
   id: string;
@@ -34,22 +35,12 @@ export function AdvancedFileUploader({ onLayerAdded, maxFileSize = 200 * 1024 * 
   const [processingStatus, setProcessingStatus] = useState<string>('');
   const { toast } = useToast();
 
-  // Upload mutation
+  // Upload mutation using XMLHttpRequest with progress tracking
   const uploadMutation = useMutation({
     mutationFn: async (file: File) => {
-      const formData = new FormData();
-      formData.append('file', file);
-
-      const response = await fetch('/api/gis/upload', {
-        method: 'POST',
-        body: formData,
+      return uploadFile(file, (progress) => {
+        setUploadProgress(progress);
       });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      return response.json();
     },
     onSuccess: async (data) => {
       const { layerId } = data;
@@ -110,9 +101,19 @@ export function AdvancedFileUploader({ onLayerAdded, maxFileSize = 200 * 1024 * 
     },
     onError: (error) => {
       setProcessingStatus('');
+      setUploadProgress(0);
+      
+      let errorMessage = 'حدث خطأ غير معروف';
+      
+      if (error instanceof APIError) {
+        errorMessage = error.message;
+      } else if (error instanceof Error) {
+        errorMessage = error.message;
+      }
+      
       toast({
         title: "خطأ في رفع الملف",
-        description: error instanceof Error ? error.message : 'حدث خطأ غير معروف',
+        description: errorMessage,
         variant: "destructive",
       });
     }

@@ -3,8 +3,16 @@ import multer from 'multer';
 import path from 'path';
 import fs from 'fs/promises';
 import { spawn } from 'child_process';
+import cors from 'cors';
 
 const router = express.Router();
+
+// Enable CORS for this router
+router.use(cors({
+  origin: true,
+  credentials: true,
+  methods: ['GET', 'POST', 'OPTIONS']
+}));
 
 // Configure multer with increased limits
 const upload = multer({

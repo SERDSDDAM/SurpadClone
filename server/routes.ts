@@ -2,6 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { WebSocketServer, WebSocket } from "ws";
 import { storage } from "./storage";
+import cors from 'cors';
 import { 
   insertSurveyorSchema,
   insertSurveyRequestSchema, 
@@ -21,6 +22,25 @@ import path from "path";
 import fs from "fs";
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // CORS middleware FIRST (before any other middleware)
+  app.use(cors({
+    origin: true, // Allow all origins for development
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Origin', 'X-Requested-With', 'Content-Type', 'Accept', 'Authorization']
+  }));
+
+  // Handle preflight requests
+  app.options('*', cors());
+
+  // Increase payload limits
+  app.use('/api/gis/upload', (req, res, next) => {
+    // Set specific limits for upload endpoints
+    req.setTimeout(300000); // 5 minutes timeout
+    res.setTimeout(300000);
+    next();
+  });
+
   // Security middleware
   app.use(helmet({
     contentSecurityPolicy: {
@@ -52,16 +72,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   const gisUploadRoutes = await import('./routes/gis-upload');
   app.use('/api/gis/legacy', gisUploadRoutes.default);
   
-  // Enable CORS and increase limits FIRST
+  // Request logging for debugging
   app.use((req, res, next) => {
-    res.header('Access-Control-Allow-Origin', '*');
-    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-    res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
-    if (req.method === 'OPTIONS') {
-      res.sendStatus(200);
-    } else {
-      next();
-    }
+    const timestamp = new Date().toISOString();
+    console.log(`${timestamp} ${req.method} ${req.originalUrl} Origin: ${req.headers.origin || 'none'}`);
+    next();
   });
 
   // Serve processed layers as static files
