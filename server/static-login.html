@@ -98,6 +98,7 @@
             border-radius: 6px;
             margin-bottom: 1rem;
             text-align: center;
+            display: none;
         }
         
         .success-message {
@@ -108,6 +109,7 @@
             border-radius: 6px;
             margin-bottom: 1rem;
             text-align: center;
+            display: none;
         }
         
         .test-data {
@@ -175,6 +177,8 @@
             messageArea.innerHTML = '';
             
             try {
+                console.log('Attempting login with:', { username, password: '***' });
+                
                 const response = await fetch('/api/auth/login', {
                     method: 'POST',
                     headers: {
@@ -184,11 +188,13 @@
                     body: JSON.stringify({ username, password })
                 });
 
+                console.log('Response status:', response.status);
                 const data = await response.json();
+                console.log('Response data:', data);
                 
                 if (response.ok && data.success) {
                     messageArea.innerHTML = `
-                        <div class="success-message">
+                        <div class="success-message" style="display: block;">
                             تم تسجيل الدخول بنجاح. جارٍ إعادة التوجيه...
                         </div>
                     `;
@@ -205,7 +211,7 @@
                     }, 1000);
                 } else {
                     messageArea.innerHTML = `
-                        <div class="error-message">
+                        <div class="error-message" style="display: block;">
                             ${data.message || 'فشل تسجيل الدخول. يرجى المحاولة مرة أخرى'}
                         </div>
                     `;
@@ -213,7 +219,7 @@
             } catch (error) {
                 console.error('Login error:', error);
                 messageArea.innerHTML = `
-                    <div class="error-message">
+                    <div class="error-message" style="display: block;">
                         خطأ في الاتصال. يرجى المحاولة مرة أخرى
                     </div>
                 `;
