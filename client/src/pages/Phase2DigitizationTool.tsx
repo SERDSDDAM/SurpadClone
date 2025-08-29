@@ -14,9 +14,9 @@ import type {
   GeoJSONFeatureCollection,
   GisFeatureInsert 
 } from '@shared/gis-schema';
-import { MapContainer, TileLayer, useMap, useMapEvents } from 'react-leaflet';
-import { LatLng, LeafletMouseEvent } from 'leaflet';
+import { calculateGeometryMetrics } from '@/utils/geometry';
 import { apiRequest } from '@/lib/queryClient';
+import InteractiveDrawingMap from '@/components/InteractiveDrawingMap';
 
 interface DigitizationState {
   currentMode: DrawingMode;
@@ -29,90 +29,8 @@ interface DigitizationState {
   pendingFeature: {
     geometry: any;
     featureType: string;
+    calculatedMetrics?: any;
   } | null;
-}
-
-// Drawing interaction component
-function DrawingHandler({ 
-  currentMode, 
-  onFeatureDrawn,
-  isEnabled 
-}: { 
-  currentMode: DrawingMode;
-  onFeatureDrawn: (feature: { geometry: any; featureType: string }) => void;
-  isEnabled: boolean;
-}) {
-  const map = useMap();
-  const [currentPath, setCurrentPath] = useState<LatLng[]>([]);
-
-  const mapEvents = useMapEvents({
-    click: (e: LeafletMouseEvent) => {
-      if (!isEnabled || !currentMode) return;
-
-      const { lat, lng } = e.latlng;
-      
-      switch (currentMode) {
-        case 'point':
-          onFeatureDrawn({
-            geometry: {
-              type: 'Point',
-              coordinates: [lng, lat]
-            },
-            featureType: 'point'
-          });
-          break;
-          
-        case 'line':
-          const newPath = [...currentPath, e.latlng];
-          setCurrentPath(newPath);
-          
-          // Complete line on double-click (simplified)
-          if (newPath.length >= 2) {
-            // For demo, auto-complete after 2 points
-            setTimeout(() => {
-              onFeatureDrawn({
-                geometry: {
-                  type: 'LineString',
-                  coordinates: newPath.map(p => [p.lng, p.lat])
-                },
-                featureType: 'linestring'
-              });
-              setCurrentPath([]);
-            }, 500);
-          }
-          break;
-          
-        case 'polygon':
-          // Simplified polygon creation
-          const polygonPath = [...currentPath, e.latlng];
-          setCurrentPath(polygonPath);
-          
-          if (polygonPath.length >= 3) {
-            setTimeout(() => {
-              // Close the polygon
-              const coordinates = [...polygonPath, polygonPath[0]].map(p => [p.lng, p.lat]);
-              onFeatureDrawn({
-                geometry: {
-                  type: 'Polygon',
-                  coordinates: [coordinates]
-                },
-                featureType: 'polygon'
-              });
-              setCurrentPath([]);
-            }, 500);
-          }
-          break;
-      }
-    },
-    
-    keydown: (e: any) => {
-      if (e.originalEvent.key === 'Escape') {
-        setCurrentPath([]);
-      }
-    }
-  });
-
-  return null;
 }
 
 export default function Phase2DigitizationTool() {
@@ -174,9 +92,12 @@ export default function Phase2DigitizationTool() {
 
   // Handle feature drawn
   const handleFeatureDrawn = useCallback((feature: { geometry: any; featureType: string }) => {
+    // Calculate metrics for the drawn feature
+    const metrics = calculateGeometryMetrics(feature.geometry);
+    
     setState(prev => ({
       ...prev,
-      pendingFeature: feature,
+      pendingFeature: { ...feature, calculatedMetrics: metrics },
       showAttributesModal: true,
       currentMode: null,
       isDrawing: false,
@@ -290,33 +211,13 @@ export default function Phase2DigitizationTool() {
       <div className="flex-1 relative">
         {/* Map Container */}
         <div className="absolute inset-0">
-          <MapContainer
-            center={[15.3694, 44.1910]} // Yemen center
-            zoom={7}
-            className="h-full w-full"
-            zoomControl={true}
-            attributionControl={false}
-          >
-            <TileLayer
-              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-              attribution="© OpenStreetMap contributors"
-            />
-            
-            {/* Drawing Handler */}
-            <DrawingHandler
-              currentMode={state.currentMode}
-              onFeatureDrawn={handleFeatureDrawn}
-              isEnabled={true}
-            />
-            
-            {/* Existing Features Layer */}
-            {featuresVisible && featuresCollection?.features && (
-              <div>
-                {/* Features would be rendered here using react-leaflet components */}
-                {/* This is a placeholder for actual feature rendering */}
-              </div>
-            )}
-          </MapContainer>
+          <InteractiveDrawingMap
+            currentMode={state.currentMode}
+            onFeatureDrawn={handleFeatureDrawn}
+            features={featuresCollection?.features || []}
+            featuresVisible={featuresVisible}
+            isEnabled={true}
+          />
         </div>
 
         {/* Drawing Toolbar */}
@@ -380,11 +281,7 @@ export default function Phase2DigitizationTool() {
         }))}
         onSave={handleSaveWithAttributes}
         featureType={state.pendingFeature?.featureType as any || 'point'}
-        calculatedMetrics={{
-          // TODO: Calculate actual metrics from geometry
-          area: state.pendingFeature?.featureType === 'polygon' ? 1000 : undefined,
-          length: state.pendingFeature?.featureType === 'linestring' ? 500 : undefined,
-        }}
+        calculatedMetrics={state.pendingFeature?.calculatedMetrics}
       />
     </div>
   );
