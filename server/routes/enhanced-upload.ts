@@ -57,8 +57,10 @@ async function processLayerEnhanced(layerId: string, tempFilePath: string, origi
     const outputDir = path.join(process.cwd(), 'temp-uploads', 'processed', layerId);
     await fs.mkdir(outputDir, { recursive: true });
 
-    // Call enhanced python processor
-    const processorPath = path.join(process.cwd(), 'server', 'lib', 'enhanced-geotiff-processor.py');
+    // اختيار المعالج المناسب حسب نوع الملف
+    const isZipFile = originalName.toLowerCase().endsWith('.zip');
+    const processorPath = path.join(process.cwd(), 'server', 'lib', 
+      isZipFile ? 'zip-processor.py' : 'enhanced-geotiff-processor.py');
     
     return new Promise<void>((resolve, reject) => {
       const pythonProcess = spawn('python3', [
