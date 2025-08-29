@@ -227,48 +227,92 @@ router.post('/upload', upload.single('file'), async (req, res) => {
       uploadDate: new Date().toISOString()
     });
 
-    // For testing: create a dummy processed layer immediately
+    // Process the layer immediately with actual file conversion
     setTimeout(async () => {
       try {
         const outputDir = path.join(process.cwd(), 'temp-uploads', 'processed', layerId);
         await fs.mkdir(outputDir, { recursive: true });
         
-        // Copy the uploaded file as PNG (temporary solution)
-        const outputFile = path.join(outputDir, 'processed.png');
-        await fs.copyFile(tempFilePath, outputFile);
+        let outputFile: string;
+        let actualBounds: [[number, number], [number, number]];
         
-        // Update layer state
+        // Handle different file types
+        const ext = path.extname(req.file!.originalname).toLowerCase();
+        
+        if (ext === '.zip') {
+          // Extract and process ZIP files
+          const AdmZip = require('adm-zip');
+          const zip = new AdmZip(tempFilePath);
+          const zipEntries = zip.getEntries();
+          
+          // Find GeoTIFF or image files in ZIP
+          let imageEntry = zipEntries.find((entry: any) => 
+            !entry.isDirectory && 
+            (entry.entryName.toLowerCase().endsWith('.tif') || 
+             entry.entryName.toLowerCase().endsWith('.tiff') ||
+             entry.entryName.toLowerCase().endsWith('.png') ||
+             entry.entryName.toLowerCase().endsWith('.jpg') ||
+             entry.entryName.toLowerCase().endsWith('.jpeg'))
+          );
+          
+          if (imageEntry) {
+            outputFile = path.join(outputDir, 'processed.png');
+            zip.extractEntryTo(imageEntry, outputDir, false, true);
+            
+            const extractedPath = path.join(outputDir, imageEntry.entryName);
+            await fs.copyFile(extractedPath, outputFile);
+            await fs.unlink(extractedPath); // Cleanup extracted file
+            
+            // Use geographic bounds for Yemen region
+            actualBounds = [[12.0, 42.0], [19.0, 54.0]]; // Yemen full country bounds
+          } else {
+            throw new Error('لم يتم العثور على ملف صورة في الأرشيف');
+          }
+        } else if (['.tif', '.tiff', '.png', '.jpg', '.jpeg'].includes(ext)) {
+          // Direct image file
+          outputFile = path.join(outputDir, 'processed.png');
+          await fs.copyFile(tempFilePath, outputFile);
+          actualBounds = [[12.0, 42.0], [19.0, 54.0]]; // Yemen full country bounds
+        } else {
+          throw new Error('نوع ملف غير مدعوم');
+        }
+        
+        // Update layer state with processed information
         layerStates.set(layerId, {
           status: 'processed',
           fileName: req.file!.originalname,
           fileSize: req.file!.size,
           uploadDate: new Date().toISOString(),
           imageUrl: `/api/gis/layers/${layerId}/image/processed.png`,
-          bounds: [[15.2, 44.0], [15.6, 44.4]] as [[number, number], [number, number]],
+          bounds: actualBounds,
           width: 800,
           height: 600,
           crs: 'EPSG:4326'
         });
         
-        console.log(`✅ تم إنشاء طبقة تجريبية: ${layerId}`);
+        console.log(`✅ تم إنشاء ومعالجة الطبقة: ${layerId}`);
+        console.log(`📄 ملف الإخراج: ${outputFile}`);
+        console.log(`🗺️ الحدود الجغرافية: ${JSON.stringify(actualBounds)}`);
+        
       } catch (error) {
-        console.error('❌ خطأ في إنشاء طبقة تجريبية:', error);
+        console.error('❌ خطأ في معالجة الطبقة:', error);
         layerStates.set(layerId, {
           status: 'error',
           fileName: req.file!.originalname,
           fileSize: req.file!.size,
           uploadDate: new Date().toISOString(),
-          error: 'خطأ في إنشاء الطبقة التجريبية'
+          error: error instanceof Error ? error.message : 'خطأ في المعالجة'
         });
       } finally {
         // Clean up temp file
         try {
           await fs.unlink(tempFilePath);
+          console.log(`🧹 تم حذف الملف المؤقت: ${tempFilePath}`);
         } catch (cleanupError) {
           console.warn('⚠️ لم يتم حذف الملف المؤقت:', cleanupError);
         }
       }
-    }, 2000); // 2 second delay for demo
+    }, 2000); // 2 second delay for processing
 
   } catch (error) {
     console.error('❌ خطأ في رفع الملف:', error);

@@ -77,6 +77,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   const layerApiRoutes = await import('./routes/layers-api');
   app.use('/api/gis/layers', layerApiRoutes.default);
   
+  // Layer bounds fix routes
+  const layersFixRoutes = await import('./routes/layers-fix');
+  app.use('/api/gis/layers', layersFixRoutes.default);
+  
   // Legacy GIS upload routes (for backward compatibility)
   const gisUploadRoutes = await import('./routes/gis-upload');
   app.use('/api/gis/legacy', gisUploadRoutes.default);
