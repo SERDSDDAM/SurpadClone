@@ -1,10 +1,12 @@
 import express from 'express';
 import bcrypt from 'bcryptjs';
+import crypto from 'crypto';
 import { db } from '../db';
 import { users } from '../../shared/schema';
-import { eq, and } from 'drizzle-orm';
+import { eq, and, sql } from 'drizzle-orm';
 import { createAuthToken, loginRateLimit } from '../middleware/auth';
 import { z } from 'zod';
+import jwt from 'jsonwebtoken';
 
 const router = express.Router();
 
@@ -116,31 +118,42 @@ router.post('/login', loginRateLimit, async (req, res) => {
       });
     }
 
-    // تسجيل الدخول الناجح - إعادة تعيين المحاولات وتحديث آخر دخول
+    // تسجيل الدخول الناجح - إنشاء Access و Refresh Tokens
+    
+    // إنشاء Access Token قصير المدى (15 دقيقة)
+    const accessToken = jwt.sign({
+      sub: user.id,
+      username: user.username,
+      role: user.role,
+      email: user.email,
+      iat: Math.floor(Date.now() / 1000),
+      exp: Math.floor(Date.now() / 1000) + (15 * 60), // 15 minutes
+      aud: 'banna-yemen-users',
+      iss: 'banna-yemen-gis'
+    }, process.env.JWT_SECRET!);
+
+    // إنشاء Refresh Token طويل المدى (30 يوم)
+    const refreshToken = crypto.randomBytes(64).toString('hex');
+    const refreshTokenHash = await bcrypt.hash(refreshToken, 10);
+
+    // تحديث قاعدة البيانات
     await db.update(users)
       .set({
         loginAttempts: 0,
         lockedUntil: null,
         lastLogin: new Date(),
-        updatedAt: new Date()
+        updatedAt: new Date(),
+        refreshTokenHash: refreshTokenHash
       })
       .where(eq(users.id, user.id));
 
-    // إنشاء JWT token
-    const token = createAuthToken({
-      id: user.id,
-      username: user.username,
-      role: user.role,
-      email: user.email || undefined
-    });
-
-    // حفظ التوكن في httpOnly cookie
-    res.cookie('authToken', token, {
+    // تعيين Refresh Token كـ HttpOnly Cookie
+    res.cookie('jid', refreshToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
-      maxAge: 8 * 60 * 60 * 1000, // 8 hours
-      path: '/'
+      maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
+      path: '/api/auth'
     });
 
     // إرجاع بيانات المستخدم (بدون كلمة المرور)
@@ -156,7 +169,7 @@ router.post('/login', loginRateLimit, async (req, res) => {
         lastName: user.lastName,
         fullName: `${user.firstName || ''} ${user.lastName || ''}`.trim()
       },
-      token // يمكن حذف هذا في الإنتاج إذا كنت تعتمد على cookies فقط
+      token: accessToken
     });
 
   } catch (error) {
@@ -169,16 +182,97 @@ router.post('/login', loginRateLimit, async (req, res) => {
 });
 
 /**
+ * POST /api/auth/refresh
+ * تجديد Access Token باستخدام Refresh Token
+ */
+router.post('/refresh', async (req, res) => {
+  const refreshToken = req.cookies?.jid;
+  
+  if (!refreshToken) {
+    return res.status(401).json({
+      error: 'No refresh token',
+      message: 'لا يوجد رمز تجديد'
+    });
+  }
+
+  try {
+    // البحث عن مستخدم لديه هذا الـ refresh token
+    const usersWithToken = await db
+      .select({
+        id: users.id,
+        username: users.username,
+        email: users.email,
+        role: users.role,
+        refreshTokenHash: users.refreshTokenHash
+      })
+      .from(users)
+      .where(sql`refresh_token_hash IS NOT NULL`);
+
+    let matchingUser = null;
+    for (const user of usersWithToken) {
+      if (user.refreshTokenHash && await bcrypt.compare(refreshToken, user.refreshTokenHash)) {
+        matchingUser = user;
+        break;
+      }
+    }
+
+    if (!matchingUser) {
+      return res.status(403).json({
+        error: 'Invalid refresh token',
+        message: 'رمز التجديد غير صحيح'
+      });
+    }
+
+    // إنشاء Access Token جديد
+    const accessToken = jwt.sign({
+      sub: matchingUser.id,
+      username: matchingUser.username,
+      role: matchingUser.role,
+      email: matchingUser.email,
+      iat: Math.floor(Date.now() / 1000),
+      exp: Math.floor(Date.now() / 1000) + (15 * 60), // 15 minutes
+      aud: 'banna-yemen-users',
+      iss: 'banna-yemen-gis'
+    }, process.env.JWT_SECRET!);
+
+    res.json({
+      success: true,
+      token: accessToken
+    });
+
+  } catch (error) {
+    console.error('Refresh token error:', error);
+    res.status(500).json({
+      error: 'Internal server error',
+      message: 'خطأ في تجديد الرمز'
+    });
+  }
+});
+
+/**
  * POST /api/auth/logout
  * تسجيل خروج المستخدم
  */
-router.post('/logout', (req, res) => {
-  // مسح الكوكي
-  res.clearCookie('authToken', {
+router.post('/logout', async (req, res) => {
+  const refreshToken = req.cookies?.jid;
+  
+  if (refreshToken) {
+    try {
+      // إزالة refresh token من قاعدة البيانات
+      await db.update(users)
+        .set({ refreshTokenHash: null })
+        .where(sql`refresh_token_hash IS NOT NULL`);
+    } catch (error) {
+      console.error('Logout error:', error);
+    }
+  }
+
+  // مسح الكوكيز
+  res.clearCookie('jid', {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
     sameSite: 'lax',
-    path: '/'
+    path: '/api/auth'
   });
 
   res.json({

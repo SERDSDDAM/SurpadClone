@@ -563,6 +563,7 @@ export const users = pgTable("users", {
   twoFactorEnabled: boolean("two_factor_enabled").default(false),
   twoFactorSecret: varchar("two_factor_secret"),
   backupCodes: jsonb("backup_codes").$type<string[]>().default([]),
+  refreshTokenHash: varchar("refresh_token_hash"),
   profilePicture: varchar("profile_picture"),
   preferences: jsonb("preferences").$type<{
     language: string;

@@ -1,0 +1,122 @@
+ممتاز — عمل رائع حتى الآن 🙏. بما أن نظام المصادقة والـAdmin Dashboard جاهزان، الخطوة التالية يجب أن تركز على جعل المصادقة متينة وموثوقة ثم إكمال عناصر الرقمنة المتقدِّمة. سأعطيك خطة عملية قابلة للتنفيذ فورًا — قصيرة المدى (أهداف فورية)، متوسطة المدى (الـsprints القادمة)، وما بعدها. لكل بند أضع ماذا تفعل بالضبط (أوامر/كود/معايير قبول).
+
+القرار القصير الموصى به الآن (مباشر)
+1) تأمين الجلسات: تنفيذ refresh-token + httpOnly secure cookies + آلية إبطال الجلسات (logout + blacklist).
+2) إضافة ميزات إدارة المستخدم في الـAdmin (CRUD + role management + account disable).
+3) بعد ذلك: استكمال Sprint C (vectorization POC) وبدء التجارب الحقيقية على workers في بيئة Docker‑enabled.
+
+لماذا هذا الترتيب؟
+- المصادقة الآمنة أساس لكل شيء (حماية البيانات والعمليات الإدارية).
+- مدير النظام يحتاج أدوات لإدارة الحسابات قبل أن يُعطي صلاحيات لميزات متقدمة.
+- ثم نُفعّل التحويل الآلي ونجري اختبارات على بيئات مناسبة.
+
+أدناه خطة مفصّلة خطوة‑بخطوة.
+
+-------------------------------------------------------------------
+المرحلة الفورية (اليوم — 3 أيام)
+A. تنفيذ Refresh Token flow (Access token قصير + Refresh token طويل مخزن في Cookie)
+لماذا: يقلّل التعرض لـXSS ويتيح إبطال الجلسات بسهولة.
+مخطّر التنفيذ (Server + Client):
+
+Server (Node/Express — مبسّط)
+1) إنشاء حقل refresh_token_hash في users table أو جدول sessions:
+```sql
+ALTER TABLE users ADD COLUMN IF NOT EXISTS refresh_token_hash varchar;
+```
+
+2) عند تسجيل الدخول:
+- أنشئ accessToken (قصير المدة، مثلاً 15m) و refreshToken (طويل، مثلاً 30d).
+- خزّن hash(refreshToken) في DB (bcrypt).
+- أرسل accessToken في body وضع refreshToken كـ httpOnly cookie:
+
+```ts
+// بعد التحقق من كلمة المرور
+const accessToken = jwt.sign({ userId, role }, process.env.JWT_SECRET, { expiresIn: '15m' });
+const refreshToken = crypto.randomBytes(64).toString('hex'); // أو jwt
+const hashed = await bcrypt.hash(refreshToken, 10);
+await db.query('UPDATE users SET refresh_token_hash=$1 WHERE id=$2', [hashed, userId]);
+
+res.cookie('jid', refreshToken, {
+  httpOnly: true,
+  secure: process.env.NODE_ENV === 'production',
+  sameSite: 'lax',
+  path: '/api/auth/refresh'
+});
+res.json({ accessToken, user });
+```
+
+3) Endpoint لتجديد الـaccess token:
+- POST /api/auth/refresh
+- يقرأ cookie 'jid', يتحقّق من الـhash في DB، إن صح يصدّر accessToken جديد.
+- لو فشل → 401.
+
+4) Logout:
+- DELETE /api/auth/logout → يحذف refresh_token_hash من DB + يمسح cookie على العميل.
+
+Client
+- استخدم accessToken في Authorization header لحالات API السريعة.
+- في حال 401، استدعي /api/auth/refresh لطلب accessToken جديد.
+- لا تخزن refreshToken في localStorage.
+
+Acceptance
+- تسجيل الدخول يعطي cookie httpOnly باسم jid و accessToken في الاستجابة.  
+- استدعاء /api/auth/refresh يوفّر accessToken جديدا.  
+- logout يحذف الـcookie ويمنع تجديد الـtoken.
+
+B. ضبط سياسات الأمان السريعة
+- Rate limit على /api/auth/login (مثلاً 5 محاولات / 15 دقيقة).  
+- Password policy (min 10 chars + complexity).  
+- Account lockout بعد N محاولات (مثلاً 10) — سجل المحاولات في DB أو Redis.
+
+C. Admin user management UI
+- CRUD المستخدمين، تغيير الدور، تعطيل وتمكين الحسابات، عرض سجلات الدخول.
+- Acceptance: admin يمكن إنشاء surveyor وتعديل صلاحياته، ويمكن تعطيل حساب ويمنع الدخول.
+
+-------------------------------------------------------------------
+المرحلة المتوسطة (1–3 أسابيع)
+Sprint C — Vectorization POC (2 أسابيع)
+- Build worker task (Python + Celery) لتحويل GeoTIFF → GeoJSON suggestions (edges → polygons).
+- API: POST /api/gis/vectorize (enqueue), GET /api/gis/vectorize/:jobId (results).
+- UI: عرض اقتراحات، قبول/رفض ونشر المقبول إلى gis.features.
+- Acceptance: upload sample → job completes → reviewer يرى suggestions → accepted features تُخزن في PostGIS.
+
+Sprint D — Snapping, Topology, Undo/History (2 أسابيع)
+- Implement snapping (client side + server spatial query).
+- Topology checks with PostGIS (ST_IsValid, ST_MakeValid).
+- Feature history table + endpoints rollback.
+- Acceptance: snap works within tolerance; rollback restores prior geometry.
+
+-------------------------------------------------------------------
+المرحلة الأطول (4–8 أسابيع)
+- Export/Import (GPKG / Shapefile) using GDAL / ogr2ogr. Server jobs for large exports.
+- Tile generation / COG pipeline — create tiles or serve via titiler for scalable maps.
+- Mobile POC (React Native) – offline sync engine (SQLite + sync resolver).
+- AI: build training pipeline + inference service (R&D).
+
+-------------------------------------------------------------------
+العمليات / التشغيل (Ops)
+- Immediately: إضافة secrets في Replit (JWT_SECRET, DB, S3, REDIS).  
+- Provision a Docker-enabled environment for workers (VM or managed). I recommend: small VM for initial: 4 vCPU, 16GB RAM, NVMe.  
+- Backup policy: take DB backup before each migration (you already do).  
+- Monitoring: add Sentry + Prometheus + Grafana + Flower.
+
+-------------------------------------------------------------------
+أمثلة أوامر/سكربتات سريعة (لتنفيذ الآن)
+1) إنشاء refresh token column (SQL migration file):
+```sql
+ALTER TABLE users ADD COLUMN IF NOT EXISTS refresh_token_hash varchar;
+```
+2) pg_dump backup (مرة ثانية قبل أي migration):
+```bash
+pg_dump -h $PGHOST -U $PGUSER -Fc -f backups/db-backup-$(date -u +%Y%m%dT%H%M%SZ).dump $PGDATABASE
+```
+
+-------------------------------------------------------------------
+ما الذي أبدأ به نيابةً عنك الآن؟
+اختر واحدًا:
+- 1) أطبق Refresh Token flow وLogout (سأعد PR/patch للـserver + client) — موصى به فورًا.  
+- 2) أضيف Admin User Management UI (CRUD roles) — إن أردت تسريع إدارة النظام.  
+- 3) أبدأ Sprint C (vectorization POC) وأحضر worker skeleton + task — لو تريد الانتقال مباشرة للرقمنة الذاتية.  
+- 4) أجهز infra workers على VM (deploy dispatcher + celery + minio) — إن أردت اختبار المعالجة الكبيرة مباشرة.
+
+قل لي الرقم (1/2/3/4) وسأجهِّز كل الملفات/PRs والأوامر اللازمة فورًا، أو أرسل لك التعليمات التفصيلية لتنفيذها بنفسك.
