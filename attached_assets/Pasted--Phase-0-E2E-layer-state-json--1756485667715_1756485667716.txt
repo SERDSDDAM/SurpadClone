@@ -1,0 +1,96 @@
+ممتاز — مبروك إنجاز Phase 0 🎉. بما أنّ اختبارات E2E نجحت وحالة الـlayer-state.json مستقرة، أوصي بـالبدء فوراً في Phase 1 كما قررت. أدناه خطة تنفيذية عملية ومباشرة لبدء Phase 1 الآن، مع فحوص ما قبل الانطلاق، خطوات تنفيذية مفصّلة، تسلسل PRs/مهام، تقديرات زمنية، ومتطلبات (أسرار/بيئة). في النهاية أسألك عن قرار واحد بسيط لكي أبدأ التنفيذ العملي (أفتح PRs وأرفع الملفات إلى الريبو).
+
+1) تأكيد سريع قبل الانطلاق (pre-checks — يجب أن تكون كلها جاهزة)
+- Phase 0 ثابت: جميع اختبارات E2E تمر، metadata.json و layer-state.json متوفّران لكل طبقة.
+- MinIO dev مُعد أو نعلم إعداداته (endpoint, accessKey, secretKey).
+- حساب S3 / مفاتيح AWS (لبيئة الإنتاج لاحقًا) جاهزة أو قرار تأجيل إدخال مفاتيح إلى مرحلة النشر.
+- قاعدة بيانات Postgres + PostGIS متاحة في dev/staging.
+- يملك الفريق حق الوصول لرابط الريبو/CI إن أردت PRs مباشرة.
+
+إذا كل ما سبق جاهز → نبدأ Phase 1.
+
+2) هدف Phase 1 (محدّد)
+إنشاء pipeline معالجة منتِجة وقابلة للتوسُّع بحيث:
+- رفع الملفات → إيداع job في صف (Celery + Redis) → workers (Python/GDAL) تُعالج الملف إلى COG/PNG + metadata.json → رفع النتائج إلى MinIO/S3 → تسجيل metadata في DB → تحديث layer-state.json و layerStates في API → إعلام الواجهة (WebSocket / polling).
+
+3) الخُطوات التنفيذية الفورية (مع مخرجات لكل خطوة + تقدير زمني)
+أقترح تنفيذ هذه الخطوات بترتيبٍ عملي، مع عمل متوازي بين DevOps وPython/Node:
+
+A — إعداد البنية الأساسية (Dev) — Docker Compose (0.5–1 يوم)
+- مخرجات: docker-compose.yml يحتوي على postgres(+postgis), redis, minio, api, dispatcher, worker, optional: flower.
+- لماذا: بيئة تطوير متكاملة قابلة لتشغيل محلي/CI.
+- سأوفّر ملفًا جاهزًا وأفتح PR: `infra/docker-compose.phase1.yml`.
+
+B — إعداد Worker Image + Celery config (1–2 أيام)
+- مخرجات:
+  - worker/Dockerfile مبني على صورة GDAL ثابتة (مثلاً osgeo/gdal أو conda image) مع rasterio, boto3, celery مثبتة.
+  - celeryconfig.py و tasks.py (عملية process_layer كما في التصميم).
+- نقاط مهمة: ضبط concurrency (بدءاً بـ 2) و retry policy وDLQ handling.
+
+C — Dispatcher (FastAPI صغير) وواجهة enqueue (0.5–1 يوم)
+- مخرجات: خدمة بسيطة تتلقى طلبات enqueue من Node (HTTP) وتدعو Celery task → ترجع jobId.
+- سبب: تسهيل العزل بين Node وCelery، وإمكانية وضع auth على dispatcher.
+
+D — تعديلات Node API (upload endpoint) — Integration (1–2 أيام)
+- مخرجات:
+  - بدلاً من spawn مباشرة، Node يُنادي dispatcher لإيداع job، يُرجع layerId + jobId.
+  - إضافة GET /api/jobs/:jobId endpoint لعرض حالة المهمة.
+  - DB migration: جدول `gis.layers` و `gis.jobs` (اختياري) للتتبع.
+- ملاحظة: نحتفظ بالمسار القديم كـfallback إن لزم.
+
+E — COG/tiles POC (1–2 أيام)
+- مخرجات:
+  - Worker يحوّل GeoTIFF → COG (gdal_translate -co TILED=YES -co COPY_SRC_OVERVIEWS=YES -co COMPRESS=DEFLATE).
+  - (اختياري) إنشاء tiles via gdal2tiles أو إعداد titiler/rio-tiler لاحقًا.
+- هدف: تأكيد أن COGs تعمل وتُقدّم عبر MinIO.
+
+F — رفع النتائج + تحديث DB + layer-state.json (0.5–1 يوم)
+- مخرجات:
+  - Worker يرفع processed files إلى MinIO (boto3).
+  - Worker يدرج/يحدّث صف السجل في gis.layers (image_url, leaflet_bounds, metadata JSON).
+  - Node يُحدّث layerStates من DB أو من قراءة layer-state.json.
+
+G — UI polling/WebSocket (0.5–1 يوم)
+- مخرجات:
+  - Frontend يعرض حالة job (pending/processing/done/error) البسيطة.
+  - عند done → يطلب بيانات الطبقة من Node ويُضيف overlay تلقائياً أو يظهر زر "عرض".
+
+H — مراقبة ومقاييس (0.5–1 يوم)
+- مخرجات:
+  - تشغيل Flower أو إضافة basic metrics (job durations) و logs.
+  - إعداد تنبيه بسيط عند فشل متكرر.
+
+التقدير الكلي للـPhase1 MVP: 5–8 أيام عمل فعّال (يمكن تسريع بالتوازي عندما يتوفر 2 مطور + مهندس DevOps).
+
+4) PRs / ملفات سأجهز فورًا (قائمة مرجّحة — أبدأ بها عند موافقتك)
+- PR-01: infra/docker-compose.phase1.yml (postgres+redis+minio+api+worker+dispatcher)
+- PR-02: worker/Dockerfile + requirements.txt + celeryconfig.py + tasks.py (process_layer task)
+- PR-03: dispatcher service (FastAPI) + docs (enqueue API)
+- PR-04: node-api changes (upload endpoint calls dispatcher + GET /api/jobs/:jobId + DB migrations)
+- PR-05: COG conversion POC script + sample command
+- PR-06: frontend small changes (job polling UI + show/hide processed)
+- PR-07: monitoring: Flower + basic Prometheus exporter (optional)
+
+5) متطلبات الوصول / أسرار (أحتاجها منك أو تعليمات لتخزينها في env)
+- MINIO_ENDPOINT, MINIO_ACCESS_KEY, MINIO_SECRET_KEY (for dev)
+- S3 bucket (prod) credentials when ready (AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY)
+- REDIS_URL
+- DATABASE_URL (Postgres/PostGIS)
+- Container registry access (optional) إذا أردنا رفع images
+
+6) اختبار Phase1 — اختبارات E2E مقترحة
+- Upload small zip → Node returns layerId + jobId.
+- Poll jobId → queued → processing → done.
+- Verify MinIO contains COG/processed.png.
+- GET /api/gis/layers/:layerId shows valid imageUrl and leaflet_bounds.
+- Frontend loads overlay from MinIO S3_URL and displays it at correct bounds.
+- Simulate worker failure → job retried → on repeated failures job marked failed and admin notified.
+
+7) قرار مطلوب الآن
+هل أبدأ فوراً بـ:
+- (A) تجهيز ورفع PRs المرحلة الأولى (infra + worker + dispatcher + Node integration) وأفتحها في الريبو لِـreview؟ — سأبدأ على هذا فورًا عند موافقتك.
+- أو (B) تريده أن ينفّذ الفريق الـDevOps داخليًا بحسب المستند الذي أقدّمه (أجهّز ملفات infra + docs فقط)؟
+
+أنا موصى بـ (A) لأن ذلك يسرّع التسليم ويضمن تكامل مباشر على الريبو. قلّي تختار (A) أو (B) — وإذا (A) أبدأ فورًا بإنشاء أول PR: docker-compose + worker Dockerfile + tasks.py و dispatcher skeleton. كما أذكر: عند الموافقة، أحتاج مفاتيح MINIO/REDIS/DATABASE في env (أو أوضح كيفية تشغيل محليًا بدون مفاتيح).
+
+هل أبدأ الآن (A) و أفتح PR-01؟

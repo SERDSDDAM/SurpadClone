@@ -17,6 +17,7 @@ import authRoutes from "./auth/auth-routes";
 import { authenticateToken, requireRole, requirePermission } from "./auth/auth-middleware";
 import surveyRoutes from "./routes/survey-routes";
 import gisRoutes from "./routes/gis-routes";
+import phase1Routes from "./routes/phase1-integration";
 import helmet from "helmet";
 import path from "path";
 import fs from "fs";
@@ -80,6 +81,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Layer bounds fix routes
   const layersFixRoutes = await import('./routes/layers-fix');
   app.use('/api/gis/layers', layersFixRoutes.default);
+  
+  // Phase 1 Processing Pipeline Integration
+  app.use('/api/gis', phase1Routes);
   
   // Legacy GIS upload routes (for backward compatibility)
   const gisUploadRoutes = await import('./routes/gis-upload');
