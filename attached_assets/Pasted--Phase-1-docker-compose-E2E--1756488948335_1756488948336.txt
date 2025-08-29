@@ -1,0 +1,118 @@
+وصف موجز
+
+شغّل خدمات Phase 1 (docker-compose) إن كانت متوافرة.
+نفّذ سكربت الاختبار E2E الذي يولّد تقرير Markdown (e2e-reports/...).
+إن لم تتوفّر Docker في البيئة، شغّل اختبار التكامل البديل (node-only) وجمّع تقرير تكاملي.
+اجمع الـlogs وملفات metadata وlayer-state وملف الـimage، وضَعها في مجلد e2e-reports/raw-<timestamp>.
+أعِد محتوى ملف التقرير النهائي (Markdown) هنا في الدردشة.
+خطوات التنفيذ (الأوامر — نفّذها بالترتيب)
+
+تنبّه: سنجرب التشغيل الكامل عبر Docker أولاً. إذا فشل، نستخدم fallback (node-only).
+
+تأكد من وجود السكربتات/الملفات المطلوبة:
+
+Bash
+
+# في جذر المشروع
+ls -la docker-compose.phase1.yml scripts e2e_phase1_run_and_report.sh scripts/e2e_phase1_test.sh scripts/test_phase1_simple.sh
+محاولة تشغيل Docker Compose (الخيار الأول، إن متاح):
+Bash
+
+# اجعل السكربت قابلًا للتنفيذ (إن وُجد)
+[ -f scripts/phase1-start.sh ] && chmod +x scripts/phase1-start.sh
+
+# حاول تشغيل السكربت المزوَّد أولاً (أخف)
+if [ -f scripts/phase1-start.sh ]; then
+  ./scripts/phase1-start.sh || true
+fi
+
+# إن لم ينجح أو السكربت غير موجود، استخدم docker-compose
+if [ -f docker-compose.phase1.yml ]; then
+  docker-compose -f docker-compose.phase1.yml up -d || true
+fi
+تحقق ما إذا كانت الحاويات تعمل (انتظر 8–12 ثانية قبل التحقق):
+Bash
+
+sleep 10
+# تحقق من وجود docker-compose و الحاويات
+if command -v docker-compose >/dev/null 2>&1 && [ -f docker-compose.phase1.yml ]; then
+  docker-compose -f docker-compose.phase1.yml ps
+else
+  echo "Docker / docker-compose غير متاح أو ملف docker-compose.phase1.yml مفقود — سنستخدم اختبار التكامل البديل (node-only)."
+fi
+تحقق من أن الـDispatcher متاح (FastAPI على port 8001) — إن كانت الحاويات تعمل:
+Bash
+
+# انتظر 3s ثم تحقق
+sleep 3
+HTTP_STATUS_DISPATCHER=0
+if curl -sS -o /dev/null -w "%{http_code}" http://localhost:8001/health 2>/dev/null; then
+  HTTP_STATUS_DISPATCHER=$(curl -sS -o /dev/null -w "%{http_code}" http://localhost:8001/health)
+fi
+echo "dispatcher http status: $HTTP_STATUS_DISPATCHER"
+شغّل اختبار E2E الرئيسي (التقرير المفصّل). الخياران: ملف e2e_phase1_run_and_report.sh في الجذر أو سكربت في scripts/:
+إن وُجد الملف e2e_phase1_run_and_report.sh، نفّذه:
+Bash
+
+if [ -f ./e2e_phase1_run_and_report.sh ]; then
+  chmod +x ./e2e_phase1_run_and_report.sh
+  ./e2e_phase1_run_and_report.sh temp-uploads/test_geotiff.tif
+  exit_code=$?
+else
+  exit_code=127
+fi
+أما إن لم يوجد أو فشل بسبب Docker، نفّذ البديل الخفيف (node-only test script):
+Bash
+
+if [ "$exit_code" -ne 0 ] && [ -f ./scripts/e2e_phase1_test.sh ]; then
+  chmod +x ./scripts/e2e_phase1_test.sh
+  ./scripts/e2e_phase1_test.sh temp-uploads/test_geotiff.tif || true
+fi
+
+# أخيراً، إن لم ينجح أي منهما، شغّل الاختبار البسيط الذي سبق إنشاؤه
+if [ ! -f ./e2e-reports/phase1-e2e-report-* ]; then
+  if [ -f ./scripts/test_phase1_simple.sh ]; then
+    chmod +x ./scripts/test_phase1_simple.sh
+    ./scripts/test_phase1_simple.sh || true
+  fi
+fi
+بعد تنفيذ السكربتات: اجمع المسارات والملفات الناتجة واطبع التقرير النهائي هنا:
+Bash
+
+# اعثر على أحدث تقرير
+REPORT=$(ls -t e2e-reports/phase1-e2e-report-*.md 2>/dev/null | head -n1 || true)
+RAW_DIR=$(ls -d e2e-reports/raw-* 2>/dev/null | head -n1 || true)
+
+echo "--- REPORT PATH ---"
+echo "$REPORT"
+echo "--- RAW DIR ---"
+echo "$RAW_DIR"
+
+# اطبع بداية التقرير (أول 400 سطر أو كامل إذا قصير)
+if [ -n "$REPORT" ]; then
+  echo "---- START REPORT ----"
+  sed -n '1,400p' "$REPORT" || true
+  echo "---- END REPORT (partial) ----"
+else
+  echo "لم يتم إيجاد تقرير. أدرج قائمة الملفات في e2e-reports/"
+  ls -la e2e-reports || true
+fi
+
+# أيضاً اجمع لوقات الحاويات المهمة (لو Docker متاح)
+if command -v docker-compose >/dev/null 2>&1 && [ -f docker-compose.phase1.yml ]; then
+  docker-compose -f docker-compose.phase1.yml logs --no-color --tail=200 && echo "=== END OF DOCKER LOGS ==="
+else
+  echo "Docker-compose غير متاح؛ لا توجد لوقات لجلبها."
+fi
+ما أريدك (Agent) أن تردّه لي بعد إتمام المهمة
+إذا نجحت: أرسل لي محتوى التقرير Markdown (أو رابط للملف في workspace) واسم مجلد raw-<timestamp>، مع موجز (3–5 أسطر) عن حالة النجاح + زمن التنفيذ الأساسي.
+إن فشل أي جزء: أرسل لي اللوق الأخير من worker/dispatcher/redis/postgres ونسخة من stdout/stderr، ومخرجات curl للـhealth endpoints، وسأقدّم تحليلًا فوريًا وخطوات تصحيح.
+ملاحظات مهمة للـAgent
+
+إذا Docker غير متاح في بيئة Replit، لا تحاول تثبيته — بدّل إلى الاختبار البديل node-only (الموجود في scripts/) وبلغني أن الاختبار الكامل لم يُجرَ لعدم دعم Docker.
+تجنّب طباعة صور ثنائية كبيرة في الدردشة — فقط أرسل مسار الملف والـMD5/الحجم.
+انتظر انتهاء العملية (قد تأخذ عدة دقائق لملفات كبيرة). لا تقطع العملية مبكرًا.
+نموذج رسالة مختصرة للـAgent عند الانتهاء (تنسخه ويضعه في النتيجة)
+
+"انتهيت من تشغيل اختبار E2E. التقرير: <path-to-md>.raw files: <path-to-raw-dir>. النتائج: [نجاح/فشل]."
+إذا فشل: أضف logs snippet (last 200 lines) وerror messages.

@@ -1,0 +1,109 @@
+ممتاز — مبروك على نجاح تكامل Phase 1 ونجاح اختبارات التكامل الجزئية ✅. أدناه خطة تشغيلية مباشرة ومفصّلة للخطوات التالية (تشغيل Docker services، تنفيذ اختبار E2E كامل، فحص النتائج، ومعالجات سريعة إن وجدت مشاكل). أضع أوامر جاهزة للتشغيل (يمكن لمساعد Replit/Agent تنفيذها)، تعليمات فحص سريعة، نصائح تصحيح الأخطاء، وخطة متابعة موجزة بعد انتهاء الاختبارات.
+
+ملخّص الهدف الآن
+
+تشغيل حزمة Docker (Redis, Celery worker, FastAPI dispatcher, MinIO, Postgres/PostGIS) → تجربة End‑to‑End حقيقية: رفع ملف → صف → معالجة → رفع نتائج إلى MinIO → تحديث DB → عرض الطبقة على الخريطة → توليد تقرير.
+أوامر التشغيل — تشغيل الخدمات (Docker‑Compose)
+إذا تملك Docker / docker‑compose في البيئة، نفّذ:
+أولاً (اختياري) اجعل السكربت قابلًا للتنفيذ:
+
+Bash
+
+chmod +x scripts/phase1-start.sh
+خيار (أ) استخدم السكربت الجاهز:
+
+Bash
+
+./scripts/phase1-start.sh
+أو خيار (ب) شغّل docker-compose مباشرة:
+
+Bash
+
+docker-compose -f docker-compose.phase1.yml up -d
+بعد التشغيل انتظر 10–30 ثانية ثم تأكد أن الحاويات تعمل:
+
+Bash
+
+docker-compose -f docker-compose.phase1.yml ps
+تحقق سريع من الصحة (health checks)
+افحص أن الخدمات الأساسية تعمل:
+Dispatcher (FastAPI):
+Bash
+
+curl -sS http://localhost:8001/health | jq .
+MinIO (console):
+افتح المتصفح: http://localhost:9001
+أو تحقق عبر CLI (إن ثبتت aws cli):
+Bash
+
+aws --endpoint-url http://localhost:9000 s3 ls
+Redis:
+Bash
+
+# لو عندك redis-cli
+redis-cli -h localhost -p 6379 ping
+# يجب أن يجيب PONG
+Postgres/PostGIS:
+Bash
+
+# تأكد من الاتصال (psql) أو تحقق من أن الحاوية تعمل
+docker-compose -f docker-compose.phase1.yml logs postgres --tail=50
+Flower (optional):
+Bash
+
+# لوحة مراقبة Celery
+http://localhost:5555
+تشغيل اختبار E2E الكامل (سكربت)
+بعد تشغيل الخدمات، نفّذ سكربت الاختبار الذي وضعناه (أحد السكربتات الموجودة: scripts/e2e_phase1_test.sh أو e2e_phase1_run_and_report.sh). مثال:
+Bash
+
+# مثال تشغيل الاختبار (ملف افتراضي موجود)
+./scripts/e2e_phase1_test.sh temp-uploads/test_geotiff.tif
+# أو السكربت الموّجه لعمل تقرير مفصّل:
+./e2e_phase1_run_and_report.sh temp-uploads/test_geotiff.tif
+نتيجة التشغيل تضع تقرير Markdown في المجلد ./e2e-reports/ مع raw artifacts. افتح الملف الناتج:
+
+Bash
+
+ls -la e2e-reports
+cat e2e-reports/phase1-e2e-report-*.md | sed -n '1,200p'
+نقاط التحقق acceptance بعد الاختبار
+تأكّد من النقاط التالية في التقرير:
+upload response → يعيد layerId و/أو jobId
+job state → يتحول queued → processing → done (أو يظهر سبب failure)
+توجد metadata.json في temp-uploads/processed/<layerId>/metadata.json وتحتوي الحقول الموحدة:
+imageFile, bbox [west,south,east,north], leaflet_bounds [[south,west],[north,east]], width, height, crs, processed_at
+توجد layer-state.json مع visible, opacity, z_index, status
+صور/COG رفعت إلى MinIO → يمكن تنزيل processed.png عبر:
+http://localhost:5000/api/gis/layers/<layerId>/image/processed.png (يجب إرجاع 200، Content-Type: image/png و Access-Control-Allow-Origin)
+الواجهة تُحمّل overlay بالـimageUrl وتعرضه في نطاق الإحداثيات الصحيحة.
+خطوات التصحيح السريع — إذا واجهت مشاكل شائعة
+Dispatcher غير متاح (connection refused):
+تأكد من أن الحاوية dispatcher تعمل: docker-compose -f docker-compose.phase1.yml ps
+راجع لوقاته: docker-compose -f docker-compose.phase1.yml logs dispatcher --tail=200
+إذا لم تعمل، جرّب يدويًا:
+Bash
+
+docker-compose -f docker-compose.phase1.yml up dispatcher
+# أو شغّل محليًا:
+uvicorn worker.dispatcher:app --host 0.0.0.0 --port 8001 --reload
+Celery worker لا يتصل بالـbroker:
+تحقق من Redis: redis-cli -h localhost ping
+راجع لوقات worker: docker-compose -f docker-compose.phase1.yml logs worker --tail=200
+قد تحتاج ضبط CELERY_BROKER_URL في env.
+GDAL/rasterio errors أو memory error:
+راجع لوقات worker، زوّد الworker بذاكرة/CPU أكبر أو خفف concurrency.
+اختبر تحويل صغير (5–10MB) لمعرفة ما إذا المشكلة بالـfile أم بالبيئة.
+مشاكل CORS على الصورة:
+تأكد أن route image يرسل header Access-Control-Allow-Origin: * أو origin المطابق.
+في Node route الذي يرسل sendFile أضف: res.setHeader('Access-Control-Allow-Origin','*').
+تحسينات مبدئية بعد نجاح E2E
+عند نجاح الاختبار الكامل اقترح فوراً:
+توليف إعدادات Celery worker:
+concurrency = عدد الأنوية CPU أو خاصية ENV WORKER_CONCURRENCY
+prefetch multiplier ضبط
+تفعيل COG options لتحسين الأداء:
+استخدم gdal_translate -co TILED=YES -co COMPRESS=DEFLATE -co BLOCKXSIZE=512 -co BLOCKYSIZE=512 -co COPY_SRC_OVERVIEWS=YES
+أو استخدم rio_cogeo/rio_tiler pipeline لإنشاء COG بكفاءة.
+تمكين Prometheus metrics + Grafana dashboard:
+اجعل worker/dispatcher
