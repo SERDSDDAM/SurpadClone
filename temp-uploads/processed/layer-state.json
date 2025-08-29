@@ -1,5 +1,18 @@
 {
-  "layers": {},
-  "lastModified": "2025-08-29T16:32:56.548Z",
+  "layers": {
+    "test_layer": {
+      "visible": true,
+      "opacity": 0.5,
+      "zIndex": 1500,
+      "lastUpdated": "2025-08-29T16:37:27.042Z"
+    },
+    "test_layer2": {
+      "visible": false,
+      "opacity": 1,
+      "zIndex": 2000,
+      "lastUpdated": "2025-08-29T16:37:27.044Z"
+    }
+  },
+  "lastModified": "2025-08-29T16:37:27.044Z",
   "version": "1.0.0"
 }
