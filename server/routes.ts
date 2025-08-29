@@ -13,8 +13,9 @@ import {
   insertReviewCommentSchema 
 } from "@shared/schema";
 
-import authRoutes from "./auth/auth-routes";
-import { authenticateToken, requireRole, requirePermission } from "./auth/auth-middleware";
+import authRoutes from "./routes/auth";
+import { authMiddleware, requireSurveyor, apiRateLimit } from './middleware/auth';
+import cookieParser from 'cookie-parser';
 import surveyRoutes from "./routes/survey-routes";
 import gisRoutes from "./routes/gis-routes";
 import phase1Routes from "./routes/phase1-integration";
@@ -24,6 +25,12 @@ import path from "path";
 import fs from "fs";
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Cookie parser middleware
+  app.use(cookieParser());
+
+  // API rate limiting
+  app.use('/api', apiRateLimit);
+  
   // CORS middleware FIRST (before any other middleware)
   app.use(cors({
     origin: true, // Allow all origins for development
@@ -57,7 +64,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     },
   }));
 
-  // Auth routes
+  // Auth routes (BEFORE other API routes)
   app.use("/api/auth", authRoutes);
   
   // Survey routes

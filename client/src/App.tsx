@@ -26,6 +26,8 @@ import Register from "@/pages/auth/register";
 import CitizenLogin from "@/pages/auth/citizen-login";
 import ProfessionalLogin from "@/pages/auth/professional-login";
 import EmployeeLogin from "@/pages/auth/employee-login";
+import EmployeeLoginPage from "@/pages/EmployeeLoginPage";
+import AdminDashboard from "@/pages/AdminDashboard";
 import PortalSelection from "@/pages/auth/portal-selection";
 import CitizenDashboard from "@/pages/citizen/citizen-dashboard";
 import SmartEmployeeDashboard from "@/pages/employee/smart-employee-dashboard";
@@ -214,6 +216,8 @@ function Router() {
           <Route path="/auth/citizen-login" component={CitizenLogin} />
           <Route path="/auth/professional-login" component={ProfessionalLogin} />
           <Route path="/auth/employee-login" component={EmployeeLogin} />
+          <Route path="/employee-login" component={EmployeeLoginPage} />
+          <Route path="/admin-dashboard" component={AdminDashboard} />
           <Route path="/citizen-dashboard" component={CitizenDashboard} />
           <Route path="/employee-dashboard" component={SmartEmployeeDashboard} />
           <Route path="/analytics-dashboard" component={AnalyticsDashboard} />
