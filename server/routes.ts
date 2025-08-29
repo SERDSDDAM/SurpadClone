@@ -61,16 +61,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Survey routes
   app.use("/api", surveyRoutes);
   
-  // GIS routes
-  app.use("/api/gis", gisRoutes);
+  // Basic GIS routes (without upload conflicts)  
+  // COMPLETELY DISABLE old gis routes to ensure enhanced upload works
+  // app.use("/api/gis", gisRoutes);
   
-  // Enhanced GIS upload routes
+  // Enhanced GIS upload routes (FIRST priority)
   const enhancedUploadRoutes = await import('./routes/enhanced-upload');
   app.use('/api/gis', enhancedUploadRoutes.default);
   
-  // Debug routes for testing
+  // Debug routes for testing  
   const debugRoutes = await import('./routes/debug-routes');
   app.use('/api/gis', debugRoutes.default);
+  
+  // Layer API routes
+  const layerApiRoutes = await import('./routes/layers-api');
+  app.use('/api/gis/layers', layerApiRoutes.default);
   
   // Legacy GIS upload routes (for backward compatibility)
   const gisUploadRoutes = await import('./routes/gis-upload');
