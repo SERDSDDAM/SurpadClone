@@ -1,0 +1,109 @@
+ممتاز — الخطأ واضح: الرسالة "Validation error … expected: string, received: undefined, path: ['username']" تعني أن الطلب الذي يرسله المتصفح إلى نقطة تسجيل الدخول لا يحتوي على الحقل username (أو أن قيمته undefined)، لذلك فالفحص/التحقق (validation) في السيرفر رَفَض الطلب. الحل عملي وبسيط: نتحقق أين المشكلة — في الطلب (العميل) أم في السيرفر — ثم نصلحها. أدناه خطوات سريعة مرتبة مع أوامر وكود جاهز للإصلاح.
+
+خطة قصيرة لإنهاء المشكلة الآن (اختصرها وطبقها)
+
+1) فحص سريع من الطرفية (اختبار مباشر مع curl)
+شغّل هذا الأمر للتحقق إن السيرفر يقبل طلب تسجيل دخول بشكل صحيح خارج الواجهة. استبدل المسار إن لزم:
+
+```bash
+curl -i -X POST "http://localhost:5000/api/auth/login" \
+  -H "Content-Type: application/json" \
+  -d '{"username":"admin","password":"Admin@2025!"}'
+```
+
+- إذا رجع 200 و token → السيرفر يعمل ويقبل الحقول username/password → المشكلة في الواجهة (client).
+- إذا رجع خطأ validation مماثل → السيرفر يتوقع حقلًا مختلفًا (مثلاً email بدل username) أو body لم يُستقبل (middleware مفقود مثل express.json()).
+
+2) فحص الطلب الذي ترسله الواجهة (DevTools)
+- افتح صفحة تسجيل الدخول في المتصفح → F12 → تبويب Network → فلتر XHR → اضغط زر "تسجيل الدخول".
+- اختر الطلب POST إلى /api/auth/login → Tab "Payload" أو "Request" → تأكد أن JSON body يحتوي على { "username": "...", "password": "..." }.
+- إن لم يظهر username أو ظهر كـ undefined → أصلح الكود في صفحة الـlogin لتملأ البيانات من الحقول.
+
+3) إصلاح الواجهة (client) — إرسال الجسم الصحيح
+في ملف العميل (EmployeeLoginPage.tsx أو useAuth hook) تأكد أن كود الإرسال يرسل JSON بهذه البنية. مثال axios/fetch:
+
+Axios مثال:
+```ts
+import api from '@/lib/api'; // أو axios instance
+
+async function login(username: string, password: string) {
+  const res = await api.post('/api/auth/login', { username, password }, {
+    headers: { 'Content-Type': 'application/json' },
+    withCredentials: true // لو تستخدم cookie
+  });
+  return res.data;
+}
+```
+
+Fetch مثال:
+```ts
+await fetch('/api/auth/login', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  credentials: 'include', // لو تستخدم cookie
+  body: JSON.stringify({ username, password })
+});
+```
+
+- تأكد أن المتغيّر username يُقرأ من input state، مثلاً:
+```ts
+const [username, setUsername] = useState('');
+<input value={username} onChange={e => setUsername(e.target.value)} />
+```
+- لا ترسل body كـ FormData إلا إذا السيرفر يتوقع ذلك.
+
+4) إصلاح السيرفر لو أراد دعم حقول بديلة (اختياري ومفيد)
+لو تريد جعل الـendpoint أكثر مرونة — يقبل username أو email ــ عدّل كود التحقق ليستخرج أي منهما:
+
+مثال (Express + Zod-like pseudocode):
+```ts
+// server/routes/auth.ts (pseudo)
+const { username, email, password } = req.body;
+const loginId = username || email; // قبول أي منهما
+if (!loginId || typeof loginId !== 'string') {
+  return res.status(400).json({ error: 'username or email required' });
+}
+if (!password) return res.status(400).json({ error: 'password required' });
+
+// ثم تحقق في DB حسب username أو email
+```
+
+أو تحسين schema:
+```ts
+const loginSchema = z.object({
+  username: z.string().optional(),
+  email: z.string().email().optional(),
+  password: z.string().min(1)
+}).refine(data => data.username || data.email, { message: "username or email required" });
+```
+
+5) تحقق من body parser و CORS
+- تأكد أن في Express لديك middleware:
+```ts
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+```
+- إن كنت تستخدم cookie للـJWT تأكد CORS يسمح بالـcredentials:
+```ts
+app.use(cors({ origin: 'https://your-domain', credentials: true }));
+```
+
+6) اختبار بعد الإصلاح
+- أعد اختبار الـcurl من الخطوة (1).
+- أعد المحاولة من واجهة المستخدم: افتح DevTools → Network → راقب payload و response.  
+- تحقق أن بعد تسجيل الدخول تحصل token أو Set-Cookie وأن /api/auth/me يعيد بيانات المستخدم.
+
+7) حلول سريعة حسب نتائجك
+- نتيجة curl نجحت، لكن UI يفشل → أصلح client كما في (3) ثم retest.  
+- نتيجة curl فشلت بنفس خطأ validation → أصلح server كما في (4) أو تحقق express.json middleware.  
+- إذا ظهرت مشكلة CORS أو cookies → ضبط cors وcredentials كما في (5).
+
+8) أرسل لي النتائج إذا احتجت مساعدة سريعة
+- ألصق هنا ناتج curl (كل الـresponse body) أو Snapshot من Network → Request Payload و Response body.  
+- إن تريد، أستطيع إعداد PR صغير لتعديل client code (EmployeeLoginPage.tsx) أو تعديل server validation ليدعم username/email مباشرة — أخبرني أي واحد تفضّل.
+
+خلاصة سريعة الآن (ماذا تفعل بالضبط خلال دقيقتين)
+1) نفّذ curl أعلاه (اختبار مباشر).  
+2) افتح DevTools → حاول تسجيل الدخول → أطلعني على محتوى Request payload لمن أرشدك مباشرة.  
+
+أخبرني بنتيجة curl أو الصق payload من DevTools وسأعطيك تعديل فوري (client أو server) خطوة‑بخطوة لتصليح المشكلة فورًا.

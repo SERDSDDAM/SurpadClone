@@ -20,9 +20,13 @@ const loginSchema = z.object({
  */
 router.post('/login', loginRateLimit, async (req, res) => {
   try {
+    console.log('📨 Raw request body:', req.body);
+    console.log('📋 Request content-type:', req.headers['content-type']);
+    
     // التحقق من صحة البيانات المدخلة
     const validationResult = loginSchema.safeParse(req.body);
     if (!validationResult.success) {
+      console.log('❌ Validation failed:', validationResult.error.errors);
       return res.status(400).json({
         error: 'Validation error',
         message: 'بيانات غير صحيحة',

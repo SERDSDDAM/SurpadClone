@@ -179,13 +179,26 @@
             try {
                 console.log('Attempting login with:', { username, password: '***' });
                 
+                // التحقق من وجود البيانات
+                if (!username || !password) {
+                    messageArea.innerHTML = `
+                        <div class="error-message" style="display: block;">
+                            يرجى إدخال اسم المستخدم وكلمة المرور
+                        </div>
+                    `;
+                    return;
+                }
+
+                const requestBody = { username, password };
+                console.log('Request body:', requestBody);
+
                 const response = await fetch('/api/auth/login', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
                     },
                     credentials: 'include',
-                    body: JSON.stringify({ username, password })
+                    body: JSON.stringify(requestBody)
                 });
 
                 console.log('Response status:', response.status);
