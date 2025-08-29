@@ -1,0 +1,16 @@
+{
+  "id": "layer_1756415314040_1wnudtdt3",
+  "imageFile": "test_geotiff.png",
+  "leaflet_bounds": [
+    [
+      12,
+      42
+    ],
+    [
+      19,
+      54
+    ]
+  ],
+  "bbox": null,
+  "crs": null
+}

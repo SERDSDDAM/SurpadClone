@@ -1,0 +1,16 @@
+{
+  "id": "test_working_layer",
+  "imageFile": "test_working.png",
+  "leaflet_bounds": [
+    [
+      12,
+      42
+    ],
+    [
+      19,
+      54
+    ]
+  ],
+  "bbox": null,
+  "crs": null
+}

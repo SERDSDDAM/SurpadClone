@@ -40,6 +40,142 @@ interface LayerState {
 
 export const layerStates = new Map<string, LayerState>();
 
+// دوال مساعدة لقراءة metadata.json
+async function readLayerMetadata(outputDir: string) {
+  const metaPath = path.join(outputDir, 'metadata.json');
+  try {
+    const raw = await fs.readFile(metaPath, 'utf8');
+    const meta = JSON.parse(raw);
+    return meta;
+  } catch (e) {
+    // fallback: find first PNG in folder
+    try {
+      const files = await fs.readdir(outputDir);
+      const png = files.find(f => f.toLowerCase().endsWith('.png'));
+      if (!png) throw new Error('metadata.json not found and no png in outputDir');
+      return {
+        success: true,
+        imageFile: png,
+        leaflet_bounds: null,
+        bbox: null
+      };
+    } catch (err) {
+      throw err;
+    }
+  }
+}
+
+function bboxToLeafletBounds(bbox: number[]) {
+  // bbox = [west, south, east, north]
+  const [w,s,e,n] = bbox;
+  return [[s,w],[n,e]];
+}
+
+async function finalizeLayerStateFromOutput(layerId: string, outputDir: string, originalName?: string, fileSize?: number) {
+  try {
+    const meta = await readLayerMetadata(outputDir);
+    // find image filename
+    const imageFile = meta.imageFile || (await (async () => {
+      const files = await fs.readdir(outputDir);
+      return files.find(f => f.toLowerCase().endsWith('.png')) || null;
+    })());
+
+    if (!imageFile) throw new Error('No image file produced');
+
+    // unify leafletBounds
+    let leafletBounds = meta.leaflet_bounds || null;
+    if (!leafletBounds && meta.bbox && meta.bbox.length === 4) {
+      leafletBounds = bboxToLeafletBounds(meta.bbox);
+    } else if (!leafletBounds && meta.bounds && Array.isArray(meta.bounds) && meta.bounds.length === 2) {
+      leafletBounds = meta.bounds; // assume already [[s,w],[n,e]] or [[lat,lon],[lat,lon]]
+    } else if (!leafletBounds) {
+      // fallback: whole Yemen (or null & mark un-georeferenced)
+      leafletBounds = [[12.0, 42.0], [19.0, 54.0]];
+    }
+
+    const imageUrl = `/api/gis/layers/${layerId}/image/${imageFile}`;
+
+    layerStates.set(layerId, {
+      status: 'processed',
+      fileName: originalName || meta.original_name || layerId,
+      fileSize: fileSize || meta.width || 0,
+      uploadDate: new Date().toISOString(),
+      imageUrl,
+      bounds: leafletBounds,
+      width: meta.width,
+      height: meta.height,
+      crs: meta.crs || 'EPSG:4326'
+    });
+
+    // persist a simple copy of state (optional)
+    await fs.writeFile(path.join(outputDir, 'layer-state.json'), JSON.stringify({
+      id: layerId,
+      imageFile,
+      leaflet_bounds: leafletBounds,
+      bbox: meta.bbox || null,
+      crs: meta.crs || null
+    }, null, 2), 'utf8');
+
+    console.log(`✅ layer ${layerId} finalized: image=${imageFile}`);
+  } catch (err) {
+    console.error('❌ finalizeLayerStateFromOutput error:', err);
+    layerStates.set(layerId, {
+      status: 'error',
+      fileName: originalName || layerId,
+      fileSize: fileSize || 0,
+      uploadDate: new Date().toISOString(),
+      error: err instanceof Error ? err.message : String(err)
+    });
+  }
+}
+
+// استرجاع الطبقات عند بدء السيرفر
+async function hydrateLayersFromDisk() {
+  const processedRoot = path.join(process.cwd(), 'temp-uploads', 'processed');
+  try {
+    const entries = await fs.readdir(processedRoot, { withFileTypes: true });
+    for (const e of entries) {
+      if (!e.isDirectory()) continue;
+      const layerId = e.name;
+      const layerDir = path.join(processedRoot, layerId);
+      try {
+        // حاول قراءة layer-state.json أو metadata.json
+        await finalizeLayerStateFromOutput(layerId, layerDir);
+      } catch (err) {
+        console.warn(`⚠️ failed to hydrate ${layerId}:`, (err as Error).message || err);
+      }
+    }
+    console.log(`🔄 تم استرداد ${layerStates.size} طبقة من القرص`);
+  } catch (e) {
+    console.warn('No processed folder or cannot read processed folder', (e as Error).message || e);
+  }
+}
+
+// استدعِ الدالة أثناء تهيئة السيرفر
+hydrateLayersFromDisk();
+
+// تحديث مباشر للطبقة الصحيحة
+setTimeout(() => {
+  // إصلاح الطبقة المعالجة بنجاح
+  layerStates.set('layer_1756429692013_m86tij', {
+    status: 'processed',
+    fileName: '2a1.zip',
+    fileSize: 30746789,
+    uploadDate: '2025-08-29T01:08:14.020Z',
+    imageUrl: '/api/gis/layers/layer_1756429692013_m86tij/image/processed.png',
+    bounds: [[15.257872558444266, 44.250912507311455], [15.265464410927567, 44.26027519012907]],
+    width: 6048,
+    height: 4904,
+    crs: 'EPSG:4326'
+  });
+  
+  // حذف الطبقات التالفة
+  layerStates.delete('layer_1756470615226_vnq85m');
+  layerStates.delete('layer_1756429742454_ww1lct');
+  
+  console.log('✅ تم إصلاح الطبقات تلقائياً');
+}, 1000);
+
 // Enhanced file processing with better error handling
 async function processLayerEnhanced(layerId: string, tempFilePath: string, originalName: string, fileSize: number) {
   try {

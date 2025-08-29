@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
+import { toLeafletBounds, validateBounds } from '@/utils/geo';
 
 // إصلاح أيقونات Leaflet
 delete (L.Icon.Default.prototype as any)._getIconUrl;
@@ -176,22 +177,57 @@ export function CleanLeafletMap({ layers, onMapReady, onCoordinatesChange, curre
         console.log(`📍 الحدود:`, layer.bounds);
         console.log(`🖼️ URL:`, layer.imageUrl);
 
-        // تحويل الحدود إلى تنسيق Leaflet
-        const bounds = L.latLngBounds(
-          [layer.bounds[0][0], layer.bounds[0][1]], // southwest
-          [layer.bounds[1][0], layer.bounds[1][1]]  // northeast
-        );
+        // تحويل الحدود إلى تنسيق Leaflet محسن
+        const convertedBounds = toLeafletBounds(layer.bounds || layer.leaflet_bounds || layer.bbox, layer.crs);
+        
+        if (!validateBounds(convertedBounds)) {
+          console.error('Invalid bounds for layer', layer.id, layer.bounds);
+          return;
+        }
 
-        // إنشاء ImageOverlay
-        const imageOverlay = L.imageOverlay(layer.imageUrl, bounds, {
-          opacity: 0.8,
-          alt: layer.name,
-          interactive: true
-        });
+        console.log('Adding overlay', layer.imageUrl, 'bounds', convertedBounds);
+        
+        // Preload image to detect errors early
+        const img = new Image();
+        img.crossOrigin = 'anonymous';
+        
+        img.onload = () => {
+          try {
+            const bounds = L.latLngBounds(
+              [convertedBounds[0][0], convertedBounds[0][1]], // southwest
+              [convertedBounds[1][0], convertedBounds[1][1]]  // northeast
+            );
 
-        // إضافة الطبقة إلى الخريطة
-        imageOverlay.addTo(map);
-        layerInstances.set(layer.id, imageOverlay);
+            // إنشاء ImageOverlay
+            const imageOverlay = L.imageOverlay(layer.imageUrl, bounds, {
+              opacity: 1,
+              alt: layer.name,
+              interactive: true,
+              crossOrigin: true
+            });
+
+            // إضافة الطبقة إلى الخريطة
+            imageOverlay.addTo(map);
+            layerInstances.set(layer.id, imageOverlay);
+            
+            // تكبير على الطبقة
+            try { 
+              map.fitBounds(bounds, { maxZoom: 17 }); 
+            } catch(e) { 
+              console.warn('fitBounds error:', e); 
+            }
+            
+            console.log(`✅ تم عرض الطبقة بنجاح: ${layer.name}`);
+          } catch (error) {
+            console.error('Error creating image overlay:', error);
+          }
+        };
+        
+        img.onerror = (err) => {
+          console.error('Image load failed:', layer.imageUrl, err);
+        };
+        
+        img.src = layer.imageUrl;
 
         console.log(`✅ تم إضافة الطبقة بنجاح: ${layer.name}`);
 

@@ -197,26 +197,31 @@ def process_geotiff(input_file, output_dir, original_name=None):
             
             print(f"✅ تم حفظ الصورة: {output_image_path}")
             
-            # إعداد معلومات النتيجة
-            result = {
+            # إعداد معلومات النتيجة الموحدة
+            # final_bounds هي [west, south, east, north]
+            metadata = {
                 "success": True,
-                "output_image": output_image_path,
-                "bounds": [[final_bounds[1], final_bounds[0]], [final_bounds[3], final_bounds[2]]], # [SW, NE] format for Leaflet
+                "imageFile": os.path.basename(output_image_path),  # e.g. "processed.png"
+                "bbox": [final_bounds[0], final_bounds[1], final_bounds[2], final_bounds[3]],  # [west, south, east, north]
+                "leaflet_bounds": [[final_bounds[1], final_bounds[0]], [final_bounds[3], final_bounds[2]]],  # [[south,west],[north,east]]
                 "width": width,
                 "height": height,
-                "crs": str(final_crs) if final_crs else "EPSG:4326",
+                "crs": "EPSG:4326",
                 "original_name": original_name or os.path.basename(input_file)
             }
             
-            # حفظ معلومات الطبقة
+            # حفظ معلومات الطبقة الموحدة
             metadata_path = os.path.join(output_dir, 'metadata.json')
             with open(metadata_path, 'w', encoding='utf-8') as f:
-                json.dump(result, f, indent=2, ensure_ascii=False)
+                json.dump(metadata, f, indent=2, ensure_ascii=False)
             
             print("✅ تمت المعالجة بنجاح")
-            print(f"📄 النتيجة: {json.dumps(result, ensure_ascii=False, indent=2)}")
+            print(f"📄 النتيجة: {json.dumps(metadata, ensure_ascii=False, indent=2)}")
             
-            return result
+            # طباعة النتيجة النهائية كـJSON للخلفية
+            print(json.dumps(metadata, ensure_ascii=False))
+            
+            return metadata
             
     except Exception as e:
         print(f"❌ خطأ في معالجة GeoTIFF: {e}")
