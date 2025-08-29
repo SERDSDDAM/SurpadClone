@@ -194,40 +194,50 @@ export function AdvancedFileUploader({ onLayerAdded, maxFileSize = 200 * 1024 * 
       </CardHeader>
       <CardContent className="space-y-4">
         {/* Drag and drop area */}
-        <div
-          className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
-            dragActive 
-              ? 'border-blue-400 bg-blue-50' 
-              : 'border-gray-300 hover:border-gray-400'
-          }`}
-          onDragEnter={handleDrag}
-          onDragLeave={handleDrag}
-          onDragOver={handleDrag}
-          onDrop={handleDrop}
-        >
-          {selectedFile ? (
-            <div className="space-y-2">
-              <FileImage className="w-12 h-12 mx-auto text-green-600" />
-              <div className="text-sm font-medium">{selectedFile.name}</div>
-              <div className="text-xs text-gray-500">
-                {Math.round(selectedFile.size / (1024 * 1024))} MB
-              </div>
-            </div>
-          ) : (
-            <div className="space-y-2">
-              <Upload className="w-12 h-12 mx-auto text-gray-400" />
-              <div>
-                <div className="text-sm font-medium">اسحب الملف هنا أو انقر للاختيار</div>
+        <div className="relative">
+          <div
+            className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors cursor-pointer ${
+              dragActive 
+                ? 'border-blue-400 bg-blue-50' 
+                : 'border-gray-300 hover:border-gray-400'
+            }`}
+            onDragEnter={handleDrag}
+            onDragLeave={handleDrag}
+            onDragOver={handleDrag}
+            onDrop={handleDrop}
+            onClick={(e) => {
+              // Only trigger file input if clicking on the drop area itself, not child elements
+              if (e.target === e.currentTarget) {
+                const input = document.getElementById('file-input-hidden') as HTMLInputElement;
+                input?.click();
+              }
+            }}
+          >
+            {selectedFile ? (
+              <div className="space-y-2">
+                <FileImage className="w-12 h-12 mx-auto text-green-600" />
+                <div className="text-sm font-medium">{selectedFile.name}</div>
                 <div className="text-xs text-gray-500">
-                  ZIP, GeoTIFF, TIF - حتى {Math.round(maxFileSize / (1024 * 1024))}MB
+                  {Math.round(selectedFile.size / (1024 * 1024))} MB
                 </div>
               </div>
-            </div>
-          )}
+            ) : (
+              <div className="space-y-2">
+                <Upload className="w-12 h-12 mx-auto text-gray-400" />
+                <div>
+                  <div className="text-sm font-medium">اسحب الملف هنا أو انقر للاختيار</div>
+                  <div className="text-xs text-gray-500">
+                    ZIP, GeoTIFF, TIF - حتى {Math.round(maxFileSize / (1024 * 1024))}MB
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
           
           <input
+            id="file-input-hidden"
             type="file"
-            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+            className="hidden"
             accept=".zip,.tif,.tiff,.geotiff"
             onChange={handleFileSelect}
           />
