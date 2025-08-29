@@ -50,32 +50,42 @@ export default function EmployeeLoginPage() {
     setLoginError(null);
 
     try {
-      const response = await apiRequest('/api/auth/login', {
+      const response = await fetch('/api/auth/login', {
         method: 'POST',
-        body: JSON.stringify(data),
         headers: {
           'Content-Type': 'application/json'
         },
-        credentials: 'include' // مهم لإرسال cookies
+        credentials: 'include',
+        body: JSON.stringify({
+          username: data.username,
+          password: data.password
+        })
       });
 
-      if (response.success) {
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'خطأ في تسجيل الدخول');
+      }
+
+      const responseData = await response.json();
+
+      if (responseData.success) {
         toast({
           title: "تم تسجيل الدخول بنجاح",
-          description: `مرحباً ${response.user.fullName || response.user.username}`,
+          description: `مرحباً ${responseData.user.fullName || responseData.user.username}`,
           variant: "default"
         });
 
         // إعادة توجيه حسب دور المستخدم
-        if (response.user.role === 'admin') {
+        if (responseData.user.role === 'admin') {
           setLocation('/admin-dashboard');
-        } else if (response.user.role === 'surveyor') {
+        } else if (responseData.user.role === 'surveyor') {
           setLocation('/phase2-digitization');
         } else {
           setLocation('/');
         }
       } else {
-        throw new Error(response.message || 'فشل تسجيل الدخول');
+        throw new Error(responseData.message || 'فشل تسجيل الدخول');
       }
     } catch (error: any) {
       console.error('Login error:', error);

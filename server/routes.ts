@@ -1,4 +1,5 @@
 import type { Express } from "express";
+import express from "express";
 import { createServer, type Server } from "http";
 import { WebSocketServer, WebSocket } from "ws";
 import { storage } from "./storage";
@@ -27,6 +28,13 @@ import fs from "fs";
 export async function registerRoutes(app: Express): Promise<Server> {
   // Cookie parser middleware
   app.use(cookieParser());
+
+  // Trust proxy for rate limiting (fix for express-rate-limit warning)
+  app.set('trust proxy', 1);
+
+  // Body parser middleware (MUST be before routes)
+  app.use(express.json({ limit: '50mb' }));
+  app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
   // API rate limiting
   app.use('/api', apiRateLimit);
@@ -66,6 +74,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Auth routes (BEFORE other API routes)
   app.use("/api/auth", authRoutes);
+
+  // صفحة تسجيل دخول ثابتة (HTML فقط)  
+  app.get('/login', (req, res) => {
+    res.sendFile(path.join(__dirname, 'static-login.html'));
+  });
   
   // Survey routes
   app.use("/api", surveyRoutes);
@@ -959,3 +972,5 @@ function generateKML(data: any): string {
   
   return kml;
 }
+
+
