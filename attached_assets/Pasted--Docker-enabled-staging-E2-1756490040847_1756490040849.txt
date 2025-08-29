@@ -1,0 +1,96 @@
+قرار التالي المقترح (الأولوية)
+أنشر الحاويات في بيئة Docker-enabled (staging) ثم شغّل الاختبارات E2E الكاملة مع ملفات كبيرة. بعد النجاح ننتقل للإنتاج أو لتوسيع الموارد.
+أوامر جاهزة لنشر سريع على سيرفر Ubuntu (نسخ → لصق على السيرفر)
+(يفترض لديك وصول SSH إلى سيرفر يملك Docker)
+A. تهيئة الخادم (إن لم يتمّ)
+
+Bash
+
+sudo apt update && sudo apt upgrade -y
+# تثبيت Docker
+sudo apt install -y docker.io
+sudo systemctl enable --now docker
+# تثبيت Docker Compose (plugin)
+sudo apt install -y docker-compose-plugin
+# إضافة المستخدم إلى مجموعة docker (اختياري)
+sudo usermod -aG docker $USER
+# إعادة دخول الجلسة بعده أو شغّل: newgrp docker
+B. نشر المشروع وتهيئة env ثم تشغيل الحاويات
+
+Bash
+
+# استنساخ repo (أو نسخ المشروع)
+git clone <REPO_URL> /home/ubuntu/binaa
+cd /home/ubuntu/binaa
+
+# إعداد متغيرات البيئة (عدل القيم)
+cat > .env <<EOF
+DATABASE_URL=postgres://gis:change_me@postgres:5432/binaa
+REDIS_URL=redis://redis:6379/0
+S3_ENDPOINT=http://minio:9000
+S3_ACCESS_KEY=minioadmin
+S3_SECRET_KEY=minioadmin
+S3_BUCKET=processed-bucket
+DISPATCHER_URL=http://dispatcher:8001
+PORT=5000
+NODE_ENV=production
+EOF
+
+# شغّل الحاويات
+docker compose -f docker-compose.phase1.yml up -d
+# تحقق
+docker compose -f docker-compose.phase1.yml ps
+تشغيل الاختبار E2E الكامل على السيرفر (بعد تشغيل الحاويات)
+Bash
+
+# اجعل السكربت قابلًا للتنفيذ
+chmod +x e2e_phase1_run_and_report.sh
+
+# شغّل
+./e2e_phase1_run_and_report.sh temp-uploads/test_geotiff.tif
+
+# بعد انتهاء الاختبار: افتح التقرير
+ls -la e2e-reports
+less e2e-reports/phase1-e2e-report-*.md
+قائمة تحقق ما بعد النشر (Acceptance checks)
+ Dispatcher (http://<server>:8001/health) → 200 OK
+ Redis متاح (redis-cli ping → PONG)
+ Celery worker يلتقط المهام (Flower: http://<server>:5555)
+ MinIO Console متاح (http://<server>:9001) والـbucket موجود
+ رفع ملف 100MB → job completes → metadata.json موجود → processed COG / processed.png مرفوعان إلى MinIO
+ Node API: GET /api/gis/layers/:id يعطي imageUrl + leaflet_bounds
+ الخريطة تعرض الطبقة بالموقع الصحيح
+ مراقبة logs: لا stack traces ووقت معالجة ضمن SLA المتفق عليه
+توصيات موارد مبدئية (staging / load testing)
+Small staging (dev): 4 vCPU, 8–16 GB RAM, 100 GB SSD
+Real processing node (testing large files): 8 vCPU, 32–64 GB RAM, NVMe SSD 300GB
+Production (initial): RDS/Postgres managed + ElastiCache Redis + S3 for storage + worker autoscaling (Kubernetes or Docker Swarm)
+نصائح ضبط الأداء (بعد اختبار الأحجام)
+GDAL/COG flags:
+text
+
+gdal_translate -of COG -co COMPRESS=DEFLATE -co TILED=YES -co BLOCKXSIZE=512 -co BLOCKYSIZE=512 input.tif output_cog.tif
+Celery worker run options:
+text
+
+celery -A tasks worker --loglevel=info --concurrency=2 --prefetch-multiplier=1 --max-tasks-per-child=50
+اضبط عدد العمال تبعًا لعدد الأنوية وRAM؛ راقب ذاكرة العملية.
+المراقبة والنسخ واللاسترجاع
+أضف: Prometheus + Grafana (مقاييس: job duration, job success/fail, queue depth)
+سجل الأخطاء لـ Sentry.
+جدولة backup يومي لقاعدة البيانات + lifecycle لملفات S3 → أرشفة.
+الأمان والـnetworking
+ضع Nginx أمام Node + HTTPS (Let's Encrypt).
+افتح المنافذ فقط المطلوبة: 443, 80, 22 (ssh)؛ اجعل Redis/Postgres و MinIO غير مكشوفين للعامة (أو أمام internal network فقط).
+تفعيل rate-limit و Helmet و validation (Zod) — لديك بعضها بالفعل.
+CI/CD ونسخة نشر آلية (اقتراح جاهز)
+أضف GitHub Actions: on push to main → build images (or pull), scp copy, ssh run docker compose pull + docker compose up -d. (سبق أعطيت مثال).
+خزّن secrets: SSH_KEY, SERVER_HOST, SERVER_USER, AWS keys.
+بعد نشر الإنتاج: بدء Phase 2 (Digitization)
+اقترح بدء Sprint2 (4 أسابيع): أدوات رسم + حفظ إلى PostGIS + snapping + attribute editor. أجهز backlog وتذاكر تفصيلية إن رغبت.
+ماذا أعدّ لك الآن عمليًا؟
+اختر أي مما يلي أبدأ به فوراً:
+A) أجهّز ملف cloud-init أو سكربت نشر تلقائي (one‑line) لتشغيل على VM + أمثلة .env جاهزة.
+B) أجهّز GitHub Actions (deploy workflow) جاهز مع تعليمات لإدخال Secrets.
+C) أبدأ ضبط Celery worker tuning وGDAL options وأقدّم توصيات ضبط بعد تجارب تحميل 100MB/500MB.
+D) أجهّز Sprint2 backlog مفصّل (tickets + مهام زمنية) لبدء Digitization.
