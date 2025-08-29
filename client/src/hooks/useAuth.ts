@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
+import { useEffect, useState } from "react";
 
 export interface User {
   id: string;
@@ -19,6 +20,23 @@ export interface AuthResponse {
 
 // Hook للتحقق من حالة المصادقة
 export function useAuth() {
+  const [localUser, setLocalUser] = useState<User | null>(null);
+  
+  // Try to get user from localStorage first
+  useEffect(() => {
+    const userData = localStorage.getItem('user_data');
+    const authToken = localStorage.getItem('auth_token');
+    
+    if (userData && authToken) {
+      try {
+        setLocalUser(JSON.parse(userData));
+      } catch (e) {
+        localStorage.removeItem('user_data');
+        localStorage.removeItem('auth_token');
+      }
+    }
+  }, []);
+
   const { data, isLoading, error, refetch } = useQuery<AuthResponse>({
     queryKey: ['/api/auth/me'],
     queryFn: () => apiRequest('/api/auth/me', {
@@ -28,19 +46,30 @@ export function useAuth() {
     retry: false,
     staleTime: 5 * 60 * 1000, // 5 minutes
     refetchOnWindowFocus: true,
-    refetchOnMount: true
+    refetchOnMount: true,
+    enabled: !!localStorage.getItem('auth_token'), // Only query if token exists
   });
 
+  // Use server user if available, otherwise use localStorage user
+  const user = data?.user || localUser;
+
   return {
-    user: data?.user,
-    isLoading,
+    user,
+    isLoading: isLoading && !localUser, // Don't show loading if we have localStorage data
     error,
-    isAuthenticated: !!data?.user,
+    isAuthenticated: !!user,
     refetch,
     // Helper methods for role checking
-    isAdmin: () => data?.user?.role === 'admin',
-    isSurveyor: () => data?.user?.role === 'surveyor',
-    hasRole: (role: string) => data?.user?.role === role
+    isAdmin: () => user?.role === 'admin',
+    isSurveyor: () => user?.role === 'surveyor',
+    hasRole: (role: string) => user?.role === role,
+    // Logout method
+    logout: () => {
+      localStorage.removeItem('user_data');
+      localStorage.removeItem('auth_token');
+      setLocalUser(null);
+      window.location.href = '/login';
+    }
   };
 }
 
