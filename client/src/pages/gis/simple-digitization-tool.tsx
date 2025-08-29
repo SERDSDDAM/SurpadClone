@@ -1,6 +1,7 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { CleanLeafletMap } from '@/components/CleanLeafletMap';
 import { AdvancedFileUploader } from '@/components/AdvancedFileUploader';
+import { SystemTester } from '@/components/SystemTester';
 import { useMutation } from '@tanstack/react-query';
 import { MapContainer, TileLayer, useMapEvents, ImageOverlay, useMap } from 'react-leaflet';
 import { Map as MapIcon, Upload, Hand, MapPin, Route, Square } from 'lucide-react';
@@ -626,6 +627,9 @@ export default function SimpleDigitizationTool() {
                     setLayers(prev => [...prev, layer]);
                   }}
                 />
+                
+                {/* System Tester for debugging */}
+                <SystemTester />
               </div>
             </CardContent>
           </Card>

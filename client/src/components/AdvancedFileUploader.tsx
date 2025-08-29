@@ -42,8 +42,8 @@ export function AdvancedFileUploader({ onLayerAdded, maxFileSize = 200 * 1024 * 
         setUploadProgress(progress);
       });
     },
-    onSuccess: async (data) => {
-      const { layerId } = data;
+    onSuccess: async (data: any) => {
+      const { layerId } = data as { layerId: string };
       setProcessingStatus('معالجة الملف...');
       
       // Poll for processing status

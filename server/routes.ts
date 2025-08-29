@@ -68,6 +68,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   const enhancedUploadRoutes = await import('./routes/enhanced-upload');
   app.use('/api/gis', enhancedUploadRoutes.default);
   
+  // Debug routes for testing
+  const debugRoutes = await import('./routes/debug-routes');
+  app.use('/api/gis', debugRoutes.default);
+  
   // Legacy GIS upload routes (for backward compatibility)
   const gisUploadRoutes = await import('./routes/gis-upload');
   app.use('/api/gis/legacy', gisUploadRoutes.default);
