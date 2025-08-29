@@ -47,14 +47,14 @@ export default function EmployeeLogin() {
       return await apiRequest("/api/auth/login", {
         method: "POST",
         body: JSON.stringify({
-          ...data,
-          userType: "employee",
+          username: data.employeeId, // تحويل employeeId إلى username
+          password: data.password,
         }),
       });
     },
     onSuccess: (response) => {
       localStorage.setItem("auth_token", response.token);
-      localStorage.setItem("user", JSON.stringify(response.user));
+      localStorage.setItem("user_data", JSON.stringify(response.user));
       
       toast({
         title: "تم تسجيل الدخول بنجاح",
