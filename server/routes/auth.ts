@@ -32,6 +32,8 @@ router.post('/login', loginRateLimit, async (req, res) => {
 
     const { username, password } = validationResult.data;
 
+    console.log('🔍 Login attempt for username:', username);
+
     // البحث عن المستخدم في قاعدة البيانات
     const [user] = await db
       .select({
@@ -49,6 +51,12 @@ router.post('/login', loginRateLimit, async (req, res) => {
       .from(users)
       .where(eq(users.username, username))
       .limit(1);
+
+    console.log('👤 User found:', user ? `${user.username} (${user.role})` : 'Not found');
+    console.log('🔐 Has password:', !!user?.password);
+    console.log('✅ Is active:', user?.isActive);
+    console.log('🔒 Login attempts:', user?.loginAttempts);
+    console.log('⏰ Locked until:', user?.lockedUntil);
 
     if (!user) {
       return res.status(401).json({
@@ -76,6 +84,7 @@ router.post('/login', loginRateLimit, async (req, res) => {
 
     // التحقق من كلمة المرور
     const isPasswordValid = user.password && await bcrypt.compare(password, user.password);
+    console.log('🔑 Password validation result:', isPasswordValid);
     
     if (!isPasswordValid) {
       // زيادة عدد المحاولات الخاطئة
