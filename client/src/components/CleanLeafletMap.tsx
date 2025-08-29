@@ -27,38 +27,77 @@ interface LeafletMapProps {
   layers: GISLayer[];
   onMapReady?: (map: L.Map) => void;
   onCoordinatesChange?: (coords: { lat: number; lng: number }) => void;
+  currentBasemap?: string;
+  children?: React.ReactNode;
 }
 
-export function CleanLeafletMap({ layers, onMapReady, onCoordinatesChange }: LeafletMapProps) {
+export function CleanLeafletMap({ layers, onMapReady, onCoordinatesChange, currentBasemap = 'esri', children }: LeafletMapProps) {
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<L.Map | null>(null);
   const [isMapReady, setIsMapReady] = useState(false);
   const layerInstancesRef = useRef<Map<string, L.ImageOverlay>>(new Map());
 
-  // تهيئة الخريطة
+  // تهيئة الخريطة - تحسين لمنع التذبذب
   useEffect(() => {
     if (!mapRef.current || mapInstanceRef.current) return;
 
     console.log('🗺️ تهيئة خريطة Leaflet...');
 
-    // إنشاء الخريطة
+    // إنشاء الخريطة مع إعدادات محسنة لمنع التذبذب
     const map = L.map(mapRef.current, {
       center: [15.3694, 44.1910], // مركز اليمن
-      zoom: 8,
-      zoomControl: true
+      zoom: 7,
+      zoomControl: true,
+      attributionControl: true,
+      // إعدادات لمنع التذبذب
+      zoomAnimation: true,
+      zoomAnimationThreshold: 4,
+      fadeAnimation: true,
+      markerZoomAnimation: true,
+      transform3DLimit: 2^23,
+      zoomSnap: 0.25,
+      zoomDelta: 0.5,
+      wheelDebounceTime: 40,
+      wheelPxPerZoomLevel: 60,
+      // إعدادات السحب المحسنة
+      dragging: true,
+      inertia: true,
+      inertiaDeceleration: 2000,
+      inertiaMaxSpeed: 1000,
+      easeLinearity: 0.2,
+      worldCopyJump: false,
+      maxBoundsViscosity: 0.0
     });
 
-    // إضافة خريطة أساس من Esri World Imagery
-    L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+    // إضافة خريطة أساس مع إعدادات محسنة
+    const baseLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
       attribution: 'Tiles &copy; Esri',
-      maxZoom: 18
-    }).addTo(map);
+      maxZoom: 18,
+      minZoom: 2,
+      tileSize: 256,
+      zoomOffset: 0,
+      crossOrigin: true,
+      updateWhenIdle: false,
+      updateWhenZooming: true,
+      keepBuffer: 2
+    });
+    
+    baseLayer.addTo(map);
 
-    // إضافة مستمع لتتبع موقع المؤشر
+    // إضافة مستمع محسن لتتبع موقع المؤشر
     if (onCoordinatesChange) {
-      map.on('mousemove', (e) => {
-        onCoordinatesChange({ lat: e.latlng.lat, lng: e.latlng.lng });
-      });
+      let lastUpdate = 0;
+      const throttleDelay = 50; // تحديث كل 50ms فقط
+      
+      const throttledMouseMove = (e: L.LeafletMouseEvent) => {
+        const now = Date.now();
+        if (now - lastUpdate > throttleDelay) {
+          onCoordinatesChange({ lat: e.latlng.lat, lng: e.latlng.lng });
+          lastUpdate = now;
+        }
+      };
+      
+      map.on('mousemove', throttledMouseMove);
     }
 
     // حفظ مرجع الخريطة عالمياً
@@ -67,22 +106,35 @@ export function CleanLeafletMap({ layers, onMapReady, onCoordinatesChange }: Lea
     mapInstanceRef.current = map;
     setIsMapReady(true);
     
-    console.log('✅ تم تهيئة خريطة Leaflet بنجاح');
+    console.log('✅ تم تهيئة خريطة Leaflet محسنة بنجاح');
+    console.log('🗺️ تم تهيئة الخريطة في الصفحة');
     
     if (onMapReady) {
       onMapReady(map);
     }
 
+    // تنظيف محسن
     return () => {
       if (mapInstanceRef.current) {
+        // إزالة جميع الطبقات أولاً
+        layerInstancesRef.current.forEach((layer) => {
+          if (mapInstanceRef.current?.hasLayer(layer)) {
+            mapInstanceRef.current.removeLayer(layer);
+          }
+        });
         layerInstancesRef.current.clear();
+        
+        // إزالة جميع مستمعي الأحداث
+        mapInstanceRef.current.off();
+        
+        // إزالة الخريطة
         mapInstanceRef.current.remove();
         mapInstanceRef.current = null;
         setIsMapReady(false);
         delete (window as any).__leafletMap;
       }
     };
-  }, [onMapReady, onCoordinatesChange]);
+  }, []);
 
   // إدارة الطبقات
   useEffect(() => {
@@ -99,13 +151,13 @@ export function CleanLeafletMap({ layers, onMapReady, onCoordinatesChange }: Lea
         .map(layer => layer.id)
     );
 
-    for (const [layerId, layerInstance] of layerInstances) {
+    Array.from(layerInstances.entries()).forEach(([layerId, layerInstance]) => {
       if (!activeLayerIds.has(layerId)) {
         map.removeLayer(layerInstance);
         layerInstances.delete(layerId);
         console.log(`🗑️ تم إزالة الطبقة: ${layerId}`);
       }
-    }
+    });
 
     // إضافة الطبقات الجديدة
     layers.forEach(layer => {
@@ -165,5 +217,10 @@ export function CleanLeafletMap({ layers, onMapReady, onCoordinatesChange }: Lea
 
   }, [layers, isMapReady]);
 
-  return <div ref={mapRef} className="w-full h-full" />;
+  return (
+    <div className="relative w-full h-full">
+      <div ref={mapRef} className="w-full h-full" />
+      {children}
+    </div>
+  );
 }
