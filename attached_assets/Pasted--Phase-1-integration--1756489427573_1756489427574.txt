@@ -1,0 +1,168 @@
+ممتاز — مبروك على اجتياز اختبارات التكامل الجزئية ونجاح Phase 1 integration على مستوى الكود. بما أن Replit لا يدعم Docker في بيئتك الحالية، الخطوة التالية هي نشر الحاويات في بيئة تدعم Docker (خادم VM أو خدمة سحابية) وتشغيل الاختبار الكامل E2E (ملف كبير → صف Celery → worker → رفع إلى MinIO → تحقق على الخريطة). أدناه كل ما تحتاجه بالضبط (أوامر قابلة للنسخ، ملفات إعداد، نصائح تصحيحية، وخيارات النشر) لكي يَشغِل الـAgent أو الفريق الإجراء تلقائيًا في بيئة Docker‑enabled.
+
+ملخّص سريع للخطوات القادمة
+1) جهّز بيئة Docker-enabled (VM أو cloud) — أو استخدم جهاز محلي يدعم Docker.  
+2) انسخ المشروع أو اسحبه من الـrepo إلى الخادم.  
+3) أنشئ ملف .env بالإعدادات (Postgres, Redis, MinIO, S3 keys).  
+4) شغّل docker-compose.phase1.yml (أو السكربت scripts/phase1-start.sh).  
+5) نفّذ سكربت E2E التفصيلي: e2e_phase1_run_and_report.sh لاستعراض كامل ومسح الأخطاء.  
+6) اطلع على التقرير الموجود في e2e-reports/*.md ورفعه لي لأعد لك الوثيقة النهائية والتوصيات.
+
+A — تعليمات جاهزة لنشر Docker على خادم Ubuntu (شغّلها على الخادم)
+
+1) تهيئة الخادم (Ubuntu 22.04 مثال)
+```bash
+# تحديث
+sudo apt update && sudo apt upgrade -y
+
+# تثبيت Docker
+sudo apt install -y docker.io
+
+# تثبيت Docker Compose plugin
+sudo apt install -y docker-compose-plugin
+
+# إضافة المستخدم لمجموعة docker (اختياري لتشغيل docker دون sudo)
+sudo usermod -aG docker $USER
+# سجل خروج ثم دخول أو شغّل: newgrp docker
+```
+
+2) استنساخ المشروع وتشغيل الحاويات
+```bash
+# مثال: استنساخ repo
+git clone https://your-repo-url.git /home/ubuntu/binaa
+cd /home/ubuntu/binaa
+
+# أنشئ ملف .env (المثال أدناه)
+cp .env.example .env
+# عدّل .env بالقيم الحقيقية (DB, REDIS, MINIO, S3...)
+
+# شغّل الحاويات
+docker compose -f docker-compose.phase1.yml up -d --remove-orphans
+
+# تحقق
+docker compose -f docker-compose.phase1.yml ps
+```
+
+3) مثال .env (ضع القيم الحقيقية)
+```env
+# Database
+DATABASE_URL=postgres://gis:gispassword@postgres:5432/binaa
+
+# Redis
+REDIS_URL=redis://redis:6379/0
+
+# MinIO (dev)
+S3_ENDPOINT=http://minio:9000
+S3_ACCESS_KEY=minioadmin
+S3_SECRET_KEY=minioadmin
+S3_BUCKET=processed-bucket
+
+# Dispatcher
+DISPATCHER_URL=http://dispatcher:8001
+
+# Node server
+NODE_ENV=production
+PORT=5000
+```
+
+4) تحقق من الصحة (بعد التشغيل)
+```bash
+# API health
+curl -s http://localhost:5000/api/gis/health | jq .
+
+# Dispatcher
+curl -s http://localhost:8001/health | jq .
+
+# Redis ping
+redis-cli -h localhost ping
+
+# MinIO console
+# افتح في المتصفح: http://<server-ip>:9001
+```
+
+B — تشغيل اختبارات E2E على الخادم (بعد التشغيل)
+```bash
+# اجعل السكربت قابلاً للتنفيذ (مرّى واحد)
+chmod +x e2e_phase1_run_and_report.sh
+
+# شغّل الاختبار مع ملف الاختبار (يمكن وضع ملف أكبر لاختبار الأداء)
+./e2e_phase1_run_and_report.sh temp-uploads/test_geotiff.tif
+
+# بعد الانتهاء: افتح التقرير
+ls -la e2e-reports
+less e2e-reports/phase1-e2e-report-*.md
+```
+
+C — ما يتوقّع مخرجاته الاختبار الكامل
+- jobId و layerId من الرفع  
+- job status يمر queued → processing → done/failed  
+- metadata.json و layer-state.json في `temp-uploads/processed/<layerId>/`  
+- processed COG و processed.png مرفوعان إلى MinIO (يمكن تنزيلهما)  
+- الواجهة (map) تعرض overlay من imageUrl مع bounds صحيحة
+
+D — إعداد CI/CD بسيط (GitHub Actions) — مثال نشر تلقائي إلى خادم عبر SSH
+احفظ هذا كمثال .github/workflows/deploy.yml (يتطلب سر SSH key و host):
+```yaml
+name: Deploy to Server
+on:
+  push:
+    branches: [ main ]
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build and push images (optional)
+        run: echo "Build step if using registry"
+
+      - name: Copy files to server
+        uses: appleboy/scp-action@v0.1.0
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SSH_KEY }}
+          source: "."
+          target: "/home/ubuntu/binaa"
+
+      - name: Docker Compose Up on server
+        uses: appleboy/ssh-action@v0.1.7
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SSH_KEY }}
+          script: |
+            cd /home/ubuntu/binaa
+            docker compose -f docker-compose.phase1.yml pull
+            docker compose -f docker-compose.phase1.yml up -d --remove-orphans
+```
+
+E — تهيئة المراقبة والـalerts (نقطة سريعة)
+- شغّل Flower (Celery monitor) على المنفذ 5555 (أدخل الخدمة في docker-compose)  
+- أضف Prometheus exporter للـCelery + Node metrics، ومخطط Grafana لعرض job durations و queue depth  
+- فعّل Sentry لالتقاط الاستثناءات في Node/Python
+
+F — توصيات أداء وموارد
+- للمعالجة: worker nodes بذاكرة كبيرة (8–16GB) و2–4 CPU لكل worker؛ ملفات >500MB قد تحتاج 16–32GB RAM.  
+- concurrency: ابدأ بـ `concurrency = max(1, CPU_COUNT - 1)` واختبر. استخدم `--max-tasks-per-child=50`.  
+- GDAL options: استخدم `gdal_translate -of COG -co COMPRESS=DEFLATE -co TILED=YES` أو `rio-cogeo` لأنّها تنتج COG مُحسّنة.
+
+G — خطوات سريعة بعد نجاح الاختبار الكامل
+1. ضبط الموارد (concurrency, memory).  
+2. جدولة Backups: DB snapshots + MinIO lifecycle → S3 archival.  
+3. إعداد alerts (Slack/email) عند فشل jobs أو زيادة queue depth.  
+4. الانتقال لمرحلة Digitization (Phase 2) مع فرق Frontend وGIS.
+
+H — مشكلة شائعة وحلها فوراً (مثال)
+- حالة: Worker يفشل عند reproject إلى EPSG:4326 بسبب missing proj definitions.  
+- حل: تأكد تثبيت pyproj و PROJ data في صورة الDocker (مثال Dockerfile uses `apt-get install -y proj-bin proj-data` or use osgeo/gdal image).
+
+I — ماذا أفعل الآن نيابةً عنك؟
+اختر أحد الخيارات التالية وسأعطي أمرًا واحدًا جاهزًا للـAgent (نص قابل للصق):
+
+1) "ابدأ النشر على خادم Ubuntu" — أُعطي Agent أوامر لإنشاء VM (أو أقدّم cloud-init) ثم تنفيذ خطوات A-C تلقائيًا. (أحتاج بيانات SSH أو تأكيد أنك تود تنفيذها يدوياً).  
+2) "شغّل الاختبار الكامل الآن" — إذا لديك خادم Docker-ready، أعطني تأكيدًا وسأوجّه Agent لتشغيل docker-compose ثم سكربت E2E وجلب التقرير.  
+3) "أريد ملف cloud-init وملف GitHub Actions" — أجهّز لك cloud-init لتسريع إنشاء VM وملف Action جاهز للنشر التلقائي.  
+4) "أريد فقط أن تُعدّ الوثيقة النهائية (PDF)" — أجهّز الوثيقة المهنية الرسمية من التقرير الموجود وأرفعه كـ PDF/MD.
+
+أخبرني أي خيار تختار (1/2/3/4) أو اكتب "ابدأ الاختبار الآن" إن كنت جهزت خادم Docker وسأعطي للـAgent الأمر المباشر لتشغيل docker‑compose + الاختبار.
