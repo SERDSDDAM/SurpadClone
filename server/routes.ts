@@ -18,6 +18,7 @@ import { authenticateToken, requireRole, requirePermission } from "./auth/auth-m
 import surveyRoutes from "./routes/survey-routes";
 import gisRoutes from "./routes/gis-routes";
 import phase1Routes from "./routes/phase1-integration";
+import { registerGISFeatureRoutes } from "./routes/gis-features";
 import helmet from "helmet";
 import path from "path";
 import fs from "fs";
@@ -84,6 +85,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // Phase 1 Processing Pipeline Integration
   app.use('/api/gis', phase1Routes);
+  
+  // Phase 2 GIS Features API (Digitization)
+  registerGISFeatureRoutes(app);
   
   // Legacy GIS upload routes (for backward compatibility)
   const gisUploadRoutes = await import('./routes/gis-upload');

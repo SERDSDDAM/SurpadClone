@@ -1,0 +1,233 @@
+ممتاز — بما أنّك دفعت التغييرات إلى الريبو وأكملت Phase 1، أجهّز لك خطة تنفيذية مفصّلة للانتقال لـ Phase 2 (Advanced Digitization & Vectorization). الخطة عملية، قابلة للتنفيذ، ومقسَّمة إلى سباقات (sprints) مع مهام واضحة، واجهات API، مخططات قاعدة البيانات، أمثلة كود جاهزة، معايير قبول، واختبارات. في النهاية أطلب منك قرار واحد بسيط لبدء التنفيذ الفعلي.
+
+ملاحظات أساسية قبل الخطة
+- الهدف من Phase 2: تفعيل أدوات رسم متقدمة على الخريطة (Point/Line/Polygon/Rectangle/Circle)، دعم التعديل/الحذف، snapping، حفظ السمات (attributes) في قاعدة PostGIS، وتقديم pipeline تجريبي لتحويل الصور النقطية إلى فيكتور (auto-vectorize POC).  
+- المنهجية: "إتقان الأساسيات قبل التوسع" — نبدأ بأدوات الرسم والتخزين والـAPI ثم نضيف التحويل الآلي كخدمة منفصلة (worker).
+
+الملخص التنفيذي المقترح (أولوية)
+1. Sprint A (2 أسابيع): واجهة الرسم الأساسية + حفظ Features إلى PostGIS (CRUD).  
+2. Sprint B (2 أسابيع): تحرير/حذف/undo-redo + snapping + attribute editor + server validation/topology checks.  
+3. Sprint C (2 أسابيع): Vectorization POC (Raster → contours → GeoJSON) كـCelery task + UI لعرض الاقتراحات.  
+4. Sprint D (2 أسابيع): تحسين الأداء، export/import (GeoJSON/GPKG/Shapefile)، واختبارات قبول + docs.  
+5. ثم مرحلة إنتاجية: تهيئة monitoring، tuning workers، وسياسة النسخ الاحتياطي.
+
+تفصيل الخطة سباقاً (Sprint-by-sprint)
+
+Sprint A — Drawing & Save (2 أسابيع)
+هدف: تمكين المستخدم من رسم وحفظ المعالم (features) إلى قاعدة البيانات.
+مهام:
+- Frontend:
+  - إضافة أدوات رسم باستخدام Leaflet + leaflet.draw (point/line/polygon/rectangle/circle).
+  - After draw → open Attribute Modal (Zod-validated form).
+  - Component: FeatureList (عرض قائمة المعالم لكل طبقة).
+- Backend:
+  - API endpoints:
+    - POST /api/gis/features — احفظ GeoJSON Feature (body: { layerId, feature: GeoJSONFeature, properties })
+    - GET /api/gis/features?layerId=... — ارجع قائمة الميزات
+  - DB migration: جدول gis.features (geometry + properties JSONB)
+  - استخدام ST_SetSRID(ST_GeomFromGeoJSON(...), 4326) لحفظ الإحداثيات.
+- DB:
+  - إنشاء جدول gis.features مع GIST index.
+- Acceptance:
+  - رسم مضلع → حفظ → استرجاع عبر API → عرض على الخريطة بنفس الشكل + area/length correct.
+
+Sprint B — Edit / Snap / Topology / Undo-Redo (2 أسابيع)
+هدف: تمكين التعديل الدقيق والعمل الطوبولوجي والربط (snapping).
+مهام:
+- Frontend:
+  - Add Modify interaction (leaflet-draw Modify).
+  - Add snapping (leaflet.snap or custom snapping using spatial queries).
+  - Undo/Redo stack (client-side for session; store server changes as history).
+- Backend:
+  - PATCH /api/gis/features/:id — تحديث feature (GeoJSON + props).
+  - DELETE /api/gis/features/:id — حذف.
+  - POST /api/gis/features/:id/history — save historical snapshot (or triggers).
+  - Validation: use PostGIS functions:
+    - ST_IsValid(geom) → if false use ST_MakeValid(geom)
+    - ST_SimplifyPreserveTopology for store
+- Acceptance:
+  - تعديل نقطة، تحقق snap to nearest node within tolerance (e.g., 2m).
+  - حفظ نسخة history على كل تعديل، واسترجاع سابق.
+
+Sprint C — Auto‑Vectorize POC (2 أسابيع)
+هدف: إنشاء سير عمل تجريبي لتحويل raster → vector suggestions.
+مهام:
+- Worker (Python Celery):
+  - Task: vectorize_layer(zip_or_tiff_path) → steps:
+    1. rasterio read → preprocess (hist equalize, band selection)
+    2. convert to grayscale / Canny edge (OpenCV)
+    3. findContours → shapely polygons → simplify
+    4. output GeoJSON suggestions and thumbnail PNG
+  - Save suggestions in temp folder and write metadata.json with suggestions file.
+- Backend:
+  - POST /api/gis/vectorize — kicks job & returns jobId
+  - GET /api/gis/vectorize/:jobId — get results (GeoJSON suggestions)
+- Frontend:
+  - UI to review suggestions, accept/reject features (then call POST /api/gis/features to persist accepted).
+- Acceptance:
+  - Upload sample GeoTIFF → run vectorize → get suggestion GeoJSON (visual check).
+  - UX: reviewer can accept suggestions and those saved appear in features table.
+
+Sprint D — Import/Export & Hardening (2 أسابيع)
+هدف: إتاحة تصدير واستيراد، تحسين الأداء، واختبارات نهائية.
+مهام:
+- Export endpoints:
+  - POST /api/gis/export → params {layerId, format: 'geojson'|'gpkg'|'shp'} → enqueue export job
+- Import endpoints:
+  - POST /api/gis/import → accept Shapefile/ZIP → parse and persist features
+- Performance:
+  - Add GIST indexes, bbox columns, vector tile strategy if many features (tegola / tippecanoe)
+- QA:
+  - E2E tests for draw → save → edit → export → import.
+- Acceptance:
+  - Export GPkg downloadable and valid; import shapefile creates features correctly.
+
+APIs — تفاصيل & أمثلة
+1) Create feature
+- POST /api/gis/features
+- Body:
+  {
+    "layerId":"layer_...",
+    "feature": { "type":"Feature", "geometry":{...}, "properties": {...} },
+    "featureType":"polygon"
+  }
+- Server-side (Express example using raw SQL):
+```ts
+// validation with zod omitted for brevity
+const { layerId, feature, featureType } = req.body;
+const geomJSON = JSON.stringify(feature.geometry);
+const props = JSON.stringify(feature.properties || {});
+const sql = `
+  INSERT INTO gis.features (id, layer_id, geometry, properties, feature_type, created_at, created_by)
+  VALUES (gen_random_uuid(), $1, ST_SetSRID(ST_GeomFromGeoJSON($2), 4326), $3::jsonb, $4, now(), $5)
+  RETURNING id;
+`;
+const res = await db.query(sql, [layerId, geomJSON, props, featureType, req.user?.id || 'system']);
+```
+
+2) Update feature
+- PATCH /api/gis/features/:id
+```sql
+UPDATE gis.features
+SET geometry = ST_SetSRID(ST_GeomFromGeoJSON($1),4326),
+    properties = $2::jsonb,
+    updated_at = now()
+WHERE id = $3;
+```
+
+DB Migration SQL (example)
+```sql
+CREATE SCHEMA IF NOT EXISTS gis;
+
+CREATE TABLE IF NOT EXISTS gis.features (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  layer_id varchar(255) NOT NULL,
+  geometry geometry(Geometry, 4326),
+  properties jsonb DEFAULT '{}',
+  feature_type varchar(50),
+  created_by varchar(255),
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone
+);
+
+CREATE INDEX IF NOT EXISTS idx_gis_features_geom ON gis.features USING GIST (geometry);
+CREATE INDEX IF NOT EXISTS idx_gis_features_layer ON gis.features (layer_id);
+```
+
+Snapping / Topology (server side patterns)
+- Snap insertion example (snap point to nearest line within tolerance):
+```sql
+WITH nearest AS (
+  SELECT id, ST_ClosestPoint(geom_line, ST_GeomFromGeoJSON($1)) AS pt
+  FROM gis.lines
+  WHERE ST_DWithin(geom_line, ST_GeomFromGeoJSON($1), $2)
+  ORDER BY ST_Distance(geom_line, ST_GeomFromGeoJSON($1)) LIMIT 1
+)
+UPDATE gis.features SET geometry = (SELECT pt FROM nearest) WHERE id=$3;
+```
+- Validate geometry:
+```sql
+SELECT ST_IsValid(geometry) FROM gis.features WHERE id = $1;
+-- If invalid, use ST_MakeValid
+UPDATE gis.features SET geometry = ST_MakeValid(geometry) WHERE id = $1 AND NOT ST_IsValid(geometry);
+```
+
+Vectorization Worker — Pseudocode (Python)
+```py
+def vectorize(input_tif, out_geojson, out_thumb):
+    with rasterio.open(input_tif) as src:
+        img = src.read([1,2,3])  # select bands
+        # preprocess: combine bands, histogram equalization
+        gray = rgb_to_gray(img)
+        edges = cv2.Canny(gray, 50, 150)
+        contours, _ = cv2.findContours(edges, cv2.RETR_CCOMP, cv2.CHAIN_APPROX_SIMPLE)
+        features = []
+        for cnt in contours:
+            poly = shapely.geometry.Polygon(cnt.squeeze())
+            if poly.area > min_area:
+                poly = poly.simplify(tolerance)
+                features.append(mapping(poly))
+        # write GeoJSON
+        with open(out_geojson, 'w') as f: json.dump({"type":"FeatureCollection","features":[{"type":"Feature","geometry":feat,"properties":{}} for feat in features]}, f)
+```
+
+Undo / Redo & Versioning
+- Implement features_history table:
+```sql
+CREATE TABLE gis.features_history (
+  id serial PRIMARY KEY,
+  feature_id uuid REFERENCES gis.features(id),
+  action varchar(20), -- create/update/delete
+  geometry geometry,
+  properties jsonb,
+  user_id varchar,
+  created_at timestamp default now()
+);
+```
+- On every change, insert snapshot into history. Client can call endpoint to rollback:
+  - POST /api/gis/features/:id/rollback → create new feature from last history entry.
+
+Export/Import (server)
+- Use ogr2ogr CLI or GDAL Python (geopandas) to create GPKG or Shapefile. Example:
+```bash
+ogr2ogr -f GPKG output.gpkg PG:"host=... dbname=... user=... password=..." -sql "SELECT id, properties, geometry FROM gis.features WHERE layer_id='...'"
+```
+
+Testing & QA (acceptance tests)
+- Unit tests for API endpoints (Zod schema validations).  
+- Integration tests: draw->save->fetch->edit->delete.  
+- Load test: bulk import 10k features → measure query times (use PostGIS GIST).  
+- E2E tests with Cypress for UI flows (draw, attribute modal, save, accept suggestion).
+
+Non‑functional / performance
+- Use GIST indexes, store bbox columns if queries often by bbox.
+- For many features, consider tile-serving: use GeoServer/tegola or vector tiles (tippecanoe).  
+- For large uploads, use streaming upload & async processing.
+
+Team & Resources
+- Frontend (React): 1–2 devs (2–4 wks scope).  
+- Backend (Node/PostGIS): 1 dev (2–3 wks).  
+- GIS/Python specialist: 0.5–1 dev for vectorization + worker (2–3 wks).  
+- DevOps: part-time for infra & deployment.
+
+Deliverables & Timeline (recommended)
+- Week 1–2: Sprint A — Draw & Save (deliver: features CRUD + DB + API + UI).  
+- Week 3–4: Sprint B — Edit/Snap/Topology/Undo (deliver: modify, snapping, server validations).  
+- Week 5–6: Sprint C — Vectorize POC (deliver: worker + UI to accept suggestions).  
+- Week 7–8: Sprint D — Export/Import + hardening + E2E tests.
+
+PRs & tasks to create now (initial)
+- PR #1: DB migration — create gis.features + index (migration SQL).  
+- PR #2: Backend API endpoints (features create/read/update/delete) + Zod validation.  
+- PR #3: Frontend: Leaflet draw integration + FeatureList + Attribute modal.  
+- PR #4: Worker: vectorize POC task + dispatcher integration (Celery).  
+- PR #5: Tests: unit + integration + Cypress e2e test skeleton.
+
+ماذا أبدأ الآن نيابةً عنك؟
+اختر واحدًا:
+- (1) أفتح PR migration مع SQL لإنشاء الجدول gis.features + index (موصى به أولاً).  
+- (2) أبدأ PR لواجهة الرسم frontend (leaflet-draw) مع حفظ مؤقت محلي (Local-only) ليتم ربطه لاحقًا بالـAPI.  
+- (3) أبدأ إعداد vectorization worker POC (Python script + Celery task).  
+- (4) أجهّز كامل Sprint A backlog كـتذاكر GitHub (issues/labels) + تقسيم على أيام وبرمجته في Board.
+
+أقترح البداية بـ (1) ثم (2): أولًا تأمين DB schema ثم بناء واجهة الرسم والـsave. أخبرني أي خيار تختار (1/2/3/4) أو اطلب تعديل الخطة (مثلاً فترة أقصر/فرق إضافية). سأبدأ فورًا.

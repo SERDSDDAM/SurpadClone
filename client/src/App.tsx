@@ -51,6 +51,7 @@ import SimpleDigitizationTool from "@/pages/gis/simple-digitization-tool";
 import QGISWebTool from "@/pages/gis/qgis-web-tool";
 import Phase0Test from "@/pages/Phase0Test";
 import Phase1Processing from "@/pages/Phase1Processing";
+import Phase2DigitizationTool from "@/pages/Phase2DigitizationTool";
 import NotFound from "@/pages/not-found";
 
 function Navigation() {
@@ -71,6 +72,7 @@ function Navigation() {
     { name: "الرقمنة البسيطة (CRS.Simple)", href: "/simple-digitization", icon: Layers },
     { name: "🧪 Phase 0 Test Suite", href: "/phase0-test", icon: Layers },
     { name: "🚀 Phase 1 Processing", href: "/phase1-processing", icon: Layers },
+    { name: "⚡ Phase 2 - الرقمنة المتقدمة", href: "/phase2-digitization", icon: Layers },
     { name: "إدارة المهنيين", href: "/professionals", icon: Users },
     { name: "تطبيق المساح", href: "/field-app", icon: Smartphone },
     { name: "التطبيق النظيف", href: "/clean-field-app", icon: MapPin },
@@ -197,7 +199,8 @@ function Router() {
           <Route path="/simple-digitization-tool" component={SimpleDigitizationTool} />
           <Route path="/phase0-test" component={Phase0Test} />
           <Route path="/phase1-processing" component={Phase1Processing} />
-        <Route path="/simple-digitization" component={SimpleDigitizationTool} />
+          <Route path="/phase2-digitization" component={Phase2DigitizationTool} />
+          <Route path="/simple-digitization" component={SimpleDigitizationTool} />
           <Route path="/qgis-web-tool" component={QGISWebTool} />
           <Route path="/professionals" component={ProfessionalsManagement} />
           <Route path="/field-app" component={FieldApp} />
