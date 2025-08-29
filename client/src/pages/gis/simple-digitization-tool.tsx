@@ -173,14 +173,41 @@ export default function SimpleDigitizationTool() {
     localStorage.setItem('basemap', currentBasemap);
   }, [currentBasemap]);
 
-  // استرداد الطبقات المحفوظة عند تحميل الصفحة
+  // استرداد الطبقات المحفوظة وجلب الطبقات الجديدة من الخادم
   useEffect(() => {
-    const savedLayers = localStorage.getItem('gis-layers');
-    if (savedLayers) {
+    const loadLayers = async () => {
       try {
-        const parsedLayers = JSON.parse(savedLayers);
-        // التحقق من معلومات الطبقات وتحديثها من الخادم
-        const updateLayersWithServerData = async () => {
+        // جلب الطبقات من الخادم
+        const serverResponse = await fetch('/api/gis/debug/layers');
+        if (serverResponse.ok) {
+          const serverData = await serverResponse.json();
+          if (serverData.success && serverData.layers.length > 0) {
+            const serverLayers = serverData.layers.map((layer: any) => ({
+              id: layer.id,
+              name: layer.fileName?.replace(/\.[^/.]+$/, "") || layer.id,
+              fileName: layer.fileName,
+              status: layer.status,
+              fileSize: layer.fileSize,
+              uploadDate: layer.uploadDate,
+              visible: true,
+              imageUrl: layer.imageUrl,
+              bounds: layer.bounds,
+              width: layer.width,
+              height: layer.height,
+              crs: layer.crs
+            }));
+            
+            setLayers(serverLayers);
+            console.log('✅ تم جلب الطبقات من الخادم:', serverLayers);
+            return;
+          }
+        }
+        
+        // في حالة عدم وجود طبقات في الخادم، جرب الطبقات المحفوظة محلياً
+        const savedLayers = localStorage.getItem('gis-layers');
+        if (savedLayers) {
+          const parsedLayers = JSON.parse(savedLayers);
+          // التحقق من معلومات الطبقات وتحديثها من الخادم
           const updatedLayers = await Promise.all(
             parsedLayers.map(async (layer: any) => {
               if (layer.status === 'uploaded' && !layer.imageUrl) {
@@ -206,14 +233,57 @@ export default function SimpleDigitizationTool() {
           );
           
           setLayers(updatedLayers);
-        };
-        
-        updateLayersWithServerData();
-        console.log('✅ تم استرداد الطبقات المحفوظة:', parsedLayers);
+          console.log('✅ تم استرداد الطبقات المحفوظة:', updatedLayers);
+        }
       } catch (error) {
-        console.error('❌ خطأ في استرداد الطبقات:', error);
+        console.error('❌ خطأ في جلب الطبقات:', error);
       }
-    }
+    };
+    
+    loadLayers();
+    
+    // إعداد تحديث دوري لجلب الطبقات الجديدة
+    const intervalId = setInterval(async () => {
+      try {
+        const response = await fetch('/api/gis/debug/layers');
+        if (response.ok) {
+          const data = await response.json();
+          if (data.success && data.layers.length > 0) {
+            const serverLayers = data.layers.map((layer: any) => ({
+              id: layer.id,
+              name: layer.fileName?.replace(/\.[^/.]+$/, "") || layer.id,
+              fileName: layer.fileName,
+              status: layer.status,
+              fileSize: layer.fileSize,
+              uploadDate: layer.uploadDate,
+              visible: true,
+              imageUrl: layer.imageUrl,
+              bounds: layer.bounds,
+              width: layer.width,
+              height: layer.height,
+              crs: layer.crs
+            }));
+            
+            setLayers(prevLayers => {
+              // فقط تحديث إذا كان هناك طبقات جديدة أو تغييرات
+              const newLayersJson = JSON.stringify(serverLayers);
+              const currentLayersJson = JSON.stringify(prevLayers);
+              
+              if (newLayersJson !== currentLayersJson) {
+                console.log('🔄 تحديث الطبقات من الخادم:', serverLayers);
+                return serverLayers;
+              }
+              
+              return prevLayers;
+            });
+          }
+        }
+      } catch (error) {
+        console.error('خطأ في تحديث الطبقات:', error);
+      }
+    }, 3000); // تحديث كل 3 ثوان
+    
+    return () => clearInterval(intervalId);
   }, []);
 
   // حفظ الطبقات في localStorage عند تحديثها
