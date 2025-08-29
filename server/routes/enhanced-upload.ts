@@ -5,6 +5,12 @@ import fs from 'fs/promises';
 import fsSync from 'fs';
 import { spawn } from 'child_process';
 import cors from 'cors';
+import { 
+  loadGlobalLayerStates, 
+  updateLayerVisibilityState, 
+  getLayerVisibilityState,
+  cleanupOrphanedStates
+} from '../lib/layer-state-manager';
 
 const router = express.Router();
 
@@ -153,6 +159,74 @@ async function hydrateLayersFromDisk() {
 
 // استدعِ الدالة أثناء تهيئة السيرفر
 hydrateLayersFromDisk();
+
+// Visibility management endpoints
+router.get('/layers/visibility', async (req, res) => {
+  try {
+    const states = await loadGlobalLayerStates();
+    res.json({
+      success: true,
+      visibility: states.layers,
+      lastModified: states.lastModified
+    });
+  } catch (error) {
+    console.error('❌ خطأ في قراءة حالة الرؤية:', error);
+    res.status(500).json({
+      success: false,
+      error: 'خطأ في قراءة حالة رؤية الطبقات'
+    });
+  }
+});
+
+router.post('/layers/:layerId/visibility', async (req, res) => {
+  try {
+    const { layerId } = req.params;
+    const { visible, opacity, zIndex } = req.body;
+    
+    console.log(`🔄 تحديث رؤية الطبقة ${layerId}:`, { visible, opacity, zIndex });
+    
+    const updates: any = {};
+    if (typeof visible === 'boolean') updates.visible = visible;
+    if (typeof opacity === 'number') updates.opacity = opacity;
+    if (typeof zIndex === 'number') updates.zIndex = zIndex;
+    
+    await updateLayerVisibilityState(layerId, updates);
+    
+    res.json({
+      success: true,
+      message: 'تم تحديث حالة الرؤية بنجاح'
+    });
+  } catch (error) {
+    console.error('❌ خطأ في تحديث حالة الرؤية:', error);
+    res.status(500).json({
+      success: false,
+      error: 'خطأ في تحديث حالة رؤية الطبقة'
+    });
+  }
+});
+
+router.post('/layers/visibility/bulk', async (req, res) => {
+  try {
+    const { updates } = req.body; // { layerId: { visible, opacity, zIndex }, ... }
+    
+    console.log(`🔄 تحديث مجمع لرؤية ${Object.keys(updates || {}).length} طبقة`);
+    
+    for (const [layerId, layerUpdates] of Object.entries(updates || {})) {
+      await updateLayerVisibilityState(layerId, layerUpdates as any);
+    }
+    
+    res.json({
+      success: true,
+      message: `تم تحديث ${Object.keys(updates || {}).length} طبقة بنجاح`
+    });
+  } catch (error) {
+    console.error('❌ خطأ في التحديث المجمع:', error);
+    res.status(500).json({
+      success: false,
+      error: 'خطأ في التحديث المجمع لرؤية الطبقات'
+    });
+  }
+});
 
 // تحديث مباشر للطبقة الصحيحة
 setTimeout(() => {

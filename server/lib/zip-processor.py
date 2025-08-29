@@ -12,11 +12,12 @@ import tempfile
 import shutil
 import numpy as np
 import rasterio
-from rasterio.warp import calculate_default_transform, reproject, Resampling
-from rasterio import crs
+from rasterio.warp import calculate_default_transform, reproject, Resampling, transform_bounds
+from rasterio.crs import CRS
 from PIL import Image
 import warnings
 from pathlib import Path
+from datetime import datetime
 
 warnings.filterwarnings('ignore')
 
@@ -113,7 +114,7 @@ def process_geotiff(input_file, output_dir, original_name=None):
             original_crs = src.crs
             
             # تحويل إلى WGS84 إذا لزم الأمر
-            dst_crs = crs.CRS.from_epsg(4326)  # WGS84
+            dst_crs = CRS.from_epsg(4326)  # WGS84
             
             if src.crs and src.crs != dst_crs:
                 print("🔄 تحويل نظام الإحداثيات إلى WGS84...")

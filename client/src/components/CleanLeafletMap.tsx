@@ -17,6 +17,8 @@ interface GISLayer {
   fileName: string;
   status: string;
   visible: boolean;
+  opacity?: number;
+  zIndex?: number;
   imageUrl?: string;
   bounds?: [[number, number], [number, number]]; // [[lat, lng], [lat, lng]]
   width?: number;
@@ -28,11 +30,19 @@ interface LeafletMapProps {
   layers: GISLayer[];
   onMapReady?: (map: L.Map) => void;
   onCoordinatesChange?: (coords: { lat: number; lng: number }) => void;
+  onLayerVisibilityChange?: (layerId: string, visible: boolean) => void;
   currentBasemap?: string;
   children?: React.ReactNode;
 }
 
-export function CleanLeafletMap({ layers, onMapReady, onCoordinatesChange, currentBasemap = 'esri', children }: LeafletMapProps) {
+export function CleanLeafletMap({ 
+  layers, 
+  onMapReady, 
+  onCoordinatesChange, 
+  onLayerVisibilityChange,
+  currentBasemap = 'esri', 
+  children 
+}: LeafletMapProps) {
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<L.Map | null>(null);
   const [isMapReady, setIsMapReady] = useState(false);

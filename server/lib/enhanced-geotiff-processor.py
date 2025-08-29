@@ -9,11 +9,13 @@ import os
 import json
 import numpy as np
 import rasterio
-from rasterio.warp import calculate_default_transform, reproject, Resampling
-from rasterio import crs
+from rasterio.warp import calculate_default_transform, reproject, Resampling, transform_bounds
+from rasterio.crs import CRS
+from rasterio import transform as rio_transform
 from PIL import Image
 import warnings
 from pathlib import Path
+from datetime import datetime
 
 warnings.filterwarnings('ignore')
 
@@ -51,9 +53,9 @@ def process_geotiff(input_file, output_dir):
                 }
             
             # تحويل إلى WGS84 إذا لزم الأمر
-            dst_crs = crs.CRS.from_epsg(4326)  # WGS84
+            dst_crs = CRS.from_epsg(4326)  # WGS84
             
-            if src.crs != dst_crs:
+            if src.crs and src.crs != dst_crs:
                 print("🔄 تحويل نظام الإحداثيات إلى WGS84...")
                 
                 # حساب التحويل
@@ -77,137 +79,122 @@ def process_geotiff(input_file, output_dir):
                 
                 # تحديث المتغيرات
                 data = reprojected_data
-                new_bounds = rasterio.transform.array_bounds(height, width, transform)
+                new_bounds = rio_transform.array_bounds(height, width, transform)
+                
+                # حساب الحدود في WGS84
+                final_bounds = transform_bounds(src.crs, dst_crs, *src.bounds)
+                final_transform = transform
+                final_crs = dst_crs
                 
             else:
                 # استخدام البيانات الأصلية
                 transform = src.transform
                 width, height = src.width, src.height
                 new_bounds = src.bounds
+                final_bounds = src.bounds
+                final_transform = src.transform
+                final_crs = src.crs if src.crs else dst_crs
             
             # تحويل البيانات إلى صورة PNG
-            if src.count == 1:
-                # صورة رمادية
-                band_data = data[0]
+            if data.ndim == 3 and data.shape[0] >= 3:
+                # RGB image
+                rgb_data = data[:3]  # أخذ أول 3 نطاقات
                 
-                # تطبيع البيانات للعرض
-                if band_data.dtype != np.uint8:
-                    # تطبيع إلى 0-255
-                    data_min = np.nanmin(band_data[band_data != src.nodata])
-                    data_max = np.nanmax(band_data[band_data != src.nodata])
-                    
-                    if data_max > data_min:
-                        normalized = ((band_data - data_min) / (data_max - data_min) * 255)
-                        normalized = np.clip(normalized, 0, 255).astype(np.uint8)
-                    else:
-                        normalized = np.zeros_like(band_data, dtype=np.uint8)
-                    
-                    band_data = normalized
+                # تطبيع البيانات
+                for i in range(3):
+                    band_data = rgb_data[i]
+                    if band_data.max() > band_data.min():
+                        band_min, band_max = np.percentile(band_data[band_data > 0], [2, 98])
+                        rgb_data[i] = np.clip((band_data - band_min) / (band_max - band_min) * 255, 0, 255)
                 
-                # إنشاء صورة PIL
-                img = Image.fromarray(band_data, mode='L')
+                # إنشاء صورة RGB
+                rgb_image = np.transpose(rgb_data, (1, 2, 0)).astype(np.uint8)
                 
-            elif src.count >= 3:
-                # صورة ملونة RGB
-                r_band = data[0] if src.count > 0 else np.zeros((height, width), dtype=np.uint8)
-                g_band = data[1] if src.count > 1 else np.zeros((height, width), dtype=np.uint8)
-                b_band = data[2] if src.count > 2 else np.zeros((height, width), dtype=np.uint8)
+            elif data.ndim == 2 or (data.ndim == 3 and data.shape[0] == 1):
+                # Grayscale image
+                if data.ndim == 3:
+                    gray_data = data[0]
+                else:
+                    gray_data = data
                 
-                # تطبيع كل نطاق
-                for band in [r_band, g_band, b_band]:
-                    if band.dtype != np.uint8:
-                        band_min = np.nanmin(band[band != src.nodata])
-                        band_max = np.nanmax(band[band != src.nodata])
-                        
-                        if band_max > band_min:
-                            band[:] = ((band - band_min) / (band_max - band_min) * 255)
-                            band[:] = np.clip(band, 0, 255).astype(np.uint8)
-                        else:
-                            band[:] = 0
+                # تطبيع البيانات
+                if gray_data.max() > gray_data.min():
+                    gray_min, gray_max = np.percentile(gray_data[gray_data > 0], [2, 98])
+                    gray_normalized = np.clip((gray_data - gray_min) / (gray_max - gray_min) * 255, 0, 255)
+                else:
+                    gray_normalized = np.zeros_like(gray_data)
                 
-                # دمج النطاقات
-                rgb_data = np.stack([r_band, g_band, b_band], axis=2)
-                img = Image.fromarray(rgb_data.astype(np.uint8), mode='RGB')
-            
+                # تحويل إلى RGB
+                rgb_image = np.stack([gray_normalized] * 3, axis=-1).astype(np.uint8)
             else:
                 return {
                     "success": False,
-                    "error": f"عدد النطاقات غير مدعوم: {src.count}"
+                    "error": f"تنسيق غير مدعوم للصورة: {data.shape}"
                 }
             
-            # حفظ الصورة
-            output_image_name = f"processed_{Path(input_file).stem}.png"
-            output_image_path = os.path.join(output_dir, output_image_name)
-            img.save(output_image_path, "PNG", optimize=True)
+            # حفظ الصورة المعالجة  
+            output_image_path = os.path.join(output_dir, 'processed.png')
+            pil_image = Image.fromarray(rgb_image)
+            pil_image.save(output_image_path, 'PNG', optimize=True)
             
-            # إنشاء ملف World File (.pgw)
-            world_file_path = os.path.join(output_dir, f"processed_{Path(input_file).stem}.pgw")
-            with open(world_file_path, 'w') as wf:
-                wf.write(f"{transform.a}\n")  # pixel size in x direction
-                wf.write(f"{transform.d}\n")  # rotation about y axis
-                wf.write(f"{transform.b}\n")  # rotation about x axis  
-                wf.write(f"{transform.e}\n")  # pixel size in y direction
-                wf.write(f"{transform.c}\n")  # x coordinate of center of upper left pixel
-                wf.write(f"{transform.f}\n")  # y coordinate of center of upper left pixel
+            print(f"✅ تم حفظ الصورة: {output_image_path}")
             
-            # حفظ ملف الإسقاط (.prj)
-            prj_file_path = os.path.join(output_dir, f"processed_{Path(input_file).stem}.prj")
-            with open(prj_file_path, 'w') as pf:
-                pf.write(dst_crs.to_wkt())
-            
-            # حساب الحدود الجغرافية
-            bounds = [
-                [new_bounds[1], new_bounds[0]],  # southwest corner [lat, lng]
-                [new_bounds[3], new_bounds[2]]   # northeast corner [lat, lng]
-            ]
-            
-            # تكوين URL الصورة
-            image_url = f"/api/gis/layers/{os.path.basename(output_dir)}/image/{output_image_name}"
-            
-            result = {
+            # إعداد معلومات النتيجة الموحدة
+            # final_bounds هي [west, south, east, north]
+            metadata = {
                 "success": True,
-                "imageUrl": image_url,
-                "bounds": bounds,
+                "imageFile": "processed.png",
+                "bbox": [final_bounds[0], final_bounds[1], final_bounds[2], final_bounds[3]],  # [west, south, east, north]
+                "leaflet_bounds": [[final_bounds[1], final_bounds[0]], [final_bounds[3], final_bounds[2]]],  # [[south,west],[north,east]]
                 "width": width,
                 "height": height,
                 "crs": "EPSG:4326",
-                "transform": {
-                    "a": transform.a,
-                    "b": transform.b,
-                    "c": transform.c,
-                    "d": transform.d,
-                    "e": transform.e,
-                    "f": transform.f
-                },
-                "files": {
-                    "image": output_image_path,
-                    "world": world_file_path,
-                    "projection": prj_file_path
-                }
+                "original_name": os.path.basename(input_file),
+                "processed_at": datetime.utcnow().isoformat() + "Z"
             }
             
-            print("✅ تمت معالجة الملف بنجاح")
-            return result
+            # حفظ معلومات الطبقة الموحدة
+            metadata_path = os.path.join(output_dir, 'metadata.json')
+            with open(metadata_path, 'w', encoding='utf-8') as f:
+                json.dump(metadata, f, indent=2, ensure_ascii=False)
+            
+            print("✅ تمت المعالجة بنجاح")
+            print(f"📄 النتيجة: {json.dumps(metadata, ensure_ascii=False, indent=2)}")
+            
+            # طباعة النتيجة النهائية كـJSON للخلفية
+            print(json.dumps(metadata, ensure_ascii=False))
+            
+            return metadata
             
     except Exception as e:
-        error_msg = f"خطأ في معالجة الملف: {str(e)}"
-        print(f"❌ {error_msg}")
+        print(f"❌ خطأ في معالجة GeoTIFF: {e}")
+        import traceback
+        traceback.print_exc()
         return {
             "success": False,
-            "error": error_msg
+            "error": f"خطأ في معالجة الملف: {str(e)}"
         }
 
 def main():
-    """دالة رئيسية"""
-    if len(sys.argv) != 3:
-        print("الاستخدام: python enhanced-geotiff-processor.py <input_file> <output_dir>")
+    if len(sys.argv) != 4:
+        print("Usage: python enhanced-geotiff-processor.py <input_file> <output_dir> <original_name>")
         sys.exit(1)
     
     input_file = sys.argv[1]
     output_dir = sys.argv[2]
+    original_name = sys.argv[3]
+    
+    print(f"🚀 بدء معالجة ملف GeoTIFF: {input_file}")
+    print(f"📁 مجلد الإخراج: {output_dir}")
+    print(f"📄 الاسم الأصلي: {original_name}")
     
     result = process_geotiff(input_file, output_dir)
-    print(json.dumps(result, ensure_ascii=False, indent=2))
+    
+    # طباعة النتيجة
+    print(json.dumps(result, ensure_ascii=False))
+    
+    if not result["success"]:
+        sys.exit(1)
 
 if __name__ == "__main__":
     main()
