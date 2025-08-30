@@ -1,6 +1,6 @@
 import express from 'express';
 import { db } from '../db';
-import { users, layers, surveyRequests } from '../../shared/schema';
+import { users, surveyRequests } from '../../shared/schema';
 import { count, eq, sql, and, gte } from 'drizzle-orm';
 import { authMiddleware } from '../middleware/auth';
 
@@ -294,6 +294,226 @@ router.post('/users', async (req, res) => {
     res.status(500).json({
       error: 'Internal server error',
       message: 'خطأ في إنشاء المستخدم'
+    });
+  }
+});
+
+/**
+ * PATCH /api/admin/users/:id
+ * Update existing user
+ */
+router.patch('/users/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { username, email, phone, firstName, lastName, role, isActive } = req.body;
+
+    // Check if user exists
+    const existingUser = await db.select().from(users).where(eq(users.id, id)).limit(1);
+    
+    if (existingUser.length === 0) {
+      return res.status(404).json({
+        error: 'User not found',
+        message: 'المستخدم غير موجود'
+      });
+    }
+
+    // Prevent admin from deactivating themselves
+    if (existingUser[0].id === req.user?.id && isActive === false) {
+      return res.status(400).json({
+        error: 'Cannot deactivate self',
+        message: 'لا يمكن إلغاء تفعيل حسابك الخاص'
+      });
+    }
+
+    // Update user
+    const [updatedUser] = await db.update(users)
+      .set({
+        username: username || existingUser[0].username,
+        email: email !== undefined ? email : existingUser[0].email,
+        phone: phone !== undefined ? phone : existingUser[0].phone,
+        firstName: firstName || existingUser[0].firstName,
+        lastName: lastName || existingUser[0].lastName,
+        role: role || existingUser[0].role,
+        isActive: isActive !== undefined ? isActive : existingUser[0].isActive,
+        updatedAt: new Date()
+      })
+      .where(eq(users.id, id))
+      .returning({
+        id: users.id,
+        username: users.username,
+        email: users.email,
+        firstName: users.firstName,
+        lastName: users.lastName,
+        phone: users.phone,
+        role: users.role,
+        isActive: users.isActive,
+        updatedAt: users.updatedAt
+      });
+
+    res.json({
+      success: true,
+      message: 'تم تحديث المستخدم بنجاح',
+      user: updatedUser
+    });
+
+  } catch (error: any) {
+    console.error('Error updating user:', error);
+    
+    if (error.code === '23505') {
+      return res.status(409).json({
+        error: 'Username already exists',
+        message: 'اسم المستخدم موجود بالفعل'
+      });
+    }
+
+    res.status(500).json({
+      error: 'Internal server error',
+      message: 'خطأ في تحديث المستخدم'
+    });
+  }
+});
+
+/**
+ * DELETE /api/admin/users/:id
+ * Soft delete user (deactivate)
+ */
+router.delete('/users/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // Check if user exists
+    const existingUser = await db.select().from(users).where(eq(users.id, id)).limit(1);
+    
+    if (existingUser.length === 0) {
+      return res.status(404).json({
+        error: 'User not found',
+        message: 'المستخدم غير موجود'
+      });
+    }
+
+    // Prevent admin from deleting themselves
+    if (existingUser[0].id === req.user?.id) {
+      return res.status(400).json({
+        error: 'Cannot delete self',
+        message: 'لا يمكن حذف حسابك الخاص'
+      });
+    }
+
+    // Soft delete - just deactivate
+    await db.update(users)
+      .set({
+        isActive: false,
+        updatedAt: new Date()
+      })
+      .where(eq(users.id, id));
+
+    res.json({
+      success: true,
+      message: 'تم إلغاء تفعيل المستخدم بنجاح'
+    });
+
+  } catch (error) {
+    console.error('Error deleting user:', error);
+    res.status(500).json({
+      error: 'Internal server error',
+      message: 'خطأ في حذف المستخدم'
+    });
+  }
+});
+
+/**
+ * GET /api/admin/users/:id
+ * Get single user details
+ */
+router.get('/users/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const user = await db.select({
+      id: users.id,
+      nationalId: users.nationalId,
+      username: users.username,
+      email: users.email,
+      firstName: users.firstName,
+      lastName: users.lastName,
+      phone: users.phone,
+      role: users.role,
+      isActive: users.isActive,
+      isVerified: users.isVerified,
+      lastLogin: users.lastLogin,
+      createdAt: users.createdAt,
+      updatedAt: users.updatedAt
+    }).from(users).where(eq(users.id, id)).limit(1);
+
+    if (user.length === 0) {
+      return res.status(404).json({
+        error: 'User not found',
+        message: 'المستخدم غير موجود'
+      });
+    }
+
+    res.json({
+      success: true,
+      user: user[0]
+    });
+
+  } catch (error) {
+    console.error('Error fetching user:', error);
+    res.status(500).json({
+      error: 'Internal server error',
+      message: 'خطأ في جلب بيانات المستخدم'
+    });
+  }
+});
+
+/**
+ * PATCH /api/admin/users/:id/password
+ * Reset user password
+ */
+router.patch('/users/:id/password', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { newPassword } = req.body;
+
+    if (!newPassword || newPassword.length < 8) {
+      return res.status(400).json({
+        error: 'Invalid password',
+        message: 'كلمة المرور يجب أن تكون 8 أحرف على الأقل'
+      });
+    }
+
+    // Check if user exists
+    const existingUser = await db.select().from(users).where(eq(users.id, id)).limit(1);
+    
+    if (existingUser.length === 0) {
+      return res.status(404).json({
+        error: 'User not found',
+        message: 'المستخدم غير موجود'
+      });
+    }
+
+    // Hash new password
+    const bcrypt = require('bcryptjs');
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+    // Update password
+    await db.update(users)
+      .set({
+        password: hashedPassword,
+        updatedAt: new Date()
+      })
+      .where(eq(users.id, id));
+
+    res.json({
+      success: true,
+      message: 'تم تغيير كلمة المرور بنجاح'
+    });
+
+  } catch (error) {
+    console.error('Error resetting password:', error);
+    res.status(500).json({
+      error: 'Internal server error',
+      message: 'خطأ في تغيير كلمة المرور'
     });
   }
 });

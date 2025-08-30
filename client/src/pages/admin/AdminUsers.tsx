@@ -160,6 +160,43 @@ export default function AdminUsers() {
     },
   });
 
+  const deleteUserMutation = useMutation({
+    mutationFn: async (userId: string) => {
+      return await apiRequest(`/api/admin/users/${userId}`, {
+        method: 'DELETE',
+      });
+    },
+    onSuccess: () => {
+      toast({
+        title: 'تم إلغاء تفعيل المستخدم',
+        description: 'تم إلغاء تفعيل المستخدم بنجاح',
+      });
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/users'] });
+    },
+    onError: (error: any) => {
+      toast({
+        title: 'فشل في إلغاء التفعيل',
+        description: error.message || 'حدث خطأ',
+        variant: 'destructive',
+      });
+    },
+  });
+
+  const toggleUserActivation = (user: User) => {
+    if (user.role === 'admin' && !user.isActive) {
+      toast({
+        title: 'تحذير',
+        description: 'لا يمكن إلغاء تفعيل حساب المدير',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    if (window.confirm(`هل أنت متأكد من ${user.isActive ? 'إلغاء تفعيل' : 'تفعيل'} المستخدم ${user.firstName} ${user.lastName}؟`)) {
+      deleteUserMutation.mutate(user.id);
+    }
+  };
+
   const onSubmit = (data: CreateUserFormValues) => {
     createUserMutation.mutate(data);
   };
@@ -438,14 +475,22 @@ export default function AdminUsers() {
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">
-                          <Button variant="ghost" size="sm">
+                          <Button 
+                            variant="ghost" 
+                            size="sm"
+                            onClick={() => toggleUserActivation(user)}
+                            disabled={deleteUserMutation.isPending}
+                            data-testid={`toggle-user-${user.id}`}
+                          >
+                            {user.isActive ? <UserX className="w-4 h-4 text-red-500" /> : <UserCheck className="w-4 h-4 text-green-500" />}
+                          </Button>
+                          <Button 
+                            variant="ghost" 
+                            size="sm"
+                            onClick={() => window.open(`/admin/users/${user.id}`, '_blank')}
+                            data-testid={`view-user-${user.id}`}
+                          >
                             <Eye className="w-4 h-4" />
-                          </Button>
-                          <Button variant="ghost" size="sm">
-                            <Edit className="w-4 h-4" />
-                          </Button>
-                          <Button variant="ghost" size="sm">
-                            <MoreHorizontal className="w-4 h-4" />
                           </Button>
                         </div>
                       </TableCell>

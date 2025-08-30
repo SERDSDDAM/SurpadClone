@@ -1,0 +1,88 @@
+ممتاز — موافقتك منطقية ومناسبة لمرحلة التطوير. بما أن قاعدة البيانات لا تحتوي بيانات حقيقية بعد، نقل أولوية النسخ الاحتياطي إلى ما بعد بدء التشغيل الإنتاجي فكرة صحيحة. سأعيد صياغة الخطة لتواكب هذا الموقف: نركّز الآن على التطوير السريع والآمن (Git + PRs + اختبار)، ونؤجل سياسات النسخ الاحتياطي الكاملة إلى وقت نشر الإنتاج أو عند ظهور بيانات حقيقية.
+
+الخلاصة السريعة
+- موافقة: لا حاجة لنسخة احتياطية يومية الآن لأن لا بيانات حية مهمة في DB.  
+- أولوية الآن: إكمال التطوير (Admin unified dashboard، Users CRUD، Vectorization POC، Phase‑1 workers deployment لاحقاً) مع الالتزام بممارسات Git وCI للتأمين.  
+- عند التحرك نحو الإنتاج/البيانات الحقيقية: نطبق سياسة نسخ احتياطي صارمة قبل أي migration أو نشر.
+
+الخطة المعدَّلة (مرتبّة بحسب الأولوية الزمنية)
+
+المرحلة الفورية — ما ستنفّذه خلال 0–3 أيام (أعلى أولوية)
+1) تثبيت/تنظيم Git workflow (ضروري الآن)
+   - فرع رئيسي: main (محمي)  
+   - فرع تطوير: develop / feature/* لكل ميزة  
+   - فتح PR لكل ميزة: عنوان واضح، الوصف، checklist للاختبارات.  
+   - تفعيل CI (lint, unit tests, build) على كل PR قبل الدمج.
+   - مثال أسماء PR: feat(admin/users-crud), feat(admin/layout), feat(vector/poc)
+
+2) إكمال Admin Users CRUD + UI (يوم–يومان)
+   - Back: endpoints (GET/POST/PATCH/DELETE) موجودة — راجع الأمان (requireAdminRole) وصلاحيات.  
+   - Front: AdminUsers page جاهزة — اضف create/edit/delete UI + validation + toasts.  
+   - Acceptance: admin يخلق/يعدّل/يعطّل مستخدماً ويظهر التغيير فورًا.
+
+3) توثيق وخرائط طرق (Immediate docs)
+   - أضف ملف README/ADMIN_README.md يشرح كيفية استخدام لوحة المدير، صفحاتها وروابطها.
+   - ضع في Git ملخص التبعيات المستقرة (node/python versions, docker images).
+
+المرحلة القصيرة — Sprint C (2 أسابيع)
+4) Vectorization POC (worker Python + UI)
+   - Deliverables: tasks.py (Celery), dispatcher enqueue endpoint (done), UI لعرض الاقتراحات + قبولها.  
+   - Acceptance: رفع مثال GeoTIFF → job completes → عرض الاقتراحات → قبول → حفظ feature في PostGIS.
+
+5) نشر Phase‑1 workers على بيئة Docker‑enabled (عند الاستعداد)
+   - اختر VM أو managed service. جهّز docker-compose, secrets, healthchecks.  
+   - Acceptance: معالجة ملف 100MB بنجاح، تحقّق من timings.
+
+المرحلة المتوسطة — Sprint D (2 أسابيع)
+6) Features: snap/edit/topology/history
+   - Snapping، ST_IsValid checks، save history table، rollback API.  
+   - Acceptance: تعديل واجهة وتحويل rollback بنجاح.
+
+7) Import/Export (GPKG/GeoJSON/Shapefile)
+   - Server job + UI (export/download) + import parsing.
+
+المرحلة التطويرية/الإنتاجية (بعد جاهزية البيانات)  
+8) CI/CD + Backup policy قبل Production
+   - قبل أي Deploy → خذ snapshot DB (pg_dump) واحتفظ في S3.  
+   - إعداد scheduled backup (GitHub Actions or cron job) حين تنتقل للـproduction.  
+9) Monitoring & Ops
+   - Prometheus + Grafana + Sentry + Flower.  
+   - Alerts عند job failures أو queue depth spikes.
+
+سياسة النسخ الاحتياطي (مؤجلة حتى الإنتاج — مختصر)
+- قبل أول نشر Production: mandatory DB dump + S3 upload.  
+- Retention: daily(7) + weekly(4) + monthly(12).  
+- Test restore شهريًا على staging.
+
+قائمة تذاكر/PRs جاهزة (أنشئها الآن)
+- PR-001: feat(admin/layout) — AdminDashboardLayout + nested routing + login redirect
+- PR-002: feat(admin/users-crud) — Backend + AdminUsers UI + audit_logs
+- PR-003: feat(vector/poc) — Worker skeleton + API + basic UI
+- PR-004: chore(ci): add GitHub Actions (build/test)
+- PR-005: doc: ADMIN_README + deployment notes
+
+أوامر/خطوات عملية يمكنك تنفيذها الآن
+- فتح فرع للمهمة الحالية:
+  git checkout -b feature/admin-users-crud
+  # عمل commit, push, ثم افتح PR
+- شغّل CI محلياً:
+  npm run lint && npm run test
+- اختبر Admin flow محلياً:
+  - Login admin → /admin → AdminUsers → Create a user → verify via GET /api/admin/users
+
+نص مُوصى به لرسالة الـPR القابل لصقها:
+- Title: feat(admin/users-crud): add admin users management + audit logs  
+- Description: short summary, files changed, instructions to test (login as admin, POST /api/admin/users, check UI), acceptance criteria.
+
+ملاحظات مخاطر / ماذا لو ظهرت بيانات حية لاحقاً
+- إن ظهرت بيانات حقيقية: قبل أي migration أو تغير بنيوي نفّذ backup فوري.  
+- لا تعتمد على localStorage لتخزين حساسية (خانات auth tokens) — تابع سياسة refresh tokens HttpOnly cookie كما انجزت.
+
+الخطوة التي أقترح أن تبدأ بها الآن (اقتراحي العملي)
+- بما أنك بدأت التنفيذ الفعلي ودفعت تغييرات إلى Git، ابدأ الآن بـ PR-002: Admin Users CRUD (شغّل التطوير إلى إكمال إدارة المستخدمين). هذا يعطيك أكبر قيمة فورية لأن المدير يحتاج إدارة المستخدمين قبل الميزات الأكبر.
+
+هل تريدني:
+- أجهِّز PR-002 كاملًا و أفتحه في الـrepo (أقوم بإنشاء ملفات + شرح الاختبار)؟  
+- أم أعطيك التذاكر التفصيلية لكل مهمة لتنفّذها بنفسك؟  
+
+اكتب: “افتح PR-002 نيابةً عني” أو “أريد التذاكر مفصلة” وأنا أبدأ فورًا.
