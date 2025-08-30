@@ -34,6 +34,7 @@ import CitizenDashboard from "@/pages/citizen/citizen-dashboard";
 import SmartEmployeeDashboard from "@/pages/employee/smart-employee-dashboard";
 import AnalyticsDashboard from "@/pages/admin/analytics-dashboard";
 import RoleManagement from "@/pages/admin/role-management";
+import React from "react";
 import UnifiedRequestDetails from "@/pages/citizen/unified-request-details";
 import CleanFieldApp from "@/pages/clean-field-app";
 import SurveyorDashboard from "@/pages/surveyor-dashboard";
@@ -219,10 +220,60 @@ function Router() {
           <Route path="/auth/employee-login" component={EmployeeLogin} />
           <Route path="/employee-login" component={EmployeeLoginPage} />
           <Route path="/simple-login" component={SimpleLoginPage} />
-          <Route path="/admin-dashboard" component={AdminDashboard} />
+          {/* New Admin Dashboard System */}
+          <Route path="/admin">
+            {() => {
+              const AdminDashboardLayout = React.lazy(() => import('@/layouts/AdminDashboardLayout'));
+              const AdminHome = React.lazy(() => import('@/pages/admin/AdminHome'));
+              const RequireAuth = React.lazy(() => import('@/components/RequireAuth'));
+              
+              return (
+                <React.Suspense fallback={<div className="min-h-screen flex items-center justify-center"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-red-600"></div></div>}>
+                  <RequireAuth role="admin">
+                    <AdminDashboardLayout>
+                      <Switch>
+                        <Route path="/admin" component={AdminHome} />
+                        <Route path="/admin/analytics" component={AnalyticsDashboard} />
+                        <Route path="/admin/users">
+                          {React.lazy(() => import('@/pages/admin/AdminUsers'))}
+                        </Route>
+                        <Route path="/admin/roles" component={RoleManagement} />
+                        <Route path="/admin/gis">
+                          <div className="p-6">
+                            <h1 className="text-2xl font-bold mb-4">نظام GIS</h1>
+                            <p className="text-gray-600">قريباً...</p>
+                          </div>
+                        </Route>
+                        <Route path="/admin/settings">
+                          <div className="p-6">
+                            <h1 className="text-2xl font-bold mb-4">الإعدادات</h1>
+                            <p className="text-gray-600">قريباً...</p>
+                          </div>
+                        </Route>
+                      </Switch>
+                    </AdminDashboardLayout>
+                  </RequireAuth>
+                </React.Suspense>
+              );
+            }}
+          </Route>
+          
+          {/* Legacy admin routes - redirect to new system */}
+          <Route path="/admin-dashboard">
+            {() => {
+              window.location.href = '/admin';
+              return null;
+            }}
+          </Route>
+          <Route path="/analytics-dashboard">
+            {() => {
+              window.location.href = '/admin/analytics';
+              return null;
+            }}
+          </Route>
+          
           <Route path="/citizen-dashboard" component={CitizenDashboard} />
           <Route path="/employee-dashboard" component={SmartEmployeeDashboard} />
-          <Route path="/analytics-dashboard" component={AnalyticsDashboard} />
           <Route path="/role-management" component={RoleManagement} />
           <Route path="/request-details/:id" component={UnifiedRequestDetails} />
           <Route component={NotFound} />

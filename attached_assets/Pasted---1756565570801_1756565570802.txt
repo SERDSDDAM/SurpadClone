@@ -1,0 +1,205 @@
+رائع — فهمت هدفك بالضبط: تريد لوحة تحكم مركزيّة موحّدة للمدير على غرار تجربة "بلدي" — تجمع كل أدوات الإدارة (تحليلات، صلاحيات، مستخدمين، إدارة طبقات GIS، رفع/معالجة ملفات، تقارير، إعدادات) في مساحة واحدة مع شريط جانبي عملي وواجهة RTL عربية متماسكة. أدناه خطة تنفيذية كاملة ومفصّلة (تصميم + بنية + واجهات + APIs + تنفيذ قابل للتدرّج) ويمكنك تطبيقها مباشرة أو تكليف الـAgent/الفريق بتنفيذ كل خطوة (أقدّم لك ملفات/PRs/كود جاهز).
+
+ملخّص الهدف
+- إنشاء Admin Dashboard موحَّد على المسار /admin مع:
+  - AdminLayout مركزي (Sidebar + Topbar + Breadcrumbs + Main content)
+  - صفحات فرعية متداخلة: /admin/analytics, /admin/roles, /admin/users, /admin/gis, /admin/uploads, /admin/reports, /admin/settings, إلخ
+  - تحكّم صلاحيات دقيق (RBAC) بحيث تظهر الروابط والأزرار طبقًا لصلاحية المستخدم
+  - حفظ تفضيلات المدير (آخر صفحة زارها، collapse sidebar، z-order) per‑user
+  - تجربة مستخدم عربية (RTL)، responsive، مع اختصارات وإجراءات سريعة
+
+ما ستحصل عليه في النهاية
+- بنية Routes موحّدة (/admin/*) مع حماية role-based
+- مكوّن AdminDashboardLayout قابل لإعادة الاستخدام
+- شريط جانبي عملي مع أيقونات وروابط سريعة
+- Home dashboard صفحة تجميعية (cards + quick actions)
+- تكامل مع النظام الموجود (analytics, roles, users, layers, jobs)
+- قواعد نشر/اختبار (preview → approve → deploy) وآليات rollback
+
+خريطة التنفيذ (خطوات عملية وبالتدرّج)
+المرحلة التحضيرية (1–2 يوم)
+1) مراجعة الأكواد الحالية وملفات routes: تأكد أن الصفحات التحليلية، role-management، users موجودة كـcomponents.  
+2) إنشاء مسار رئيسي /admin في App.tsx ويكون مهيأًا لاستقبال المكوّن layout.  
+3) حجز اسماء الروابط وأيقوناتها في config مركزي.
+
+Sprint 1 — Admin Layout + Routing (2–3 أيام)
+هدف: إنشاء AdminLayout + nested routing وredirect من login → /admin
+
+مهام:
+- Component: client/src/layouts/AdminDashboardLayout.tsx
+  - sidebar (links array), collapse button, topbar (user menu, notifications), content area (Outlet)
+- Client guard: RequireAuth(role='admin') component
+- Routes: App.tsx nested:
+  - /admin (layout)
+    - /admin/analytics
+    - /admin/roles
+    - /admin/users
+    - /admin/gis
+    - /admin/uploads
+    - /admin/reports
+    - /admin/settings
+- Update login redirect to navigate('/admin') for admin users
+- Save last admin subroute in localStorage so next login returns user to where left off
+
+مثال كود: AdminDashboardLayout (قابل للصق)
+```tsx
+// client/src/layouts/AdminDashboardLayout.tsx
+import React, { useEffect } from 'react';
+import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
+import { Shield, BarChart3, Users, Settings, FileText, MapPin, UploadCloud } from 'lucide-react';
+
+const adminLinks = [
+  { to: 'analytics', label: 'التحليلات', icon: <BarChart3 /> },
+  { to: 'roles', label: 'إدارة الصلاحيات', icon: <Shield /> },
+  { to: 'users', label: 'إدارة المستخدمين', icon: <Users /> },
+  { to: 'gis', label: 'نظام GIS', icon: <MapPin /> },
+  { to: 'uploads', label: 'رفع الملفات', icon: <UploadCloud /> },
+  { to: 'reports', label: 'التقارير', icon: <FileText /> },
+  { to: 'settings', label: 'إعدادات', icon: <Settings /> },
+];
+
+export default function AdminDashboardLayout() {
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    // If user lands on /admin, redirect to last visited or analytics
+    if (location.pathname === '/admin') {
+      const last = localStorage.getItem('admin_last_route') || '/admin/analytics';
+      navigate(last, { replace: true });
+    } else if (location.pathname.startsWith('/admin')) {
+      localStorage.setItem('admin_last_route', location.pathname);
+    }
+  }, [location, navigate]);
+
+  return (
+    <div className="flex min-h-screen" dir="rtl">
+      <aside className="w-64 bg-white border-l p-4">
+        <div className="mb-6 text-center">
+          <h3 className="font-bold text-lg">لوحة التحكم</h3>
+        </div>
+        <nav className="space-y-1">
+          {adminLinks.map(l => (
+            <NavLink
+              key={l.to}
+              to={`/admin/${l.to}`}
+              className={({isActive}) => `flex items-center gap-3 p-2 rounded ${isActive ? 'bg-primary/10 text-primary' : 'text-gray-700'}`}
+            >
+              <span className="w-5">{l.icon}</span>
+              <span>{l.label}</span>
+            </NavLink>
+          ))}
+        </nav>
+      </aside>
+      <main className="flex-1 p-6 bg-surface">
+        <Outlet />
+      </main>
+    </div>
+  );
+}
+```
+
+Sprint 2 — Admin Home (cards & quick actions) + Users CRUD (3–5 أيام)
+هدف: صفحة مجمّعة تجمع الإحصائيات والروابط السريعة + إنشاء Users management backend & UI
+
+مهام:
+- AdminHome page: KPI cards (users, layers, decisions, uptime), quick action cards (Create user, Upload layer, Run job, View logs)
+- Backend endpoints (if not present):
+  - GET /api/admin/stats → return KPIs
+  - CRUD users endpoints (already partly exist) → ensure paging/search/filter
+  - Audit logs endpoint
+- Frontend Users page: table, search, role change modal, disable/enable
+- Acceptance: admin يخلق مستخدمًا جديدًا ويمنحه صلاحية ثم يرى المستخدم في القائمة
+
+Sprint 3 — Roles / Permissions UI + Audit log (2–3 أيام)
+- Role matrix and per-role granular toggles (you have role-management component already)
+- Persist permission changes: POST /api/admin/roles/:role/permissions
+- Audit logs viewer: show changes with user/timestamp
+
+Sprint 4 — GIS admin actions & Quick tasks (2–4 أيام)
+- Integrate existing GIS pages under /admin/gis
+- Add quick actions: reprocess layer, preview layer, view job queue
+- Jobs panel: show Celery job status, cancel, retry
+- Acceptance: admin can select a processed layer and press Reprocess -> job enqueued -> results show
+
+Sprint 5 — Polish, security, tests & docs (2 weken)
+- E2E tests for admin flows (login → admin → create user → draw feature → export)
+- Accessibility, RTL checks, keyboard navigation
+- Performance profiling of admin pages
+- Add feature flags, rollout plan
+
+Permissions and access control
+- Client: RequireAuth wrapper with role prop, plus permissions-based UI rendering
+- Server: requireRole middleware (already discussed) and audit logs for critical actions
+- Granular permissions table stored in DB (role_permissions table) for future dynamic control
+
+Route & URL design (recommended)
+- /admin → AdminHome (redirect to /admin/analytics or last route)
+- /admin/analytics
+- /admin/users
+- /admin/roles
+- /admin/gis/layers
+- /admin/gis/uploads
+- /admin/jobs
+- /admin/reports
+- /admin/settings
+
+State & data fetching
+- Use TanStack Query for server state (caching, invalidation)
+- Use context or Zustand for UI state (sidebar collapsed, last route)
+- Persist per-user admin preferences server-side (user_settings table) and client-side localStorage
+
+UX details inspired by "بلدي"
+- Top KPI row with large numbers, colored badges and delta percentages
+- Left vertical sidebar with icons + grouped sections (Management / GIS / Reports / Settings)
+- Quick actions tiles in the home (Upload File, Create User, Run Job)
+- Breadcrumbs / page title in content header
+- Modal workflows for heavy operations (create user, role assign) with confirmation step
+- Responsive: sidebar collapses to hamburger on mobile, use off‑canvas drawer
+
+Accessibility & RTL
+- Ensure aria-label on sidebar links
+- Keyboard focus outline & skip links
+- Use semantic HTML for forms and tables
+- Use appropriate CSS direction and mirroring for icons
+
+Acceptance Criteria (what must be true to call success)
+- Admin logs in -> lands in /admin (or last admin page) within 2s
+- Sidebar visible and navigates to each subpage with content loaded
+- Admin can create/update/delete users and change roles; results saved in DB and reflected immediately
+- Permissions matrix persists and effective (UI should show/hide elements according to permission)
+- Reprocessing layer action enqueues job and job status visible
+- All pages pass RTL checks and are keyboard accessible
+
+Estimate & resourcing
+- Rough total time: 3–6 sprints (2 weeks each) depending on team size  
+- Minimal team for MVP:
+  - 1 frontend React dev (2–3 weeks)  
+  - 1 backend Node/PostGIS dev (2–3 weeks)  
+  - 0.5 GIS/Python for integration (vectorization later)  
+  - 0.2 DevOps for deployment infra
+
+Deliverables (per sprint)
+- Sprint 1: AdminLayout + nested routes + login redirect change (PR)  
+- Sprint 2: AdminHome + Users CRUD (PR + DB migration + tests)  
+- Sprint 3: Roles UI + save permissions + audit log viewer  
+- Sprint 4: GIS admin tools + jobs panel + quick actions  
+- Sprint 5: E2E tests, accessibility fixes, docs
+
+Rollback & migration safety
+- Always run DB backup before migrations (pg_dump).  
+- Use preview deploy & test changes on preview (you are already doing).  
+- Make migrations idempotent (IF NOT EXISTS).  
+- Feature-flag new admin features to enable/disable quickly.
+
+نماذج كود/PRs أجهزها لك فورًا لو رغبت
+- AdminLayout.tsx (component), App.tsx route changes, RequireAuth component — PR جاهز.  
+- AdminHome page (KPI + quick actions) — PR جاهز.  
+- Users API endpoints (if any missing) + frontend AdminUsers — PR جاهز.
+
+هل أبدأ الآن بتحضير PR أولي (AdminLayout + routing + login redirect) أم تفضّل أن نجهّز التصميم المرئي أولًا (mockup) ثم ننفذ؟ اختر:
+- (A) جهّز PR الآن (أضيف الملفات والكود، أفتح PR)  
+- (B) أجهّز تصميم مرئي (Figma-like spec) + style guide للـsidebar والcards  
+- (C) أجهّز backlog تفصيلي لـJira/Trello مع تذاكر لكل مهمة (dev tasks + QA + deploy)
+
+أي خيار تفضّل؟

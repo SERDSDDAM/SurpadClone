@@ -219,7 +219,7 @@
                     // إعادة توجيه حسب دور المستخدم
                     setTimeout(() => {
                         if (data.user.role === 'admin') {
-                            window.location.href = '/admin-dashboard';
+                            window.location.href = '/admin';
                         } else if (data.user.role === 'surveyor') {
                             window.location.href = '/phase2-digitization';
                         } else {

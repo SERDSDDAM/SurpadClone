@@ -21,6 +21,7 @@ import surveyRoutes from "./routes/survey-routes";
 import gisRoutes from "./routes/gis-routes";
 import phase1Routes from "./routes/phase1-integration";
 import { registerGISFeatureRoutes } from "./routes/gis-features";
+import adminRoutes from "./routes/admin";
 import helmet from "helmet";
 import path from "path";
 import fs from "fs";
@@ -74,6 +75,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Auth routes (BEFORE other API routes)
   app.use("/api/auth", authRoutes);
+  
+  // Admin routes (protected)
+  app.use('/api/admin', adminRoutes);
 
   // صفحة تسجيل دخول ثابتة (HTML فقط)  
   app.get('/login', (req, res) => {
