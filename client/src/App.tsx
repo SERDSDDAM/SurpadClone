@@ -220,7 +220,7 @@ function Router() {
           <Route path="/auth/employee-login" component={EmployeeLogin} />
           <Route path="/employee-login" component={EmployeeLoginPage} />
           <Route path="/simple-login" component={SimpleLoginPage} />
-          {/* New Admin Dashboard System */}
+          {/* Admin Dashboard System - Fixed Routes */}
           <Route path="/admin">
             {() => {
               const AdminDashboardLayout = React.lazy(() => import('@/layouts/AdminDashboardLayout'));
@@ -231,26 +231,99 @@ function Router() {
                 <React.Suspense fallback={<div className="min-h-screen flex items-center justify-center"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-red-600"></div></div>}>
                   <RequireAuth role="admin">
                     <AdminDashboardLayout>
-                      <Switch>
-                        <Route path="/admin" component={AdminHome} />
-                        <Route path="/admin/analytics" component={AnalyticsDashboard} />
-                        <Route path="/admin/users">
-                          {React.lazy(() => import('@/pages/admin/AdminUsers'))}
-                        </Route>
-                        <Route path="/admin/roles" component={RoleManagement} />
-                        <Route path="/admin/gis">
-                          <div className="p-6">
-                            <h1 className="text-2xl font-bold mb-4">نظام GIS</h1>
-                            <p className="text-gray-600">قريباً...</p>
-                          </div>
-                        </Route>
-                        <Route path="/admin/settings">
-                          <div className="p-6">
-                            <h1 className="text-2xl font-bold mb-4">الإعدادات</h1>
-                            <p className="text-gray-600">قريباً...</p>
-                          </div>
-                        </Route>
-                      </Switch>
+                      <AdminHome />
+                    </AdminDashboardLayout>
+                  </RequireAuth>
+                </React.Suspense>
+              );
+            }}
+          </Route>
+
+          <Route path="/admin/analytics">
+            {() => {
+              const AdminDashboardLayout = React.lazy(() => import('@/layouts/AdminDashboardLayout'));
+              const RequireAuth = React.lazy(() => import('@/components/RequireAuth'));
+              
+              return (
+                <React.Suspense fallback={<div className="min-h-screen flex items-center justify-center"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-red-600"></div></div>}>
+                  <RequireAuth role="admin">
+                    <AdminDashboardLayout>
+                      <AnalyticsDashboard />
+                    </AdminDashboardLayout>
+                  </RequireAuth>
+                </React.Suspense>
+              );
+            }}
+          </Route>
+
+          <Route path="/admin/users">
+            {() => {
+              const AdminDashboardLayout = React.lazy(() => import('@/layouts/AdminDashboardLayout'));
+              const AdminUsers = React.lazy(() => import('@/pages/admin/AdminUsers'));
+              const RequireAuth = React.lazy(() => import('@/components/RequireAuth'));
+              
+              return (
+                <React.Suspense fallback={<div className="min-h-screen flex items-center justify-center"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-red-600"></div></div>}>
+                  <RequireAuth role="admin">
+                    <AdminDashboardLayout>
+                      <AdminUsers />
+                    </AdminDashboardLayout>
+                  </RequireAuth>
+                </React.Suspense>
+              );
+            }}
+          </Route>
+
+          <Route path="/admin/roles">
+            {() => {
+              const AdminDashboardLayout = React.lazy(() => import('@/layouts/AdminDashboardLayout'));
+              const RequireAuth = React.lazy(() => import('@/components/RequireAuth'));
+              
+              return (
+                <React.Suspense fallback={<div className="min-h-screen flex items-center justify-center"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-red-600"></div></div>}>
+                  <RequireAuth role="admin">
+                    <AdminDashboardLayout>
+                      <RoleManagement />
+                    </AdminDashboardLayout>
+                  </RequireAuth>
+                </React.Suspense>
+              );
+            }}
+          </Route>
+
+          <Route path="/admin/gis">
+            {() => {
+              const AdminDashboardLayout = React.lazy(() => import('@/layouts/AdminDashboardLayout'));
+              const RequireAuth = React.lazy(() => import('@/components/RequireAuth'));
+              
+              return (
+                <React.Suspense fallback={<div className="min-h-screen flex items-center justify-center"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-red-600"></div></div>}>
+                  <RequireAuth role="admin">
+                    <AdminDashboardLayout>
+                      <div className="p-6">
+                        <h1 className="text-2xl font-bold mb-4">نظام GIS</h1>
+                        <p className="text-gray-600">قريباً...</p>
+                      </div>
+                    </AdminDashboardLayout>
+                  </RequireAuth>
+                </React.Suspense>
+              );
+            }}
+          </Route>
+
+          <Route path="/admin/settings">
+            {() => {
+              const AdminDashboardLayout = React.lazy(() => import('@/layouts/AdminDashboardLayout'));
+              const RequireAuth = React.lazy(() => import('@/components/RequireAuth'));
+              
+              return (
+                <React.Suspense fallback={<div className="min-h-screen flex items-center justify-center"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-red-600"></div></div>}>
+                  <RequireAuth role="admin">
+                    <AdminDashboardLayout>
+                      <div className="p-6">
+                        <h1 className="text-2xl font-bold mb-4">الإعدادات</h1>
+                        <p className="text-gray-600">قريباً...</p>
+                      </div>
                     </AdminDashboardLayout>
                   </RequireAuth>
                 </React.Suspense>
