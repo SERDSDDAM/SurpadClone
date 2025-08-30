@@ -1,0 +1,134 @@
+ممتاز — شكراً للشرح واللقطات. الصورة توضّح أن الشريط الجانبي والـLayout يعملان لكن محتوى صفحة /admin/gis فارغ (محتوى “قريباً…” أو خطأ 404 سابقاً). الخطوة التالية العملية هي تعبئة صفحة نظام GIS داخل لوحة المدير — عرض قائمة الطبقات، معاينة الصورة، إجراءات سريعة (إعادة معالجة، إظهار/إخفاء، حذف، تنزيل)، وحالة المهمة (job status). أدناه خطة قصيرة المدى + كود جاهز يمكنك لصقه/تعديلَه فورًا لملء هذه الصفحة وإعطائها وظيفة فعلية.
+
+خلاصة ما سنفعله الآن (الهدف خلال ساعة)
+1. إضافة مكوّن AdminGIS يتصل بالـAPI للحصول على قائمة الطبقات.  
+2. عرض الشبكة (cards) لكل طبقة مع thumbnail + معلومات (name, size, status).  
+3. أزرار إجراءات: معاينة (lightbox)، إعادة معالجة (enqueue)، تبديل الرؤية (visible on/off), حذف.  
+4. ربط الـmutations مع react-query لتحديث الواجهة فورًا.  
+5. اختبار سريع عبر الواجهة (admin/Admin@2025!).
+
+أسباب عملية: هذه الخطوات تملأ المحتوى الفارغ وتمنح المدير أدوات مباشرة لإدارة الطبقات دون ترك لوحة التحكم.
+
+1) Endpoint(s) التي سنستخدمها
+- GET /api/gis/debug/layers  — قائمة الطبقات (يوجد بالفعل في debug-routes).  
+- GET /api/gis/layers/:layerId — استعلام طبقة واحدة (موجود).  
+- POST /api/gis/reprocess-existing-layer/:layerId — لإعادة المعالجة (يوجد).  
+- POST /api/gis/layers/:layerId/visibility — لتبديل visible (layer-state-manager يوفره).  
+- DELETE /api/gis/layers/:layerId — (يمكن إنشاؤه لاحقًا، الآن سنعرض زر فقط).
+
+مسار كامل API (full path): تذكر أن كلّ هذه تبدأ بـ /api/gis فـ full URL مثال: /api/gis/debug/layers أو /api/gis/reprocess-existing-layer/:id
+
+2) كود مثال للصفحة AdminGIS (React + TanStack Query)
+ضع هذا الملف كـ client/src/pages/admin/AdminGIS.tsx (أو الصق داخل مشروعك):
+
+```tsx
+import React from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { apiRequest } from '@/lib/queryClient';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Toast } from '@/hooks/use-toast';
+
+function fetchLayers() {
+  return apiRequest('/api/gis/debug/layers');
+}
+
+export default function AdminGIS() {
+  const qc = useQueryClient();
+  const { data, isLoading, isError } = useQuery(['admin','gis','layers'], fetchLayers, { staleTime: 30_000 });
+
+  const reprocess = useMutation(async (layerId: string) => {
+    // call reprocess endpoint
+    return apiRequest(`/api/gis/reprocess-existing-layer/${layerId}`, { method: 'POST' });
+  }, {
+    onSuccess: () => qc.invalidateQueries(['admin','gis','layers'])
+  });
+
+  const toggleVisibility = useMutation(async ({ id, visible }: {id:string,visible:boolean}) => {
+    return apiRequest(`/api/gis/layers/${id}/visibility`, { method: 'POST', body: JSON.stringify({ visible }) });
+  }, {
+    onSuccess: () => qc.invalidateQueries(['admin','gis','layers'])
+  });
+
+  if (isLoading) return <div>جارٍ التحميل...</div>;
+  if (isError) return <div>فشل جلب الطبقات</div>;
+
+  const layers = data.layers || [];
+
+  return (
+    <div>
+      <h2 className="text-xl font-bold mb-4">نظام GIS — إدارة الطبقات</h2>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        {layers.map((layer: any) => (
+          <Card key={layer.id}>
+            <CardHeader>
+              <CardTitle>{layer.name || layer.fileName || layer.id}</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="mb-2">
+                <img 
+                  src={layer.imageUrl || `/api/gis/layers/${layer.id}/image/processed.png`} 
+                  alt={layer.name} 
+                  style={{ width: '100%', height: 160, objectFit: 'cover' }}
+                  crossOrigin="anonymous"
+                />
+              </div>
+              <p className="text-sm text-gray-600 mb-2">الحالة: {layer.status}</p>
+              <p className="text-sm text-gray-600 mb-2">حجم الملف: {Math.round((layer.fileSize||0)/1024)} KB</p>
+
+              <div className="flex gap-2">
+                <Button size="sm" onClick={() => window.open(layer.imageUrl, '_blank')}>معاينة</Button>
+                <Button size="sm" variant="outline" onClick={() => reprocess.mutate(layer.id)}>إعادة معالجة</Button>
+                <Button size="sm" variant="ghost" onClick={() => toggleVisibility.mutate({ id: layer.id, visible: !(layer.visible) })}>
+                  {layer.visible ? 'إخفاء' : 'إظهار'}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+    </div>
+  );
+}
+```
+
+ملاحظات:
+- apiRequest هو wrapper (أنت تستخدمه). إذا يُرجع غير JSON فقد تحتاج تعديل.
+- يُعطّل إعادة المعالجة مباشرة، ويعطي تحديثًا بعد النجاح عبر invalidateQueries.
+
+3) ربط الصفحة بالمسار
+تأكد أن App.tsx أو Router لديك يشير إلى جديد المسار:
+- /admin/gis → AdminGIS component (موضوعة في nested layout)
+
+مثال باستخدام wouter (App.tsx):
+```tsx
+// داخل <Switch> أو Routerتعريف:
+<Route path="/admin/gis" component={AdminGIS} />
+```
+أو إذا تستعمل AdminDashboardLayout approach: ensure a route that wraps:
+```
+/admin/gis -> <RequireAuth role="admin"><AdminDashboardLayout><AdminGIS/></AdminDashboardLayout></RequireAuth>
+```
+
+4) اختبار سريع محلياً
+- افتح http://localhost:5000/admin/gis بعد تسجيل admin.  
+- يجب أن ترى قائمة الطبقات (من debug API) وthumbnails. اضغط إعادة معالجة → تحقق من response (Network tab) ثم تحقّق من /api/gis/jobs/:id أو /api/gis/debug/layers مرة أخرى بعد لحظات.
+
+5) تحسينات لاحقة
+- إضافة status indicator (processing spinner) و WebSocket/Server-Sent-Events لعرض progress حقيقي.  
+- دعم pagination للطبقات لو كثرت.  
+- إضافة search/filter by layer name/date/status.
+
+6) إن حدث أي خطأ (404 أو blank)
+- افتح DevTools Console → أرسِل لي رسالة الخطأ.  
+- تأكد أن AdminGIS component مستورد ومسجل في Router (اسم الملف ومسار import صحيح).  
+- تأكد أن API /api/gis/debug/layers يرجع JSON وبتنسيق { success:true, layers: [...] }.
+
+---
+
+خلاصة سريعة الآن (اقترح تنفيذ مباشر)
+- أنشأتِ AdminLayout — ممتاز. الآن انسخ AdminGIS.tsx أعلاه إلى مشروعك، أضف المسار `/admin/gis` في App.tsx داخل نفس RequireAuth + AdminDashboardLayout، ثم أعد تحميل الصفحة.  
+- جرب إعادة المعالجة والتبديل رؤية واطلب مني فحص أي خطأ — أجهّز إصلاحات سريعة (server or client).
+
+هل تريد أن ألصق AdminGIS.tsx في مشروعك الآن (أجري PR تلقائي) أم تفضّل تنسخه وتلصقه محليًا؟ أستطيع أيضاً أن أطلب من الـAgent لصق الملف وتشغيل الفحص تلقائيًا — قُل "الصق وشغّل" وإذا تريد أن أفعل ذلك نيابةً عنك.

@@ -361,12 +361,12 @@ export default function AdminUsers() {
                 />
               </div>
             </div>
-            <Select value={roleFilter} onValueChange={setRoleFilter}>
+            <Select value={roleFilter} onValueChange={(value) => setRoleFilter(value === 'all' ? '' : value)}>
               <SelectTrigger className="w-full sm:w-48">
                 <SelectValue placeholder="تصفية حسب الدور" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">جميع الأدوار</SelectItem>
+                <SelectItem value="all">جميع الأدوار</SelectItem>
                 {Object.entries(roleLabels).map(([value, label]) => (
                   <SelectItem key={value} value={value}>
                     {label}

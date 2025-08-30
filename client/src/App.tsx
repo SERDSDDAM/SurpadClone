@@ -294,16 +294,14 @@ function Router() {
           <Route path="/admin/gis">
             {() => {
               const AdminDashboardLayout = React.lazy(() => import('@/layouts/AdminDashboardLayout'));
+              const AdminGIS = React.lazy(() => import('@/pages/admin/AdminGIS'));
               const RequireAuth = React.lazy(() => import('@/components/RequireAuth'));
               
               return (
                 <React.Suspense fallback={<div className="min-h-screen flex items-center justify-center"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-red-600"></div></div>}>
                   <RequireAuth role="admin">
                     <AdminDashboardLayout>
-                      <div className="p-6">
-                        <h1 className="text-2xl font-bold mb-4">نظام GIS</h1>
-                        <p className="text-gray-600">قريباً...</p>
-                      </div>
+                      <AdminGIS />
                     </AdminDashboardLayout>
                   </RequireAuth>
                 </React.Suspense>
