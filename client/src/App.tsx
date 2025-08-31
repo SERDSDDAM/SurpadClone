@@ -274,6 +274,24 @@ function Router() {
             }}
           </Route>
 
+          <Route path="/admin/users/:id">
+            {() => {
+              const AdminDashboardLayout = React.lazy(() => import('@/layouts/AdminDashboardLayout'));
+              const AdminUserDetails = React.lazy(() => import('@/pages/admin/AdminUserDetails'));
+              const RequireAuth = React.lazy(() => import('@/components/RequireAuth'));
+              
+              return (
+                <React.Suspense fallback={<div className="min-h-screen flex items-center justify-center"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-red-600"></div></div>}>
+                  <RequireAuth role="admin">
+                    <AdminDashboardLayout>
+                      <AdminUserDetails />
+                    </AdminDashboardLayout>
+                  </RequireAuth>
+                </React.Suspense>
+              );
+            }}
+          </Route>
+
           <Route path="/admin/roles">
             {() => {
               const AdminDashboardLayout = React.lazy(() => import('@/layouts/AdminDashboardLayout'));

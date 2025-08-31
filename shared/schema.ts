@@ -73,6 +73,49 @@ export const surveyPoints = pgTable("survey_points", {
   photos: jsonb("photos").default('[]'),
 });
 
+// Audit Logs for system tracking and security
+export const auditLogs = pgTable("audit_logs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull(),
+  action: varchar("action").notNull(),
+  tableName: varchar("table_name"),
+  recordId: varchar("record_id"),
+  oldValues: jsonb("old_values"),
+  newValues: jsonb("new_values"),
+  ipAddress: varchar("ip_address"),
+  userAgent: text("user_agent"),
+  sessionId: varchar("session_id"),
+  timestamp: timestamp("timestamp").defaultNow(),
+  success: boolean("success").default(true),
+  errorMessage: text("error_message"),
+});
+
+// User Sessions for login tracking and security
+export const userSessions = pgTable("user_sessions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull(),
+  sessionToken: varchar("session_token").notNull().unique(),
+  ipAddress: varchar("ip_address"),
+  userAgent: text("user_agent"),
+  loginAt: timestamp("login_at").defaultNow(),
+  lastActivity: timestamp("last_activity").defaultNow(),
+  logoutAt: timestamp("logout_at"),
+  active: boolean("active").default(true),
+});
+
+// System Settings
+export const systemSettings = pgTable("system_settings", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  category: varchar("category").notNull(),
+  key: varchar("key").notNull(),
+  value: text("value"),
+  dataType: varchar("data_type").default("string"), // string, number, boolean, json
+  description: text("description"),
+  isPublic: boolean("is_public").default(false),
+  updatedBy: varchar("updated_by"),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 // Survey Lines
 export const surveyLines = pgTable("survey_lines", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -539,10 +582,10 @@ export const users = pgTable("users", {
   nationalId: varchar("national_id").notNull().unique(),
   username: varchar("username").unique(),
   email: varchar("email"),
-  phone: varchar("phone").notNull(),
   password: varchar("password"), // hashed password
   firstName: varchar("first_name").notNull(),
   lastName: varchar("last_name").notNull(),
+  name: text("name").notNull(),
   middleName: varchar("middle_name"),
   dateOfBirth: varchar("date_of_birth"),
   gender: varchar("gender"), // male, female
@@ -555,9 +598,9 @@ export const users = pgTable("users", {
   }>(),
   role: varchar("role").notNull().default("citizen"), // citizen, inspector, admin, surveyor, engineer, contractor
   permissions: jsonb("permissions").$type<string[]>().default([]),
+  status: varchar("status").notNull().default("active"), // active, inactive, suspended, deleted
   isActive: boolean("is_active").default(true),
   isVerified: boolean("is_verified").default(false),
-  lastLogin: timestamp("last_login"),
   loginAttempts: integer("login_attempts").default(0),
   lockedUntil: timestamp("locked_until"),
   twoFactorEnabled: boolean("two_factor_enabled").default(false),
@@ -565,6 +608,12 @@ export const users = pgTable("users", {
   backupCodes: jsonb("backup_codes").$type<string[]>().default([]),
   refreshTokenHash: varchar("refresh_token_hash"),
   profilePicture: varchar("profile_picture"),
+  passwordResetRequired: boolean("password_reset_required").default(false),
+  phone: varchar("phone").notNull(),
+  department: varchar("department"),
+  position: varchar("position"),
+  lastLogin: timestamp("last_login"),
+  deletedAt: timestamp("deleted_at"),
   preferences: jsonb("preferences").$type<{
     language: string;
     theme: string;
@@ -586,48 +635,7 @@ export const users = pgTable("users", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
-// User Sessions Table
-export const userSessions = pgTable("user_sessions", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
-  sessionToken: varchar("session_token").notNull().unique(),
-  deviceInfo: jsonb("device_info").$type<{
-    deviceType: string;
-    browser: string;
-    os: string;
-    ipAddress: string;
-    userAgent: string;
-  }>(),
-  location: jsonb("location").$type<{
-    country?: string;
-    city?: string;
-    region?: string;
-  }>(),
-  isActive: boolean("is_active").default(true),
-  expiresAt: timestamp("expires_at").notNull(),
-  createdAt: timestamp("created_at").defaultNow(),
-  lastAccessedAt: timestamp("last_accessed_at").defaultNow(),
-});
 
-// Security Audit Log Table
-export const auditLogs = pgTable("audit_logs", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  userId: varchar("user_id").references(() => users.id),
-  action: varchar("action").notNull(), // login, logout, create, update, delete, view
-  resource: varchar("resource").notNull(), // building_permit, inspection, user, etc.
-  resourceId: varchar("resource_id"),
-  details: jsonb("details").$type<{
-    oldValues?: any;
-    newValues?: any;
-    metadata?: any;
-  }>(),
-  ipAddress: varchar("ip_address"),
-  userAgent: varchar("user_agent"),
-  success: boolean("success").default(true),
-  errorMessage: text("error_message"),
-  severity: varchar("severity").default("info"), // info, warning, error, critical
-  createdAt: timestamp("created_at").defaultNow(),
-});
 
 // Password Reset Tokens
 export const passwordResetTokens = pgTable("password_reset_tokens", {
