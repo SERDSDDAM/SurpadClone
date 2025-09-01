@@ -71,8 +71,8 @@ export default function EmployeeLogin() {
       console.log('🚀 Redirecting user with role:', role);
       
       if (role === "admin" || role === "super_admin") {
-        console.log('📍 Redirecting admin to /admin-dashboard');
-        window.location.href = "/admin-dashboard";
+        console.log('📍 Redirecting admin to context management');
+        window.location.href = "/admin/context-management";
       } else if (role === "inspector") {
         window.location.href = "/inspector-field-app";
       } else if (role === "surveyor") {
