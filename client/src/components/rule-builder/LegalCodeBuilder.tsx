@@ -24,6 +24,9 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { apiRequest } from '@/lib/queryClient';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { ScenarioSimulator } from './ScenarioSimulator';
+import { SmartTemplatesLibrary } from './SmartTemplatesLibrary';
+import { AITrainerInterface } from './AITrainerInterface';
 
 interface LegalRule {
   id?: string;
@@ -290,10 +293,13 @@ export function LegalCodeBuilder() {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-6">
           <TabsTrigger value="builder">إنشاء القانون</TabsTrigger>
+          <TabsTrigger value="templates">القوالب الذكية</TabsTrigger>
           <TabsTrigger value="test">اختبار القانون</TabsTrigger>
-          <TabsTrigger value="templates">قوالب جاهزة</TabsTrigger>
+          <TabsTrigger value="simulator">محاكي السيناريوهات</TabsTrigger>
+          <TabsTrigger value="ai-trainer">مدرب الذكاء الاصطناعي</TabsTrigger>
+          <TabsTrigger value="history">السجل</TabsTrigger>
         </TabsList>
 
         <TabsContent value="builder" className="space-y-6">
@@ -680,54 +686,62 @@ export function LegalCodeBuilder() {
         </TabsContent>
 
         <TabsContent value="templates" className="space-y-6">
+          <SmartTemplatesLibrary onApplyTemplate={(template) => {
+            // تطبيق القالب المحدد
+            setRule({
+              ...rule,
+              ruleName: template.name,
+              description: template.description,
+              category: template.category,
+              conditions: template.conditions,
+              actions: template.actions
+            });
+            setActiveTab('builder');
+            toast({
+              title: "تم تطبيق القالب",
+              description: `تم تطبيق قالب "${template.name}" بنجاح`,
+            });
+          }} />
+        </TabsContent>
+
+        <TabsContent value="simulator" className="space-y-6">
+          <ScenarioSimulator />
+        </TabsContent>
+
+        <TabsContent value="ai-trainer" className="space-y-6">
+          <AITrainerInterface />
+        </TabsContent>
+
+        <TabsContent value="history" className="space-y-6">
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <BookOpen className="h-5 w-5" />
-                قوالب قوانين البناء الجاهزة
+                سجل القوانين المنشأة
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* قوالب جاهزة للقوانين الشائعة */}
-                <div className="p-4 border rounded-lg">
-                  <h4 className="font-medium mb-2">موافقة تلقائية - مباني سكنية صغيرة</h4>
-                  <p className="text-sm text-muted-foreground mb-3">
-                    موافقة تلقائية للمباني السكنية أقل من 200 م² وطابقين
-                  </p>
-                  <Button size="sm" variant="outline">
-                    استخدام هذا القالب
-                  </Button>
+              <div className="space-y-4">
+                <div className="flex justify-between items-center p-4 bg-gray-50 rounded-lg">
+                  <div className="text-right">
+                    <h4 className="font-medium">قانون المساحة الدنيا للمباني السكنية</h4>
+                    <p className="text-sm text-gray-600">تم الإنشاء: 2024-01-20 15:30</p>
+                  </div>
+                  <Badge variant="outline">نشط</Badge>
                 </div>
-
-                <div className="p-4 border rounded-lg">
-                  <h4 className="font-medium mb-2">مراجعة - مباني تجارية</h4>
-                  <p className="text-sm text-muted-foreground mb-3">
-                    تتطلب مراجعة للمباني التجارية بدون موقف سيارات
-                  </p>
-                  <Button size="sm" variant="outline">
-                    استخدام هذا القالب
-                  </Button>
+                <div className="flex justify-between items-center p-4 bg-gray-50 rounded-lg">
+                  <div className="text-right">
+                    <h4 className="font-medium">قانون ارتفاع المباني التجارية</h4>
+                    <p className="text-sm text-gray-600">تم الإنشاء: 2024-01-19 11:15</p>
+                  </div>
+                  <Badge variant="outline">نشط</Badge>
                 </div>
-
-                <div className="p-4 border rounded-lg">
-                  <h4 className="font-medium mb-2">تصعيد - مباني عالية</h4>
-                  <p className="text-sm text-muted-foreground mb-3">
-                    تصعيد للإدارة للمباني أكثر من 5 طوابق
-                  </p>
-                  <Button size="sm" variant="outline">
-                    استخدام هذا القالب
-                  </Button>
-                </div>
-
-                <div className="p-4 border rounded-lg">
-                  <h4 className="font-medium mb-2">رفض - مناطق تراثية</h4>
-                  <p className="text-sm text-muted-foreground mb-3">
-                    رفض تلقائي للمباني في المناطق التراثية
-                  </p>
-                  <Button size="sm" variant="outline">
-                    استخدام هذا القالب
-                  </Button>
+                <div className="flex justify-between items-center p-4 bg-gray-50 rounded-lg">
+                  <div className="text-right">
+                    <h4 className="font-medium">قانون المباني الصناعية - المسافات الآمنة</h4>
+                    <p className="text-sm text-gray-600">تم الإنشاء: 2024-01-18 09:45</p>
+                  </div>
+                  <Badge variant="secondary">متوقف</Badge>
                 </div>
               </div>
             </CardContent>

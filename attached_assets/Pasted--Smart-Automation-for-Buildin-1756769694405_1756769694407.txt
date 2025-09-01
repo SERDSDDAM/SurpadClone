@@ -1,0 +1,813 @@
+# 🧠 المرحلة الثالثة المطورة: الأتمتة الذكية لقانون البناء والاشتراطات (Smart Automation for Building Code)
+
+> **"نظام يقرأ القانون → يفهم الاشتراطات → يطبقها تلقائياً → ويصدر القرار — بدون تدخل بشري."**
+
+بعد دراسة متأنية للوثائق القانونية ودليل الخدمات الشامل، أقدم لكم تصميم متكامل ومتطور للمرحلة الثالثة، يركز على **أتمتة قانون البناء والاشتراطات والمتطلبات للخدمات**، مع واجهات ذكية لإنشاء القوانين وإدخال المدخلات.
+
+---
+
+## 🎯 الأهداف الاستراتيجية
+
+1. **تحويل القانون إلى كود رقمي**: كل مادة قانونية → قاعدة أتمتة.
+2. **ربط الخدمات بالاشتراطات تلقائياً**: عند تقديم طلب — النظام يتحقق من استيفاء الشروط.
+3. **واجهات No-Code لإنشاء القوانين**: للمدراء والمهندسين — لا يحتاجون مبرمجاً.
+4. **محاكاة السيناريوهات**: اختبار القاعدة قبل تفعيلها.
+5. **التعلم من التاريخ**: كل تدخل بشري يُستخدم لتدريب النظام.
+6. **إنشاء دليل خدمات ذكي**: مرتبط مباشرة بالقانون والاشتراطات.
+
+---
+
+## 🧩 المكونات الأساسية المطورة
+
+### 1. محرك الأتمتة القانونية (LegalAutomationEngine.ts) - مطور
+
+```ts
+// server/services/LegalAutomationEngine.ts
+export class LegalAutomationEngine {
+  async evaluateServiceRequest(requestData: ServiceRequest): Promise<AutomationResult> {
+    // 1. جلب الخدمة المطلوبة
+    const service = await db.service.findUnique({ 
+      where: { id: requestData.serviceId },
+      include: { requirements: true }
+    });
+    
+    // 2. جلب جميع الاشتراطات المرتبطة بالخدمة
+    const evaluations = [];
+    let totalScore = 0;
+    let passedCount = 0;
+
+    for (let sr of service.requirements) {
+      const requirement = await db.requirement.findUnique({
+        where: { id: sr.requirementId }
+      });
+
+      // 3. تقييم كل اشتراط بناءً على نوعه
+      const evaluation = await this.evaluateRequirement(requirement, requestData, sr);
+      evaluations.push(evaluation);
+
+      if (evaluation.passed) {
+        passedCount++;
+        totalScore += 1;
+      } else {
+        totalScore += 0.2; // جزئي
+      }
+    }
+
+    // 4. اتخاذ القرار النهائي
+    const passRate = passedCount / service.requirements.length;
+    const confidence = totalScore / service.requirements.length;
+    
+    return {
+      approved: passRate >= 0.8,
+      confidence,
+      passRate,
+      evaluations,
+      recommendedActions: this.getRecommendedActions(evaluations),
+      nextSteps: this.getNextSteps(service, evaluations)
+    };
+  }
+
+  private async evaluateRequirement(req: Requirement, data: ServiceRequest, sr: ServiceRequirement): Promise<EvaluationResult> {
+    let passed = false;
+    let message = "";
+
+    switch (req.valueType) {
+      case 'number':
+        if (req.minValue && data[req.field] < req.minValue) {
+          passed = false;
+          message = `غير مستوفى: ${req.requirementText} - الحد الأدنى هو ${req.minValue} ${req.unit}`;
+        } else if (req.maxValue && data[req.field] > req.maxValue) {
+          passed = false;
+          message = `غير مستوفى: ${req.requirementText} - الحد الأقصى هو ${req.maxValue} ${req.unit}`;
+        } else {
+          passed = true;
+          message = "مستوفى";
+        }
+        break;
+      
+      case 'boolean':
+        if (req.isMandatory && !data[req.field]) {
+          passed = false;
+          message = `غير مستوفى: ${req.requirementText} - هذا الشرط إلزامي`;
+        } else {
+          passed = true;
+          message = "مستوفى";
+        }
+        break;
+      
+      case 'string':
+        if (req.isMandatory && (!data[req.field] || data[req.field].trim() === '')) {
+          passed = false;
+          message = `غير مستوفى: ${req.requirementText} - هذا الحقل مطلوب`;
+        } else {
+          passed = true;
+          message = "مستوفى";
+        }
+        break;
+      
+      case 'conditional':
+        // التحقق من الشرط المشروط
+        if (sr.isConditional && sr.conditionDetails) {
+          const conditionPassed = this.evaluateCondition(sr.conditionDetails, data);
+          if (!conditionPassed) {
+            passed = true; // ليس مطلوباً إذا لم يتحقق الشرط
+            message = "غير مطلوب في هذا السيناريو";
+          } else {
+            // إذا تحقق الشرط، نطبق نفس المنطق كما في الحالات الأخرى
+            if (req.isMandatory && (!data[req.field] || data[req.field].trim() === '')) {
+              passed = false;
+              message = `غير مستوفى: ${req.requirementText} - هذا الحقل مطلوب عند ${sr.conditionDetails}`;
+            } else {
+              passed = true;
+              message = "مستوفى";
+            }
+          }
+        }
+        break;
+    }
+
+    return {
+      requirementId: req.id,
+      requirementText: req.requirementText,
+      passed,
+      message,
+      category: req.category.name
+    };
+  }
+
+  private evaluateCondition(condition: string, data: any): boolean {
+    // مثال: "في حال زيادة مساحة البناء عن 200 متر مربع"
+    if (condition.includes("زيادة مساحة البناء عن")) {
+      const area = parseFloat(data.area_sqm || 0);
+      const threshold = parseFloat(condition.match(/\d+/)?.[0] || "0");
+      return area > threshold;
+    }
+    return false;
+  }
+
+  private getRecommendedActions(evaluations: EvaluationResult[]): string[] {
+    const actions: string[] = [];
+    evaluations.forEach(eval => {
+      if (!eval.passed) {
+        actions.push(`تعديل: ${eval.requirementText}`);
+      }
+    });
+    return actions;
+  }
+
+  private getNextSteps(service: Service, evaluations: EvaluationResult[]): NextStep[] {
+    const steps: NextStep[] = [];
+    
+    // الخطوة 1: تقديم المستندات الناقصة
+    const missingDocs = evaluations.filter(e => !e.passed && e.category === 'وثائق');
+    if (missingDocs.length > 0) {
+      steps.push({
+        step: 1,
+        title: "تقديم المستندات الناقصة",
+        description: `يرجى تقديم الوثائق التالية: ${missingDocs.map(d => d.requirementText).join(', ')}`,
+        estimatedTime: "1-2 أيام عمل"
+      });
+    }
+
+    // الخطوة 2: دفع الرسوم
+    if (service.fees && !steps.some(s => s.title.includes('دفع'))) {
+      steps.push({
+        step: 2,
+        title: "دفع الرسوم",
+        description: `المبلغ المطلوب: ${service.fees}. يمكن الدفع إلكترونياً أو في مركز الخدمة.`,
+        estimatedTime: "فوري"
+      });
+    }
+
+    // الخطوة 3: المراجعة الفنية
+    const technicalReqs = evaluations.filter(e => !e.passed && e.category === 'فنية');
+    if (technicalReqs.length > 0) {
+      steps.push({
+        step: 3,
+        title: "المراجعة الفنية",
+        description: `سيقوم فريقنا الفني بمراجعة المتطلبات الفنية التالية: ${technicalReqs.map(t => t.requirementText).join(', ')}`,
+        estimatedTime: "3-5 أيام عمل"
+      });
+    }
+
+    return steps;
+  }
+}
+
+interface EvaluationResult {
+  requirementId: string;
+  requirementText: string;
+  passed: boolean;
+  message: string;
+  category: string;
+}
+
+interface NextStep {
+  step: number;
+  title: string;
+  description: string;
+  estimatedTime: string;
+}
+```
+
+---
+
+### 2. واجهة "مساعد إنشاء القوانين" (No-Code Rule Builder) - مطورة
+
+#### التصميم:
+```tsx
+// client/src/components/RuleBuilder.tsx
+function RuleBuilder() {
+  const [ruleName, setRuleName] = useState('');
+  const [serviceId, setServiceId] = useState('');
+  const [conditions, setConditions] = useState<Condition[]>([]);
+  const [actions, setActions] = useState<Action[]>([]);
+  const [testData, setTestData] = useState<any>({});
+  const [testResult, setTestResult] = useState<TestResult | null>(null);
+
+  const addCondition = () => {
+    setConditions([...conditions, { field: '', operator: '', value: '' }]);
+  };
+
+  const addAction = () => {
+    setActions([...actions, { type: 'approve', message: '' }]);
+  };
+
+  const testRule = async () => {
+    const response = await fetch('/api/automation/test-rule', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        conditions,
+        actions,
+        testData
+      })
+    });
+    const result = await response.json();
+    setTestResult(result);
+  };
+
+  return (
+    <div className="rule-builder p-6 bg-white rounded-lg shadow-md">
+      <h2 className="text-2xl font-bold mb-6">مساعد إنشاء القوانين</h2>
+      
+      {/* معلومات القاعدة */}
+      <div className="mb-6">
+        <input
+          type="text"
+          placeholder="اسم القاعدة"
+          value={ruleName}
+          onChange={(e) => setRuleName(e.target.value)}
+          className="w-full p-3 border border-gray-300 rounded-md mb-4"
+        />
+        <select
+          value={serviceId}
+          onChange={(e) => setServiceId(e.target.value)}
+          className="w-full p-3 border border-gray-300 rounded-md"
+        >
+          <option value="">اختر الخدمة</option>
+          <option value="building-permit">ترخيص بناء جديد</option>
+          <option value="demolition-permit">رخصة هدم</option>
+          <option value="fencing-permit">رخصة تسوير</option>
+        </select>
+      </div>
+
+      {/* If Conditions */}
+      <div className="mb-6">
+        <h3 className="text-xl font-semibold mb-4">شروط التطبيق (If)</h3>
+        {conditions.map((condition, index) => (
+          <div key={index} className="flex space-x-2 mb-4">
+            <select
+              value={condition.field}
+              onChange={(e) => {
+                const newConditions = [...conditions];
+                newConditions[index].field = e.target.value;
+                setConditions(newConditions);
+              }}
+              className="p-2 border border-gray-300 rounded-md"
+            >
+              <option value="">اختر الحقل</option>
+              <option value="area_sqm">مساحة البناء</option>
+              <option value="height_m">الارتفاع</option>
+              <option value="location">الموقع</option>
+              <option value="has_survey">هل يوجد تقرير تربة؟</option>
+            </select>
+            <select
+              value={condition.operator}
+              onChange={(e) => {
+                const newConditions = [...conditions];
+                newConditions[index].operator = e.target.value;
+                setConditions(newConditions);
+              }}
+              className="p-2 border border-gray-300 rounded-md"
+            >
+              <option value="<">&lt;</option>
+              <option value=">">&gt;</option>
+              <option value="==">=</option>
+              <option value="!=">!=</option>
+            </select>
+            <input
+              type="text"
+              placeholder="القيمة"
+              value={condition.value}
+              onChange={(e) => {
+                const newConditions = [...conditions];
+                newConditions[index].value = e.target.value;
+                setConditions(newConditions);
+              }}
+              className="p-2 border border-gray-300 rounded-md"
+            />
+            <button
+              onClick={() => {
+                const newConditions = conditions.filter((_, i) => i !== index);
+                setConditions(newConditions);
+              }}
+              className="bg-red-500 text-white px-3 py-1 rounded-md"
+            >
+              حذف
+            </button>
+          </div>
+        ))}
+        <button
+          onClick={addCondition}
+          className="bg-blue-500 text-white px-4 py-2 rounded-md"
+        >
+          + إضافة شرط
+        </button>
+      </div>
+
+      {/* Then Actions */}
+      <div className="mb-6">
+        <h3 className="text-xl font-semibold mb-4">الإجراءات (Then)</h3>
+        {actions.map((action, index) => (
+          <div key={index} className="flex space-x-2 mb-4">
+            <select
+              value={action.type}
+              onChange={(e) => {
+                const newActions = [...actions];
+                newActions[index].type = e.target.value;
+                setActions(newActions);
+              }}
+              className="p-2 border border-gray-300 rounded-md"
+            >
+              <option value="approve">موافقة</option>
+              <option value="reject">رفض</option>
+              <option value="escalate">تصعيد</option>
+              <option value="request_docs">طلب مستندات إضافية</option>
+            </select>
+            <input
+              type="text"
+              placeholder="رسالة الإجراء"
+              value={action.message}
+              onChange={(e) => {
+                const newActions = [...actions];
+                newActions[index].message = e.target.value;
+                setActions(newActions);
+              }}
+              className="flex-1 p-2 border border-gray-300 rounded-md"
+            />
+            <button
+              onClick={() => {
+                const newActions = actions.filter((_, i) => i !== index);
+                setActions(newActions);
+              }}
+              className="bg-red-500 text-white px-3 py-1 rounded-md"
+            >
+              حذف
+            </button>
+          </div>
+        ))}
+        <button
+          onClick={addAction}
+          className="bg-blue-500 text-white px-4 py-2 rounded-md"
+        >
+          + إضافة إجراء
+        </button>
+      </div>
+
+      {/* Test Section */}
+      <div className="mb-6">
+        <h3 className="text-xl font-semibold mb-4">اختبار القاعدة</h3>
+        <div className="grid grid-cols-2 gap-4 mb-4">
+          <input
+            type="number"
+            placeholder="مساحة البناء (م²)"
+            onChange={(e) => setTestData({...testData, area_sqm: e.target.value})}
+            className="p-2 border border-gray-300 rounded-md"
+          />
+          <input
+            type="number"
+            placeholder="الارتفاع (م)"
+            onChange={(e) => setTestData({...testData, height_m: e.target.value})}
+            className="p-2 border border-gray-300 rounded-md"
+          />
+        </div>
+        <button
+          onClick={testRule}
+          className="bg-green-500 text-white px-4 py-2 rounded-md"
+        >
+          تشغيل المحاكاة
+        </button>
+        
+        {testResult && (
+          <div className="mt-4 p-4 bg-gray-100 rounded-md">
+            <h4 className="font-semibold">نتيجة الاختبار:</h4>
+            <p className={testResult.approved ? 'text-green-600' : 'text-red-600'}>
+              {testResult.approved ? '✅ موافقة' : '❌ رفض'}
+            </p>
+            <p>درجة الثقة: {testResult.confidence}</p>
+            <div>
+              <h5 className="font-semibold">التقييمات:</h5>
+              <ul>
+                {testResult.evaluations.map((eval, i) => (
+                  <li key={i} className={eval.passed ? 'text-green-600' : 'text-red-600'}>
+                    {eval.message}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Save Button */}
+      <button
+        onClick={saveRule}
+        className="bg-purple-500 text-white px-6 py-3 rounded-md font-semibold"
+      >
+        حفظ القاعدة
+      </button>
+    </div>
+  );
+}
+```
+
+---
+
+### 3. واجهة "دليل الخدمات الذكي" (Smart Service Guide)
+
+#### التصميم:
+```tsx
+// client/src/components/SmartServiceGuide.tsx
+function SmartServiceGuide() {
+  const [selectedService, setSelectedService] = useState<Service | null>(null);
+  const [userAnswers, setUserAnswers] = useState<Record<string, any>>({});
+  const [eligibility, setEligibility] = useState<EligibilityResult | null>(null);
+
+  const handleAnswerChange = (questionId: string, answer: any) => {
+    setUserAnswers({
+      ...userAnswers,
+      [questionId]: answer
+    });
+  };
+
+  const checkEligibility = async () => {
+    if (!selectedService) return;
+    
+    const response = await fetch('/api/automation/check-eligibility', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        serviceId: selectedService.id,
+        answers: userAnswers
+      })
+    });
+    const result = await response.json();
+    setEligibility(result);
+  };
+
+  return (
+    <div className="smart-service-guide p-6 bg-white rounded-lg shadow-md">
+      <h2 className="text-2xl font-bold mb-6">دليل الخدمات الذكي</h2>
+      
+      {/* Service Selection */}
+      <div className="mb-6">
+        <label className="block text-sm font-medium text-gray-700 mb-2">
+          اختر الخدمة التي ترغب في الحصول عليها:
+        </label>
+        <select
+          onChange={(e) => {
+            const serviceId = e.target.value;
+            const service = services.find(s => s.id === serviceId);
+            setSelectedService(service || null);
+            setUserAnswers({});
+            setEligibility(null);
+          }}
+          className="w-full p-3 border border-gray-300 rounded-md"
+        >
+          <option value="">اختر الخدمة</option>
+          {services.map(service => (
+            <option key={service.id} value={service.id}>
+              {service.name}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      {selectedService && (
+        <>
+          {/* Service Description */}
+          <div className="mb-6 p-4 bg-blue-50 rounded-md">
+            <h3 className="text-lg font-semibold mb-2">{selectedService.name}</h3>
+            <p>{selectedService.description}</p>
+            <div className="mt-2">
+              <span className="inline-block bg-green-100 text-green-800 text-xs font-semibold mr-2 px-2.5 py-0.5 rounded">
+                المدة: {selectedService.duration}
+              </span>
+              <span className="inline-block bg-yellow-100 text-yellow-800 text-xs font-semibold mr-2 px-2.5 py-0.5 rounded">
+                الرسوم: {selectedService.fees}
+              </span>
+            </div>
+          </div>
+
+          {/* Eligibility Questions */}
+          <div className="mb-6">
+            <h3 className="text-xl font-semibold mb-4">أسئلة الأهلية</h3>
+            {selectedService.eligibilityQuestions.map((question, index) => (
+              <div key={index} className="mb-4 p-4 border border-gray-200 rounded-md">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  {question.text}
+                </label>
+                {question.type === 'boolean' && (
+                  <div className="flex space-x-4">
+                    <label className="inline-flex items-center">
+                      <input
+                        type="radio"
+                        name={question.id}
+                        value="true"
+                        onChange={(e) => handleAnswerChange(question.id, e.target.value === 'true')}
+                        className="form-radio"
+                      />
+                      <span className="mr-2">نعم</span>
+                    </label>
+                    <label className="inline-flex items-center">
+                      <input
+                        type="radio"
+                        name={question.id}
+                        value="false"
+                        onChange={(e) => handleAnswerChange(question.id, e.target.value === 'true')}
+                        className="form-radio"
+                      />
+                      <span className="mr-2">لا</span>
+                    </label>
+                  </div>
+                )}
+                {question.type === 'number' && (
+                  <input
+                    type="number"
+                    onChange={(e) => handleAnswerChange(question.id, parseFloat(e.target.value))}
+                    className="w-full p-2 border border-gray-300 rounded-md"
+                    placeholder={question.placeholder}
+                  />
+                )}
+                {question.type === 'text' && (
+                  <input
+                    type="text"
+                    onChange={(e) => handleAnswerChange(question.id, e.target.value)}
+                    className="w-full p-2 border border-gray-300 rounded-md"
+                    placeholder={question.placeholder}
+                  />
+                )}
+                {question.type === 'select' && (
+                  <select
+                    onChange={(e) => handleAnswerChange(question.id, e.target.value)}
+                    className="w-full p-2 border border-gray-300 rounded-md"
+                  >
+                    <option value="">اختر...</option>
+                    {question.options?.map((option, i) => (
+                      <option key={i} value={option.value}>{option.label}</option>
+                    ))}
+                  </select>
+                )}
+              </div>
+            ))}
+          </div>
+
+          {/* Check Eligibility Button */}
+          <button
+            onClick={checkEligibility}
+            className="bg-blue-500 text-white px-6 py-3 rounded-md font-semibold mb-6"
+          >
+            التحقق من الأهلية
+          </button>
+
+          {/* Eligibility Result */}
+          {eligibility && (
+            <div className={`p-6 rounded-md ${
+              eligibility.eligible ? 'bg-green-50 border border-green-200' : 'bg-red-50 border border-red-200'
+            }`}>
+              <h3 className="text-lg font-semibold mb-4">
+                {eligibility.eligible ? '🎉 مبروك! أنت مؤهل لهذه الخدمة' : '❌ عذرًا، أنت غير مؤهل لهذه الخدمة'}
+              </h3>
+              
+              {eligibility.eligible && (
+                <>
+                  <p className="mb-4">بناءً على إجاباتك، يمكنك المضي قدمًا في طلب هذه الخدمة.</p>
+                  <div className="mb-4">
+                    <h4 className="font-semibold mb-2">المستندات المطلوبة:</h4>
+                    <ul className="list-disc list-inside">
+                      {eligibility.requiredDocuments.map((doc, i) => (
+                        <li key={i}>{doc}</li>
+                      ))}
+                    </ul>
+                  </div>
+                  <div className="mb-4">
+                    <h4 className="font-semibold mb-2">الخطوات التالية:</h4>
+                    <ol className="list-decimal list-inside">
+                      {eligibility.nextSteps.map((step, i) => (
+                        <li key={i} className="mb-2">
+                          <strong>{step.step}. {step.title}</strong>
+                          <p>{step.description}</p>
+                          <p className="text-sm text-gray-600">الوقت المقدر: {step.estimatedTime}</p>
+                        </li>
+                      ))}
+                    </ol>
+                  </div>
+                  <button className="bg-green-500 text-white px-6 py-3 rounded-md font-semibold">
+                    بدء طلب الخدمة
+                  </button>
+                </>
+              )}
+
+              {!eligibility.eligible && (
+                <>
+                  <p className="mb-4">بناءً على إجاباتك، لا يمكنك طلب هذه الخدمة في الوقت الحالي.</p>
+                  <div className="mb-4">
+                    <h4 className="font-semibold mb-2">الأسباب:</h4>
+                    <ul className="list-disc list-inside text-red-700">
+                      {eligibility.reasons.map((reason, i) => (
+                        <li key={i}>{reason}</li>
+                      ))}
+                    </ul>
+                  </div>
+                  <div className="mb-4">
+                    <h4 className="font-semibold mb-2">الحلول المقترحة:</h4>
+                    <ul className="list-disc list-inside">
+                      {eligibility.suggestedActions.map((action, i) => (
+                        <li key={i}>{action}</li>
+                      ))}
+                    </ul>
+                  </div>
+                  <div className="mb-4">
+                    <h4 className="font-semibold mb-2">خدمات بديلة قد تناسبك:</h4>
+                    <ul className="list-disc list-inside">
+                      {eligibility.alternativeServices.map((service, i) => (
+                        <li key={i}>
+                          <a href="#" className="text-blue-600 hover:underline">
+                            {service.name}
+                          </a> - {service.description}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                </>
+              )}
+            </div>
+          )}
+        </>
+      )}
+    </div>
+  );
+}
+
+// أنواع البيانات
+interface Service {
+  id: string;
+  name: string;
+  description: string;
+  duration: string;
+  fees: string;
+  eligibilityQuestions: Question[];
+}
+
+interface Question {
+  id: string;
+  text: string;
+  type: 'boolean' | 'number' | 'text' | 'select';
+  placeholder?: string;
+  options?: { value: string; label: string }[];
+}
+
+interface EligibilityResult {
+  eligible: boolean;
+  reasons: string[];
+  suggestedActions: string[];
+  requiredDocuments: string[];
+  nextSteps: NextStep[];
+  alternativeServices: Service[];
+}
+
+interface NextStep {
+  step: number;
+  title: string;
+  description: string;
+  estimatedTime: string;
+}
+```
+
+---
+
+### 4. الجداول الجديدة في قاعدة البيانات - مطورة
+
+#### automated_decisions
+```sql
+CREATE TABLE automated_decisions (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  service_request_id VARCHAR(255) NOT NULL,
+  service_id VARCHAR(255) NOT NULL,
+  decision_result VARCHAR(50) NOT NULL, -- 'approved', 'rejected', 'requires_review'
+  confidence_score DECIMAL(3,2) NOT NULL CHECK (confidence_score BETWEEN 0 AND 1),
+  pass_rate DECIMAL(3,2) NOT NULL CHECK (pass_rate BETWEEN 0 AND 1),
+  evaluations JSONB NOT NULL, -- [{"requirement_id": "...", "passed": true, "message": "...", "category": "..."}]
+  recommended_actions JSONB,
+  next_steps JSONB,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+```
+
+#### automation_rules
+```sql
+CREATE TABLE automation_rules (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  rule_name VARCHAR(255) NOT NULL UNIQUE,
+  service_id VARCHAR(255) NOT NULL, -- أي خدمة تنطبق عليها
+  conditions JSONB NOT NULL, -- [{"field": "area_sqm", "operator": "<", "value": 200}]
+  actions JSONB NOT NULL, -- [{"type": "approve", "message": "تمت الموافقة تلقائياً"}]
+  priority INTEGER DEFAULT 5 CHECK (priority BETWEEN 1 AND 10),
+  success_rate DECIMAL(3,2) DEFAULT 1.0,
+  last_executed TIMESTAMPTZ,
+  execution_count INTEGER DEFAULT 0,
+  is_active BOOLEAN DEFAULT TRUE,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+```
+
+#### ai_learning_data
+```sql
+CREATE TABLE ai_learning_data (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  model_type VARCHAR(100) NOT NULL, -- 'approval_model', 'risk_model'
+  input_data JSONB NOT NULL, -- بيانات الطلب الأصلية
+  expected_output JSONB, -- ما كان يجب أن يكون القرار
+  actual_output JSONB, -- ما قرره النظام
+  accuracy_score DECIMAL(3,2),
+  feedback_provided BOOLEAN DEFAULT FALSE,
+  learning_session VARCHAR(255),
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+```
+
+#### service_eligibility_questions
+```sql
+CREATE TABLE service_eligibility_questions (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  service_id VARCHAR(255) NOT NULL,
+  question_text TEXT NOT NULL,
+  question_type VARCHAR(50) NOT NULL, -- 'boolean', 'number', 'text', 'select'
+  question_options JSONB, -- [{"value": "residential", "label": "سكني"}, {"value": "commercial", "label": "تجاري"}]
+  is_required BOOLEAN DEFAULT TRUE,
+  order_index INTEGER DEFAULT 1,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+```
+
+---
+
+## 🚀 أفكار إضافية لتطوير المرحلة
+
+### 1. "الوضع الاستباقي" في التطبيق المحمول
+- عندما يفتح المواطن التطبيق في موقع معين → النظام يقترح عليه الخدمات المناسبة لهذا الموقع تلقائياً.
+
+### 2. "المساعد الصوتي القانوني"
+- مواطن يسأل: "هل يمكنني بناء دور ثالث هنا؟" → النظام يجيب: "نعم، بشرط أن يكون الارتفاع أقل من 12 مترًا حسب المادة 15 من قانون البناء."
+
+### 3. "التنبيهات الوقائية"
+- إذا بدأ المواطن في رفع ملفات لمشروع تجاري → النظام ينبهه: "لا تنسَ توفير موقف سيارات كما يشترط القانون."
+
+### 4. "تحليل المخالفات التنبؤي"
+- النظام يحلل طلبات المناطق ذات كثرة المخالفات → يقترح زيادة الرقابة فيها.
+
+### 5. "التحقق التلقائي من المستندات"
+- المواطن يرفع صورة من وثيقة الملكية → النظام يتحقق من صحتها باستخدام OCR ومقارنتها بقاعدة البيانات.
+
+### 6. "التوصيات الذكية"
+- بناءً على تاريخ المواطن السابق → النظام يقترح عليه الخدمات التي قد يحتاجها في المستقبل.
+
+---
+
+## ✅ الخلاصة
+
+- **الأتمتة ليست فقط للموافقات — بل لتطبيق القانون نفسه**.
+- **الواجهات No-Code تجعل النظام في متناول غير المبرمجين**.
+- **المحاكاة والتدريب يجعلان النظام أكثر دقة مع الوقت**.
+- **هذا هو مستقبل الحكومة الرقمية: ذكاء + بساطة + شفافية**.
+
+هل تريدني أرسل لك:
+- ملف `LegalAutomationEngine.ts` كامل؟
+- كود React لواجهة No-Code Rule Builder؟
+- SQL لإنشاء الجداول؟
+- خطة تدريب للموظفين على إنشاء القوانين؟
+
+قل لي "تم" وأرسل لك كل شيء خلال ساعتين.

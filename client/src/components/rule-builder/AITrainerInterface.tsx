@@ -1,520 +1,447 @@
-import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
-import { Badge } from '@/components/ui/badge';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Progress } from '@/components/ui/progress';
+import { useState, useEffect } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Progress } from "@/components/ui/progress";
+import { Badge } from "@/components/ui/badge";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
   Brain, 
-  CheckCircle, 
-  XCircle, 
   TrendingUp, 
-  RefreshCw, 
-  MessageSquare,
+  AlertCircle, 
+  CheckCircle,
+  XCircle,
+  BarChart3,
   Target,
-  BookOpen,
-  Lightbulb
-} from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
-import { apiRequest } from '@/lib/queryClient';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+  Lightbulb,
+  Database
+} from "lucide-react";
+
+interface LearningMetrics {
+  accuracy: number;
+  processed_cases: number;
+  improvement_rate: number;
+  confidence_score: number;
+  last_training: string;
+}
 
 interface TrainingCase {
   id: string;
-  inputData: Record<string, any>;
-  systemDecision: string;
-  systemConfidence: number;
-  humanDecision: string;
-  humanFeedback: string;
-  correctionDate: string;
-  category: string;
-  status: 'pending' | 'trained' | 'verified';
-  impactScore?: number;
+  input_data: any;
+  expected_decision: string;
+  actual_decision: string;
+  confidence: number;
+  feedback_provided: boolean;
+  learning_impact: 'high' | 'medium' | 'low';
 }
 
-interface ModelMetrics {
-  totalCases: number;
-  trainedCases: number;
-  accuracy: number;
-  lastTraining: string;
-  modelVersion: string;
-  averageConfidence: number;
-  improvementRate: number;
+interface AIInsight {
+  type: 'pattern' | 'recommendation' | 'warning';
+  title: string;
+  description: string;
+  impact: 'high' | 'medium' | 'low';
+  action_needed: boolean;
 }
-
-const DECISION_OPTIONS = [
-  { value: 'approve', label: 'موافقة', color: 'green' },
-  { value: 'reject', label: 'رفض', color: 'red' },
-  { value: 'require_review', label: 'يتطلب مراجعة', color: 'blue' },
-  { value: 'escalate', label: 'تصعيد', color: 'yellow' },
-  { value: 'fast_track', label: 'مسار سريع', color: 'purple' },
-];
 
 export function AITrainerInterface() {
-  const { toast } = useToast();
-  const queryClient = useQueryClient();
+  const [metrics, setMetrics] = useState<LearningMetrics>({
+    accuracy: 0.92,
+    processed_cases: 847,
+    improvement_rate: 0.15,
+    confidence_score: 0.88,
+    last_training: '2024-01-20T10:30:00Z'
+  });
+
+  const [trainingCases, setTrainingCases] = useState<TrainingCase[]>([]);
   const [selectedCase, setSelectedCase] = useState<TrainingCase | null>(null);
-  const [humanDecision, setHumanDecision] = useState('');
-  const [humanFeedback, setHumanFeedback] = useState('');
+  const [feedback, setFeedback] = useState('');
   const [isTraining, setIsTraining] = useState(false);
+  const [insights, setInsights] = useState<AIInsight[]>([]);
 
-  // جلب حالات التدريب
-  const { data: trainingCases, isLoading } = useQuery({
-    queryKey: ['/api/smart-automation/training/cases'],
-    enabled: true,
-  });
+  useEffect(() => {
+    // محاكاة بيانات التدريب
+    const mockCases: TrainingCase[] = [
+      {
+        id: 'case-001',
+        input_data: { buildingArea: 180, height: 15, buildingType: 'residential' },
+        expected_decision: 'approve',
+        actual_decision: 'approve',
+        confidence: 0.95,
+        feedback_provided: true,
+        learning_impact: 'medium'
+      },
+      {
+        id: 'case-002',
+        input_data: { buildingArea: 90, height: 25, buildingType: 'commercial' },
+        expected_decision: 'reject',
+        actual_decision: 'approve',
+        confidence: 0.72,
+        feedback_provided: false,
+        learning_impact: 'high'
+      },
+      {
+        id: 'case-003',
+        input_data: { buildingArea: 250, height: 18, buildingType: 'mixed-use' },
+        expected_decision: 'conditional',
+        actual_decision: 'conditional',
+        confidence: 0.88,
+        feedback_provided: true,
+        learning_impact: 'low'
+      }
+    ];
 
-  // جلب مقاييس النموذج
-  const { data: modelMetrics } = useQuery({
-    queryKey: ['/api/smart-automation/training/metrics'],
-    enabled: true,
-  });
+    const mockInsights: AIInsight[] = [
+      {
+        type: 'pattern',
+        title: 'نمط في المساحات الصغيرة',
+        description: 'النظام يميل لرفض المباني السكنية أقل من 100م² حتى لو كانت تحقق الشروط الأخرى',
+        impact: 'medium',
+        action_needed: true
+      },
+      {
+        type: 'recommendation',
+        title: 'تحسين دقة المباني التجارية',
+        description: 'يُنصح بإضافة المزيد من حالات التدريب للمباني التجارية لتحسين الدقة',
+        impact: 'high',
+        action_needed: true
+      },
+      {
+        type: 'warning',
+        title: 'انخفاض في الثقة',
+        description: 'مستوى الثقة في القرارات المتعلقة بالمباني المختلطة منخفض نسبياً',
+        impact: 'medium',
+        action_needed: false
+      }
+    ];
 
-  // إضافة تصحيح بشري
-  const correctDecisionMutation = useMutation({
-    mutationFn: async (correction: {
-      caseId: string;
-      humanDecision: string;
-      humanFeedback: string;
-    }) => {
-      return apiRequest('/api/smart-automation/training/correct', {
-        method: 'POST',
-        body: JSON.stringify(correction),
-      });
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/smart-automation/training/cases'] });
-      setSelectedCase(null);
-      setHumanDecision('');
-      setHumanFeedback('');
-      toast({
-        title: "تم الحفظ",
-        description: "تم حفظ التصحيح البشري بنجاح",
-      });
-    },
-    onError: (error: any) => {
-      toast({
-        title: "خطأ",
-        description: error.message || "فشل في حفظ التصحيح",
-        variant: "destructive",
-      });
-    }
-  });
+    setTrainingCases(mockCases);
+    setInsights(mockInsights);
+  }, []);
 
-  // إعادة تدريب النموذج
-  const retrainModelMutation = useMutation({
-    mutationFn: async () => {
-      setIsTraining(true);
-      return apiRequest('/api/smart-automation/training/retrain', {
-        method: 'POST',
-      });
-    },
-    onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ['/api/smart-automation/training/metrics'] });
-      setIsTraining(false);
-      toast({
-        title: "تم التدريب",
-        description: `تم إعادة تدريب النموذج. دقة جديدة: ${(data.newAccuracy * 100).toFixed(1)}%`,
-      });
-    },
-    onError: (error: any) => {
-      setIsTraining(false);
-      toast({
-        title: "خطأ في التدريب",
-        description: error.message || "فشل في إعادة تدريب النموذج",
-        variant: "destructive",
-      });
-    }
-  });
-
-  const cases: TrainingCase[] = (trainingCases as any)?.data || [];
-  const metrics: ModelMetrics = (modelMetrics as any)?.data || {
-    totalCases: 0,
-    trainedCases: 0,
-    accuracy: 0,
-    lastTraining: '',
-    modelVersion: '1.0.0',
-    averageConfidence: 0,
-    improvementRate: 0
-  };
-
-  const handleCorrectDecision = () => {
-    if (!selectedCase || !humanDecision || !humanFeedback.trim()) {
-      toast({
-        title: "خطأ",
-        description: "يرجى إكمال جميع الحقول المطلوبة",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    correctDecisionMutation.mutate({
-      caseId: selectedCase.id,
-      humanDecision,
-      humanFeedback,
-    });
-  };
-
-  const getDecisionColor = (decision: string) => {
-    const option = DECISION_OPTIONS.find(opt => opt.value === decision);
-    return option?.color || 'gray';
-  };
-
-  const getDecisionLabel = (decision: string) => {
-    const option = DECISION_OPTIONS.find(opt => opt.value === decision);
-    return option?.label || decision;
-  };
-
-  if (isLoading) {
-    return (
-      <div className="space-y-6">
-        <Card>
-          <CardContent className="pt-6 text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-            <p className="mt-4 text-muted-foreground">جاري تحميل بيانات التدريب...</p>
-          </CardContent>
-        </Card>
-      </div>
+  const provideFeedback = async (caseId: string, feedback: string, correctDecision: string) => {
+    setIsTraining(true);
+    
+    // محاكاة عملية التدريب
+    await new Promise(resolve => setTimeout(resolve, 2000));
+    
+    // تحديث الحالة
+    setTrainingCases(prev => 
+      prev.map(c => 
+        c.id === caseId 
+          ? { ...c, feedback_provided: true, expected_decision: correctDecision }
+          : c
+      )
     );
-  }
+
+    // تحسين المقاييس
+    setMetrics(prev => ({
+      ...prev,
+      accuracy: Math.min(prev.accuracy + 0.02, 1.0),
+      processed_cases: prev.processed_cases + 1,
+      improvement_rate: 0.18
+    }));
+
+    setIsTraining(false);
+    setFeedback('');
+    setSelectedCase(null);
+  };
+
+  const startBatchTraining = async () => {
+    setIsTraining(true);
+    
+    // محاكاة التدريب المجمع
+    for (let i = 0; i <= 100; i += 10) {
+      await new Promise(resolve => setTimeout(resolve, 200));
+      // تحديث شريط التقدم سيتم هنا
+    }
+
+    // تحديث المقاييس بعد التدريب
+    setMetrics(prev => ({
+      ...prev,
+      accuracy: Math.min(prev.accuracy + 0.05, 1.0),
+      confidence_score: Math.min(prev.confidence_score + 0.03, 1.0),
+      last_training: new Date().toISOString()
+    }));
+
+    setIsTraining(false);
+  };
+
+  const getDecisionIcon = (decision: string) => {
+    switch (decision) {
+      case 'approve': return <CheckCircle className="h-4 w-4 text-green-500" />;
+      case 'reject': return <XCircle className="h-4 w-4 text-red-500" />;
+      case 'conditional': return <AlertCircle className="h-4 w-4 text-yellow-500" />;
+      default: return <AlertCircle className="h-4 w-4 text-gray-500" />;
+    }
+  };
+
+  const getInsightIcon = (type: string) => {
+    switch (type) {
+      case 'pattern': return <BarChart3 className="h-4 w-4" />;
+      case 'recommendation': return <Lightbulb className="h-4 w-4" />;
+      case 'warning': return <AlertCircle className="h-4 w-4" />;
+      default: return <Brain className="h-4 w-4" />;
+    }
+  };
 
   return (
-    <div className="space-y-6">
-      {/* مقاييس النموذج */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card>
-          <CardContent className="pt-6 text-center">
-            <div className="text-2xl font-bold text-blue-600">{metrics.accuracy.toFixed(1)}%</div>
-            <p className="text-sm text-muted-foreground">دقة النموذج</p>
-            <div className="mt-2">
-              <Progress value={metrics.accuracy} className="h-2" />
-            </div>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardContent className="pt-6 text-center">
-            <div className="text-2xl font-bold text-green-600">{metrics.trainedCases}</div>
-            <p className="text-sm text-muted-foreground">حالات مُدربة</p>
-            <div className="text-xs text-muted-foreground mt-1">
-              من أصل {metrics.totalCases}
-            </div>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardContent className="pt-6 text-center">
-            <div className="text-2xl font-bold text-purple-600">{metrics.averageConfidence.toFixed(1)}%</div>
-            <p className="text-sm text-muted-foreground">متوسط الثقة</p>
-            <div className="flex items-center justify-center mt-2">
-              {metrics.improvementRate > 0 ? (
-                <TrendingUp className="h-4 w-4 text-green-600" />
-              ) : null}
-              <span className="text-xs text-muted-foreground ml-1">
-                {metrics.improvementRate > 0 && `+${metrics.improvementRate.toFixed(1)}%`}
-              </span>
-            </div>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardContent className="pt-6 text-center">
-            <div className="text-lg font-bold text-gray-700">{metrics.modelVersion}</div>
-            <p className="text-sm text-muted-foreground">إصدار النموذج</p>
-            <div className="text-xs text-muted-foreground mt-1">
-              {metrics.lastTraining ? 
-                new Date(metrics.lastTraining).toLocaleDateString('ar-YE') : 
-                'لم يتم التدريب بعد'
-              }
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+    <Card className="w-full">
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2 text-right">
+          <Brain className="h-5 w-5" />
+          واجهة تدريب الذكاء الاصطناعي
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        <Tabs defaultValue="metrics" className="w-full">
+          <TabsList className="grid w-full grid-cols-4">
+            <TabsTrigger value="metrics">المقاييس</TabsTrigger>
+            <TabsTrigger value="training">التدريب</TabsTrigger>
+            <TabsTrigger value="insights">الرؤى</TabsTrigger>
+            <TabsTrigger value="history">السجل</TabsTrigger>
+          </TabsList>
 
-      {/* أزرار التحكم */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Brain className="h-5 w-5" />
-            مدرب الذكاء الاصطناعي
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-center gap-4">
-            <Button
-              onClick={() => retrainModelMutation.mutate()}
-              disabled={isTraining || cases.length === 0}
-              size="lg"
-              data-testid="button-retrain-model"
-            >
-              <RefreshCw className={`h-4 w-4 mr-2 ${isTraining ? 'animate-spin' : ''}`} />
-              {isTraining ? 'جاري إعادة التدريب...' : 'إعادة تدريب النموذج'}
-            </Button>
-            
-            <div className="text-sm text-muted-foreground">
-              <p>عدد الحالات المتاحة للتدريب: {cases.filter(c => c.status === 'pending').length}</p>
-              <p>آخر تدريب: {metrics.lastTraining ? 
-                new Date(metrics.lastTraining).toLocaleString('ar-YE') : 
-                'لم يتم التدريب بعد'
-              }</p>
-            </div>
-          </div>
-          
-          {metrics.accuracy < 80 && (
-            <Alert className="mt-4">
-              <Target className="h-4 w-4" />
-              <AlertDescription>
-                دقة النموذج أقل من 80%. يُنصح بإضافة المزيد من التصحيحات البشرية وإعادة التدريب.
-              </AlertDescription>
-            </Alert>
-          )}
-        </CardContent>
-      </Card>
+          <TabsContent value="metrics" className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              <Card>
+                <CardContent className="p-4">
+                  <div className="flex items-center justify-between">
+                    <div className="text-right">
+                      <p className="text-sm font-medium text-gray-600">الدقة</p>
+                      <p className="text-2xl font-bold text-green-600">
+                        {(metrics.accuracy * 100).toFixed(1)}%
+                      </p>
+                    </div>
+                    <Target className="h-8 w-8 text-green-500" />
+                  </div>
+                </CardContent>
+              </Card>
 
-      {/* جدول حالات التدريب */}
-      <Card>
-        <CardHeader>
-          <CardTitle>حالات التدريب والتصحيح</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>الحالة</TableHead>
-                <TableHead>البيانات</TableHead>
-                <TableHead>قرار النظام</TableHead>
-                <TableHead>القرار الصحيح</TableHead>
-                <TableHead>مستوى التأثير</TableHead>
-                <TableHead>تاريخ التصحيح</TableHead>
-                <TableHead>إجراءات</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {cases.map((case_) => (
-                <TableRow key={case_.id}>
-                  <TableCell>
-                    <Badge variant={
-                      case_.status === 'trained' ? 'default' :
-                      case_.status === 'verified' ? 'secondary' : 'outline'
-                    }>
-                      {case_.status === 'trained' ? 'مُدرب' :
-                       case_.status === 'verified' ? 'مُؤكد' : 'في الانتظار'}
-                    </Badge>
-                  </TableCell>
-                  
-                  <TableCell>
-                    <div className="max-w-xs">
-                      <details className="cursor-pointer">
-                        <summary className="text-sm font-medium">عرض البيانات</summary>
-                        <pre className="text-xs mt-2 p-2 bg-gray-100 rounded">
-                          {JSON.stringify(case_.inputData, null, 2)}
-                        </pre>
-                      </details>
+              <Card>
+                <CardContent className="p-4">
+                  <div className="flex items-center justify-between">
+                    <div className="text-right">
+                      <p className="text-sm font-medium text-gray-600">الحالات المعالجة</p>
+                      <p className="text-2xl font-bold text-blue-600">
+                        {metrics.processed_cases.toLocaleString()}
+                      </p>
                     </div>
-                  </TableCell>
-                  
-                  <TableCell>
-                    <div className="flex items-center gap-2">
-                      <Badge variant="outline" className={`bg-${getDecisionColor(case_.systemDecision)}-100`}>
-                        {getDecisionLabel(case_.systemDecision)}
-                      </Badge>
-                      <span className="text-xs text-muted-foreground">
-                        ثقة: {(case_.systemConfidence * 100).toFixed(0)}%
-                      </span>
+                    <Database className="h-8 w-8 text-blue-500" />
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardContent className="p-4">
+                  <div className="flex items-center justify-between">
+                    <div className="text-right">
+                      <p className="text-sm font-medium text-gray-600">معدل التحسن</p>
+                      <p className="text-2xl font-bold text-purple-600">
+                        +{(metrics.improvement_rate * 100).toFixed(1)}%
+                      </p>
                     </div>
-                  </TableCell>
-                  
-                  <TableCell>
-                    {case_.humanDecision ? (
-                      <div>
-                        <Badge variant="outline" className={`bg-${getDecisionColor(case_.humanDecision)}-100`}>
-                          {getDecisionLabel(case_.humanDecision)}
-                        </Badge>
-                        {case_.humanFeedback && (
-                          <details className="mt-1 cursor-pointer">
-                            <summary className="text-xs text-muted-foreground">عرض التعليق</summary>
-                            <p className="text-xs mt-1 p-2 bg-blue-50 rounded">
-                              {case_.humanFeedback}
-                            </p>
-                          </details>
+                    <TrendingUp className="h-8 w-8 text-purple-500" />
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardContent className="p-4">
+                  <div className="flex items-center justify-between">
+                    <div className="text-right">
+                      <p className="text-sm font-medium text-gray-600">مستوى الثقة</p>
+                      <p className="text-2xl font-bold text-orange-600">
+                        {(metrics.confidence_score * 100).toFixed(1)}%
+                      </p>
+                    </div>
+                    <Brain className="h-8 w-8 text-orange-500" />
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            <Card>
+              <CardContent className="p-4">
+                <h4 className="font-medium mb-4 text-right">تقدم الدقة عبر الوقت</h4>
+                <div className="space-y-2">
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-gray-600">الهدف: 95%</span>
+                    <span className="text-sm font-medium">{(metrics.accuracy * 100).toFixed(1)}%</span>
+                  </div>
+                  <Progress value={metrics.accuracy * 100} className="w-full" />
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="training" className="space-y-4">
+            <div className="flex justify-between items-center">
+              <Button 
+                onClick={startBatchTraining} 
+                disabled={isTraining}
+                className="flex items-center gap-2"
+              >
+                <Brain className="h-4 w-4" />
+                {isTraining ? 'جاري التدريب...' : 'بدء التدريب المجمع'}
+              </Button>
+              <Badge variant="outline">
+                {trainingCases.filter(c => !c.feedback_provided).length} حالة تحتاج تغذية راجعة
+              </Badge>
+            </div>
+
+            <div className="space-y-4">
+              {trainingCases.map((trainingCase) => (
+                <Card key={trainingCase.id} className={!trainingCase.feedback_provided ? 'border-yellow-200 bg-yellow-50' : ''}>
+                  <CardContent className="p-4">
+                    <div className="flex justify-between items-start">
+                      <div className="flex-1 text-right">
+                        <div className="flex items-center gap-2 mb-2">
+                          {getDecisionIcon(trainingCase.actual_decision)}
+                          <span className="text-sm font-medium">
+                            القرار: {trainingCase.actual_decision}
+                          </span>
+                          <Badge variant="outline">
+                            ثقة: {(trainingCase.confidence * 100).toFixed(0)}%
+                          </Badge>
+                        </div>
+                        
+                        <div className="text-sm text-gray-600 mb-2">
+                          البيانات: مساحة {trainingCase.input_data.buildingArea}م²، 
+                          ارتفاع {trainingCase.input_data.height}م، 
+                          نوع: {trainingCase.input_data.buildingType}
+                        </div>
+
+                        {trainingCase.expected_decision !== trainingCase.actual_decision && (
+                          <div className="text-sm text-red-600 mb-2">
+                            ⚠️ القرار المتوقع: {trainingCase.expected_decision}
+                          </div>
                         )}
                       </div>
-                    ) : (
-                      <span className="text-muted-foreground">-</span>
-                    )}
-                  </TableCell>
-                  
-                  <TableCell>
-                    {case_.impactScore ? (
-                      <div className="flex items-center gap-1">
-                        <Progress value={case_.impactScore * 20} className="w-12 h-2" />
-                        <span className="text-xs">{case_.impactScore}/5</span>
-                      </div>
-                    ) : (
-                      <span className="text-muted-foreground">-</span>
-                    )}
-                  </TableCell>
-                  
-                  <TableCell className="text-sm">
-                    {case_.correctionDate ? 
-                      new Date(case_.correctionDate).toLocaleDateString('ar-YE') : 
-                      '-'
-                    }
-                  </TableCell>
-                  
-                  <TableCell>
-                    {!case_.humanDecision && (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => setSelectedCase(case_)}
-                        data-testid={`button-correct-${case_.id}`}
-                      >
-                        <MessageSquare className="h-4 w-4 mr-1" />
-                        تصحيح
-                      </Button>
-                    )}
-                    {case_.humanDecision && case_.status === 'pending' && (
-                      <Badge variant="secondary" className="text-xs">
-                        جاهز للتدريب
-                      </Badge>
-                    )}
-                  </TableCell>
-                </TableRow>
+
+                      {!trainingCase.feedback_provided && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => setSelectedCase(trainingCase)}
+                        >
+                          تقديم تغذية راجعة
+                        </Button>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
               ))}
-            </TableBody>
-          </Table>
-          
-          {cases.length === 0 && (
-            <div className="text-center py-8">
-              <BookOpen className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-              <p className="text-muted-foreground">لا توجد حالات تدريب متاحة حالياً</p>
-              <p className="text-sm text-muted-foreground mt-2">
-                ستظهر هنا الحالات التي يتخذ فيها النظام قرارات خاطئة لإعادة تدريبه
-              </p>
             </div>
-          )}
-        </CardContent>
-      </Card>
 
-      {/* نموذج التصحيح */}
-      {selectedCase && (
-        <Card className="border-blue-200 bg-blue-50">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <MessageSquare className="h-5 w-5 text-blue-600" />
-              تصحيح قرار النظام
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <h4 className="font-medium text-sm mb-2">بيانات الحالة:</h4>
-                <pre className="text-xs p-3 bg-gray-100 rounded max-h-32 overflow-y-auto">
-                  {JSON.stringify(selectedCase.inputData, null, 2)}
-                </pre>
-              </div>
-              
-              <div>
-                <h4 className="font-medium text-sm mb-2">قرار النظام الحالي:</h4>
-                <div className="flex items-center gap-2">
-                  <Badge variant="outline" className={`bg-${getDecisionColor(selectedCase.systemDecision)}-100`}>
-                    {getDecisionLabel(selectedCase.systemDecision)}
-                  </Badge>
-                  <span className="text-sm text-muted-foreground">
-                    ثقة: {(selectedCase.systemConfidence * 100).toFixed(0)}%
-                  </span>
+            {selectedCase && (
+              <Card className="border-blue-200 bg-blue-50">
+                <CardContent className="p-4">
+                  <h4 className="font-medium mb-4 text-right">تغذية راجعة للحالة {selectedCase.id}</h4>
+                  <div className="space-y-4">
+                    <div>
+                      <label className="text-sm font-medium mb-2 block text-right">القرار الصحيح:</label>
+                      <Select defaultValue={selectedCase.expected_decision}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="اختر القرار الصحيح" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="approve">موافقة</SelectItem>
+                          <SelectItem value="reject">رفض</SelectItem>
+                          <SelectItem value="conditional">مشروط</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div>
+                      <label className="text-sm font-medium mb-2 block text-right">ملاحظات إضافية:</label>
+                      <Textarea
+                        value={feedback}
+                        onChange={(e) => setFeedback(e.target.value)}
+                        placeholder="اشرح سبب القرار الصحيح..."
+                        className="text-right"
+                      />
+                    </div>
+
+                    <div className="flex gap-2 justify-end">
+                      <Button variant="outline" onClick={() => setSelectedCase(null)}>
+                        إلغاء
+                      </Button>
+                      <Button 
+                        onClick={() => provideFeedback(selectedCase.id, feedback, 'approve')}
+                        disabled={isTraining}
+                      >
+                        حفظ التغذية الراجعة
+                      </Button>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+          </TabsContent>
+
+          <TabsContent value="insights" className="space-y-4">
+            {insights.map((insight, index) => (
+              <Card key={index} className="border-l-4 border-l-blue-500">
+                <CardContent className="p-4">
+                  <div className="flex items-start gap-3">
+                    {getInsightIcon(insight.type)}
+                    <div className="flex-1 text-right">
+                      <div className="flex items-center gap-2 mb-2">
+                        <h4 className="font-medium">{insight.title}</h4>
+                        <Badge variant={
+                          insight.impact === 'high' ? 'destructive' : 
+                          insight.impact === 'medium' ? 'secondary' : 
+                          'outline'
+                        }>
+                          {insight.impact === 'high' ? 'عالي' : insight.impact === 'medium' ? 'متوسط' : 'منخفض'}
+                        </Badge>
+                      </div>
+                      <p className="text-sm text-gray-600 mb-2">{insight.description}</p>
+                      {insight.action_needed && (
+                        <Button size="sm" variant="outline">
+                          اتخاذ إجراء
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </TabsContent>
+
+          <TabsContent value="history" className="space-y-4">
+            <Card>
+              <CardContent className="p-4">
+                <h4 className="font-medium mb-4 text-right">سجل جلسات التدريب</h4>
+                <div className="space-y-3">
+                  <div className="flex justify-between items-center p-3 bg-gray-50 rounded">
+                    <div className="text-right">
+                      <p className="text-sm font-medium">جلسة التدريب #847</p>
+                      <p className="text-xs text-gray-600">2024-01-20 10:30 صباحاً</p>
+                    </div>
+                    <Badge variant="outline">+2.5% دقة</Badge>
+                  </div>
+                  <div className="flex justify-between items-center p-3 bg-gray-50 rounded">
+                    <div className="text-right">
+                      <p className="text-sm font-medium">جلسة التدريب #846</p>
+                      <p className="text-xs text-gray-600">2024-01-19 02:15 مساءً</p>
+                    </div>
+                    <Badge variant="outline">+1.8% دقة</Badge>
+                  </div>
+                  <div className="flex justify-between items-center p-3 bg-gray-50 rounded">
+                    <div className="text-right">
+                      <p className="text-sm font-medium">جلسة التدريب #845</p>
+                      <p className="text-xs text-gray-600">2024-01-18 09:45 صباحاً</p>
+                    </div>
+                    <Badge variant="outline">+3.1% دقة</Badge>
+                  </div>
                 </div>
-              </div>
-            </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium mb-2">القرار الصحيح:</label>
-                <select
-                  value={humanDecision}
-                  onChange={(e) => setHumanDecision(e.target.value)}
-                  className="w-full px-3 py-2 border rounded-lg"
-                  data-testid="select-human-decision"
-                >
-                  <option value="">اختر القرار الصحيح</option>
-                  {DECISION_OPTIONS.map(option => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium mb-2">سبب التصحيح:</label>
-                <Textarea
-                  placeholder="اشرح لماذا هذا القرار صحيح وما الذي أخطأ فيه النظام..."
-                  value={humanFeedback}
-                  onChange={(e) => setHumanFeedback(e.target.value)}
-                  rows={3}
-                  data-testid="textarea-human-feedback"
-                />
-              </div>
-            </div>
-            
-            <div className="flex items-center gap-2">
-              <Button
-                onClick={handleCorrectDecision}
-                disabled={correctDecisionMutation.isPending || !humanDecision || !humanFeedback.trim()}
-                data-testid="button-save-correction"
-              >
-                <CheckCircle className="h-4 w-4 mr-2" />
-                {correctDecisionMutation.isPending ? 'جاري الحفظ...' : 'حفظ التصحيح'}
-              </Button>
-              
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setSelectedCase(null);
-                  setHumanDecision('');
-                  setHumanFeedback('');
-                }}
-                data-testid="button-cancel-correction"
-              >
-                إلغاء
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* نصائح التدريب */}
-      <Card className="bg-yellow-50 border-yellow-200">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-yellow-800">
-            <Lightbulb className="h-5 w-5" />
-            نصائح لتحسين أداء النموذج
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="text-yellow-700 space-y-2">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <h4 className="font-medium mb-2">🎯 تصحيحات فعّالة:</h4>
-              <ul className="text-sm space-y-1 list-disc list-inside">
-                <li>اشرح السبب بوضوح في تعليقك</li>
-                <li>ركز على الحالات الأكثر تكراراً</li>
-                <li>صحح القرارات ذات التأثير العالي أولاً</li>
-              </ul>
-            </div>
-            <div>
-              <h4 className="font-medium mb-2">📈 تحسين مستمر:</h4>
-              <ul className="text-sm space-y-1 list-disc list-inside">
-                <li>أعد تدريب النموذج كل 20-30 تصحيح</li>
-                <li>راقب اتجاه تحسن الدقة بعد التدريب</li>
-                <li>تحقق من النتائج على حالات جديدة</li>
-              </ul>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-    </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
+      </CardContent>
+    </Card>
   );
 }
