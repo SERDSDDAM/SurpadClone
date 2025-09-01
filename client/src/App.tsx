@@ -69,6 +69,7 @@ import SimpleTestPage from "@/pages/SimpleTestPage";
 import { useSimpleAuth } from "@/hooks/useSimpleAuth";
 import { SmartAutomationDashboard } from "@/pages/SmartAutomationDashboard";
 import { AdvancedRuleBuilderPage } from "@/pages/AdvancedRuleBuilderPage";
+import { AdvancedLegalAutomationPage } from "@/pages/AdvancedLegalAutomationPage";
 
 function Navigation() {
   const [location] = useLocation();
@@ -266,6 +267,7 @@ function Router() {
           <Route path="/phase2-digitization" component={Phase2DigitizationTool} />
         <Route path="/smart-automation" component={SmartAutomationDashboard} />
           <Route path="/rule-builder" component={AdvancedRuleBuilderPage} />
+          <Route path="/advanced-legal-automation" component={AdvancedLegalAutomationPage} />
           <Route path="/simple-digitization" component={SimpleDigitizationTool} />
           <Route path="/qgis-web-tool" component={QGISWebTool} />
           <Route path="/professionals" component={ProfessionalsManagement} />

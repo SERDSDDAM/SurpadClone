@@ -24,6 +24,7 @@ import advancedRbacRoutes from './routes/advanced-rbac-routes';
 import contextAwareRoutes from './routes/context-aware-routes';
 import predictiveRoutes from './routes/predictive-routes';
 import smartAutomationRoutes from './routes/smart-automation-routes';
+import advancedLegalAutomationRoutes from './routes/advanced-legal-automation';
 import { requireAuth, requireRole } from './middleware/auth';
 import rateLimit from 'express-rate-limit';
 import cookieParser from 'cookie-parser';
@@ -187,6 +188,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // Smart Automation Routes (Phase 3)
   app.use('/api/smart-automation', smartAutomationRoutes);
+  
+  // Advanced Legal Automation Routes (Phase 3 Enhanced)
+  app.use('/api/advanced-automation', advancedLegalAutomationRoutes);
   
   // app.use("/api/auth", authManagementRoutes); // Old system - disabled
   // OLD auth system disabled permanently - using new JWT system only
