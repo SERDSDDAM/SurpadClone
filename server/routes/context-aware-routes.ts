@@ -4,7 +4,7 @@
 
 import { Router } from 'express';
 import { contextAwareService } from '../services/ContextAwareService-fixed';
-import { requirePermission } from '../middleware/auth';
+import { requireAuth, requireRole } from '../middleware/auth';
 import { db } from '../db';
 import { eq, and, desc } from 'drizzle-orm';
 import { 
@@ -17,8 +17,9 @@ import { z } from 'zod';
 
 const router = Router();
 
-// التحقق من الهوية مطلوب لجميع المسارات
-router.use(requirePermission('system.access'));
+// التحقق من الهوية والدور الإداري
+router.use(requireAuth);
+router.use(requireRole('admin'));
 
 // Schema للتحقق من البيانات
 const UpdateContextSchema = z.object({
@@ -163,7 +164,7 @@ router.get('/context-state', async (req: any, res) => {
  * إنشاء مشغل سياقي جديد
  * POST /api/context-aware/triggers
  */
-router.post('/triggers', requirePermission('admin.rbac.manage'), async (req: any, res) => {
+router.post('/triggers', async (req: any, res) => {
   try {
     const validatedData = CreateTriggerSchema.parse(req.body);
     const createdBy = req.user?.id || req.user?.claims?.sub;
@@ -176,7 +177,7 @@ router.post('/triggers', requirePermission('admin.rbac.manage'), async (req: any
     };
 
     const [newTrigger] = await db.insert(contextualTriggers)
-      .values(triggerData)
+      .values([triggerData])
       .returning();
 
     res.status(201).json({
@@ -235,7 +236,7 @@ router.get('/triggers', async (req: any, res) => {
  * تحديث مشغل سياقي
  * PUT /api/context-aware/triggers/:triggerId
  */
-router.put('/triggers/:triggerId', requirePermission('admin.rbac.manage'), async (req: any, res) => {
+router.put('/triggers/:triggerId', async (req: any, res) => {
   try {
     const { triggerId } = req.params;
     const validatedData = CreateTriggerSchema.partial().parse(req.body);
@@ -271,7 +272,7 @@ router.put('/triggers/:triggerId', requirePermission('admin.rbac.manage'), async
  * حذف مشغل سياقي
  * DELETE /api/context-aware/triggers/:triggerId
  */
-router.delete('/triggers/:triggerId', requirePermission('admin.rbac.manage'), async (req: any, res) => {
+router.delete('/triggers/:triggerId', async (req: any, res) => {
   try {
     const { triggerId } = req.params;
 
@@ -301,7 +302,7 @@ router.delete('/triggers/:triggerId', requirePermission('admin.rbac.manage'), as
  * تفعيل/إلغاء تفعيل مشغل سياقي
  * PATCH /api/context-aware/triggers/:triggerId/toggle
  */
-router.patch('/triggers/:triggerId/toggle', requirePermission('admin.rbac.manage'), async (req: any, res) => {
+router.patch('/triggers/:triggerId/toggle', async (req: any, res) => {
   try {
     const { triggerId } = req.params;
     const { isActive } = req.body;
@@ -367,7 +368,7 @@ router.get('/check-permission/:permission', async (req: any, res) => {
  * تفعيل وضع الطوارئ
  * POST /api/context-aware/emergency/activate
  */
-router.post('/emergency/activate', requirePermission('emergency.activate'), async (req: any, res) => {
+router.post('/emergency/activate', async (req: any, res) => {
   try {
     const userId = req.body.userId || req.user?.id || req.user?.claims?.sub;
     const activatedBy = req.user?.id || req.user?.claims?.sub;
@@ -400,7 +401,7 @@ router.post('/emergency/activate', requirePermission('emergency.activate'), asyn
  * إلغاء وضع الطوارئ
  * POST /api/context-aware/emergency/deactivate
  */
-router.post('/emergency/deactivate', requirePermission('emergency.deactivate'), async (req: any, res) => {
+router.post('/emergency/deactivate', async (req: any, res) => {
   try {
     const userId = req.body.userId || req.user?.id || req.user?.claims?.sub;
     const reason = req.body.reason || 'انتهاء حالة الطوارئ';
@@ -471,7 +472,7 @@ router.get('/events', async (req: any, res) => {
  * تنظيف الصلاحيات المنتهية الصلاحية
  * POST /api/context-aware/cleanup-expired
  */
-router.post('/cleanup-expired', requirePermission('admin.rbac.manage'), async (req: any, res) => {
+router.post('/cleanup-expired', async (req: any, res) => {
   try {
     await contextAwareService.cleanupExpiredPermissions();
 

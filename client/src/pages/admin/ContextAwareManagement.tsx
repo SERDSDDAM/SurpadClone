@@ -268,7 +268,7 @@ export function ContextAwareManagement() {
               <div className="space-y-4">
                 {triggersLoading ? (
                   <div className="text-center py-8">جاري التحميل...</div>
-                ) : triggers.length === 0 ? (
+                ) : !triggers || triggers.length === 0 ? (
                   <div className="text-center py-8 text-gray-500">
                     لا توجد مشغلات سياقية
                   </div>
@@ -383,7 +383,7 @@ export function ContextAwareManagement() {
             <CardContent>
               {contextLoading ? (
                 <div className="text-center py-8">جاري التحميل...</div>
-              ) : !contextState?.data ? (
+              ) : !contextState || !contextState.data ? (
                 <div className="text-center py-8 text-gray-500">
                   لا توجد بيانات سياق
                 </div>
@@ -393,14 +393,14 @@ export function ContextAwareManagement() {
                     <div className="space-y-3">
                       <h3 className="font-semibold">معلومات المشروع</h3>
                       <p className="text-sm text-gray-600">
-                        المشروع الحالي: {contextState.data.currentProject || 'غير محدد'}
+                        المشروع الحالي: {contextState?.data?.currentProject || 'غير محدد'}
                       </p>
                     </div>
                     
                     <div className="space-y-3">
                       <h3 className="font-semibold">الموقع الجغرافي</h3>
                       <p className="text-sm text-gray-600">
-                        {contextState.data.currentLocation
+                        {contextState?.data?.currentLocation
                           ? `الموقع: ${contextState.data.currentLocation.district || 'غير محدد'}`
                           : 'الموقع: غير محدد'}
                       </p>
@@ -412,7 +412,7 @@ export function ContextAwareManagement() {
                   <div>
                     <h3 className="font-semibold mb-3">الصلاحيات النشطة</h3>
                     <div className="flex flex-wrap gap-2">
-                      {contextState.data.activePermissions?.map((permission: string) => (
+                      {contextState?.data?.activePermissions?.map((permission: string) => (
                         <Badge key={permission} variant="default">
                           {permission}
                         </Badge>
@@ -423,7 +423,7 @@ export function ContextAwareManagement() {
                   <div>
                     <h3 className="font-semibold mb-3">الصلاحيات السياقية</h3>
                     <div className="flex flex-wrap gap-2">
-                      {contextState.data.contextualPermissions?.map((permission: string) => (
+                      {contextState?.data?.contextualPermissions?.map((permission: string) => (
                         <Badge key={permission} variant="secondary">
                           {permission}
                         </Badge>
@@ -431,18 +431,18 @@ export function ContextAwareManagement() {
                     </div>
                   </div>
 
-                  {contextState.data.emergencyStatus?.isActive && (
+                  {contextState?.data?.emergencyStatus?.isActive && (
                     <div className="border-l-4 border-red-500 bg-red-50 p-4 rounded">
                       <div className="flex items-center gap-2">
                         <AlertTriangle className="w-5 h-5 text-red-500" />
                         <h3 className="font-semibold text-red-800">وضع الطوارئ نشط</h3>
                       </div>
                       <p className="text-red-700 mt-2">
-                        المستوى: {contextState.data.emergencyStatus.level}/5
+                        المستوى: {contextState?.data?.emergencyStatus?.level}/5
                         <br />
-                        النوع: {contextState.data.emergencyStatus.type}
+                        النوع: {contextState?.data?.emergencyStatus?.type}
                         <br />
-                        السبب: {contextState.data.emergencyStatus.reason}
+                        السبب: {contextState?.data?.emergencyStatus?.reason}
                       </p>
                     </div>
                   )}
@@ -466,7 +466,7 @@ export function ContextAwareManagement() {
             <CardContent>
               {eventsLoading ? (
                 <div className="text-center py-8">جاري التحميل...</div>
-              ) : events.length === 0 ? (
+              ) : !events || events.length === 0 ? (
                 <div className="text-center py-8 text-gray-500">
                   لا توجد أحداث سياقية
                 </div>

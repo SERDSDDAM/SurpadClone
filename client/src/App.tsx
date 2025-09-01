@@ -303,6 +303,13 @@ function Router() {
               </ProtectedRoute>
             )}
           </Route>
+          <Route path="/admin/context-management">
+            {() => (
+              <ProtectedRoute role="admin">
+                <ContextAwareManagement />
+              </ProtectedRoute>
+            )}
+          </Route>
           <Route path="/admin/context-aware">
             {() => (
               <ProtectedRoute role="admin">
