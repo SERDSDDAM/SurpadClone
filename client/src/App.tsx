@@ -53,6 +53,7 @@ import DigitalCertificates from "@/pages/digital-certificates";
 import NotificationsSystem from "@/pages/notifications-system";
 import { GISDataManagement, DigitizationTool } from "@/pages/gis";
 import SimpleDigitizationTool from "@/pages/gis/simple-digitization-tool";
+import RolesAndPermissions from "@/pages/admin/RolesAndPermissions";
 import QGISWebTool from "@/pages/gis/qgis-web-tool";
 import Phase0Test from "@/pages/Phase0Test";
 import Phase1Processing from "@/pages/Phase1Processing";
@@ -282,6 +283,13 @@ function Router() {
             {() => (
               <ProtectedRoute role="admin">
                 <AdminUsers />
+              </ProtectedRoute>
+            )}
+          </Route>
+          <Route path="/admin-rbac">
+            {() => (
+              <ProtectedRoute role="admin">
+                <RolesAndPermissions />
               </ProtectedRoute>
             )}
           </Route>

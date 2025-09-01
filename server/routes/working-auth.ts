@@ -154,4 +154,38 @@ router.get('/me', (req, res) => {
   }
 });
 
+// Middleware للتحقق من المصادقة
+export const authenticateToken = (req: any, res: any, next: any) => {
+  const authHeader = req.headers.authorization;
+  
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return res.status(401).json({ 
+      error: 'Unauthorized',
+      message: 'مطلوب تسجيل الدخول للوصول لهذا المورد'
+    });
+  }
+
+  const token = authHeader.substring(7);
+  
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'dev-secret-key') as any;
+    const user = TEST_USERS.find(u => u.id === decoded.sub);
+    
+    if (!user) {
+      return res.status(401).json({ 
+        error: 'Unauthorized',
+        message: 'المستخدم غير موجود'
+      });
+    }
+
+    req.user = user;
+    next();
+  } catch (error) {
+    return res.status(401).json({ 
+      error: 'Unauthorized',
+      message: 'رمز المصادقة غير صالح'
+    });
+  }
+};
+
 export default router;

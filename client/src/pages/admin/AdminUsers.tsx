@@ -125,7 +125,7 @@ export default function AdminUsers() {
     mutationFn: async ({ id, isActive }: { id: string; isActive: boolean }) => {
       return await apiRequest(`/api/admin/users/${id}/status`, {
         method: 'PATCH',
-        body: { isActive },
+        body: JSON.stringify({ isActive }),
       });
     },
     onSuccess: () => {
@@ -458,8 +458,9 @@ function UserForm({
 
     const dataToSubmit = { ...formData };
     if (isEdit && !formData.password) {
-      delete dataToSubmit.password;
-      delete dataToSubmit.confirmPassword;
+      const { password, confirmPassword, ...submitData } = dataToSubmit;
+      onSubmit(submitData);
+      return;
     }
 
     onSubmit(dataToSubmit);

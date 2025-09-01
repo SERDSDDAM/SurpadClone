@@ -18,7 +18,8 @@ import {
 import simpleAuthRoutes from "./routes/simple-auth";
 import authManagementRoutes from "./routes/auth-management";
 import simpleJwtAuth from "./routes/simple-jwt-auth";
-import workingAuth from "./routes/working-auth";
+import workingAuth, { authenticateToken } from "./routes/working-auth";
+import rbacRoutes from './routes/rbac-routes';
 import { requireAuth, requireRole } from './middleware/auth';
 import rateLimit from 'express-rate-limit';
 import cookieParser from 'cookie-parser';
@@ -91,6 +92,85 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // Working JWT Auth system
   app.use("/api/auth", workingAuth);
+  
+  // Admin APIs with authentication
+  app.get('/api/admin/users', authenticateToken, (req: any, res) => {
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({
+        error: 'Forbidden',
+        message: 'صلاحية الإدارة مطلوبة للوصول لهذا المورد'
+      });
+    }
+    
+    // إرجاع قائمة المستخدمين (بدون كلمات المرور)
+    const users = [
+      {
+        id: '1',
+        username: 'admin',
+        email: 'admin@banna-yemen.gov.ye',
+        firstName: 'مدير',
+        lastName: 'النظام',
+        fullName: 'مدير النظام',
+        role: 'admin',
+        department: 'الإدارة العامة',
+        organizationUnit: 'المقر الرئيسي',
+        status: 'active',
+        lastLogin: new Date().toISOString(),
+        createdAt: new Date().toISOString()
+      },
+      {
+        id: '2',
+        username: 'surveyor1',
+        email: 'surveyor1@banna-yemen.gov.ye',
+        firstName: 'أحمد',
+        lastName: 'المساح',
+        fullName: 'أحمد المساح',
+        role: 'surveyor',
+        department: 'إدارة المساحة',
+        organizationUnit: 'القطاع الفني',
+        status: 'active',
+        lastLogin: new Date().toISOString(),
+        createdAt: new Date().toISOString()
+      },
+      {
+        id: '3',
+        username: 'inspector1',
+        email: 'inspector1@banna-yemen.gov.ye',
+        firstName: 'محمد',
+        lastName: 'المفتش',
+        fullName: 'محمد المفتش',
+        role: 'inspector',
+        department: 'إدارة التفتيش',
+        organizationUnit: 'قطاع التفتيش والرقابة',
+        status: 'active',
+        lastLogin: new Date().toISOString(),
+        createdAt: new Date().toISOString()
+      },
+      {
+        id: '4',
+        username: 'engineer1',
+        email: 'engineer1@banna-yemen.gov.ye',
+        firstName: 'فاطمة',
+        lastName: 'المهندسة',
+        fullName: 'فاطمة المهندسة',
+        role: 'engineer',
+        department: 'الشؤون الفنية والمباني',
+        organizationUnit: 'القطاع الفني',
+        status: 'active',
+        lastLogin: new Date().toISOString(),
+        createdAt: new Date().toISOString()
+      }
+    ];
+    
+    res.json({
+      success: true,
+      users,
+      total: users.length
+    });
+  });
+  
+  // RBAC Routes
+  app.use('/api/rbac', rbacRoutes);
   
   // app.use("/api/auth", authManagementRoutes); // Old system - disabled
   // OLD auth system disabled permanently - using new JWT system only
