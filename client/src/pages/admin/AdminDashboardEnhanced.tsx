@@ -362,7 +362,7 @@ export default function AdminDashboardEnhanced() {
 
         {/* الصلاحيات المتقدمة */}
         <TabsContent value="permissions" className="space-y-4">
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
             <Card>
               <CardHeader>
                 <CardTitle className="text-base">الصلاحيات المشروطة</CardTitle>
@@ -403,6 +403,24 @@ export default function AdminDashboardEnhanced() {
                 <Link href="/admin-advanced-rbac">
                   <Button variant="outline" size="sm" className="mt-3">
                     إدارة
+                  </Button>
+                </Link>
+              </CardContent>
+            </Card>
+
+            <Card className="border-blue-200 bg-blue-50/30">
+              <CardHeader>
+                <CardTitle className="text-base flex items-center gap-2">
+                  <Settings className="w-4 h-4 text-blue-600" />
+                  الذكاء السياقي
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="text-center">
+                <div className="text-3xl font-bold mb-2 text-blue-600">نشط</div>
+                <p className="text-sm text-gray-600">تفعيل تلقائي للصلاحيات</p>
+                <Link href="/admin/context-aware">
+                  <Button variant="outline" size="sm" className="mt-3 border-blue-200 text-blue-700 hover:bg-blue-100">
+                    إدارة المشغلات
                   </Button>
                 </Link>
               </CardContent>

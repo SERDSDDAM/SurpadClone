@@ -24,6 +24,7 @@ export const taskStatusEnum = pgEnum('task_status', ['pending', 'assigned', 'in_
 export const delegationTypeEnum = pgEnum('delegation_type', ['temporary', 'permanent', 'conditional', 'emergency']);
 export const alertSeverityEnum = pgEnum('alert_severity', ['info', 'warning', 'critical', 'emergency']);
 export const contextTypeEnum = pgEnum('context_type', ['project', 'emergency', 'location', 'time', 'amount']);
+export const emergencyLevelEnum = pgEnum('emergency_level', ['low', 'medium', 'high', 'critical', 'catastrophic']);
 
 // الصلاحيات المشروطة المتقدمة
 export const conditionalPermissions = pgTable('conditional_permissions', {
@@ -561,3 +562,217 @@ export const SmartAlertInsertSchema = createInsertSchema(smartAlerts);
 export const SmartAlertSelectSchema = createSelectSchema(smartAlerts);
 export type SmartAlertInsert = z.infer<typeof SmartAlertInsertSchema>;
 export type SmartAlert = z.infer<typeof SmartAlertSelectSchema>;
+
+// ===== المرحلة 1: الذكاء السياقي التلقائي =====
+
+// جدول المشغلات السياقية للصلاحيات
+export const contextualTriggers = pgTable('contextual_triggers', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: varchar('user_id', { length: 255 }).notNull(),
+  name: varchar('name', { length: 255 }).notNull(),
+  description: text('description'),
+  
+  // نوع المشغل
+  triggerType: contextTypeEnum('trigger_type').notNull(),
+  
+  // الإعدادات حسب النوع
+  projectTriggers: jsonb('project_triggers').$type<{
+    projectIds?: string[];
+    projectTypes?: string[];
+    autoActivateOnOpen?: boolean;
+    autoDeactivateOnClose?: boolean;
+  }>(),
+  
+  locationTriggers: jsonb('location_triggers').$type<{
+    allowedBounds?: [number, number, number, number]; // [minLat, minLng, maxLat, maxLng]
+    allowedDistricts?: string[];
+    allowedOffices?: string[];
+    allowedBuildings?: string[];
+    radius?: number; // متر
+    centerPoint?: [number, number]; // [lat, lng]
+    strictMode?: boolean;
+  }>(),
+  
+  timeTriggers: jsonb('time_triggers').$type<{
+    workingHours?: {
+      start: string; // HH:MM
+      end: string; // HH:MM
+    };
+    allowedDays?: string[]; // ['sunday', 'monday', ...]
+    timeZone?: string;
+    holidayRestrictions?: boolean;
+    emergencyOverride?: boolean;
+  }>(),
+  
+  emergencyTriggers: jsonb('emergency_triggers').$type<{
+    autoActivateOnLevel?: number; // 1-5
+    emergencyTypes?: string[];
+    escalationMinutes?: number;
+    notificationChannels?: string[];
+    overrideAllRestrictions?: boolean;
+  }>(),
+  
+  amountTriggers: jsonb('amount_triggers').$type<{
+    maxAmount?: number;
+    dailyLimit?: number;
+    monthlyLimit?: number;
+    requiresApprovalAbove?: number;
+    escalateAbove?: number;
+  }>(),
+  
+  // الصلاحيات المتأثرة
+  affectedPermissions: jsonb('affected_permissions').$type<string[]>().notNull(),
+  
+  // الإجراءات التلقائية
+  actions: jsonb('actions').$type<{
+    activatePermissions?: string[];
+    deactivatePermissions?: string[];
+    sendNotification?: boolean;
+    logActivity?: boolean;
+    requireConfirmation?: boolean;
+    temporaryDuration?: number; // دقائق
+  }>(),
+  
+  // الحالة والأولوية
+  isActive: boolean('is_active').default(true),
+  priority: integer('priority').default(5), // 1-10
+  
+  // التوقيتات والصلاحية
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
+  createdBy: varchar('created_by', { length: 255 }).notNull(),
+  lastTriggeredAt: timestamp('last_triggered_at'),
+  triggerCount: integer('trigger_count').default(0),
+  
+  // ملاحظات
+  notes: text('notes'),
+}, (table) => ({
+  userTriggerIdx: index('contextual_triggers_user_idx').on(table.userId),
+  typeIdx: index('contextual_triggers_type_idx').on(table.triggerType),
+  activeIdx: index('contextual_triggers_active_idx').on(table.isActive),
+  priorityIdx: index('contextual_triggers_priority_idx').on(table.priority),
+}));
+
+// جدول حالات السياق الحالية للمستخدمين
+export const userContextState = pgTable('user_context_state', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: varchar('user_id', { length: 255 }).notNull().unique(),
+  
+  // السياق الحالي
+  currentProject: varchar('current_project', { length: 255 }),
+  currentLocation: jsonb('current_location').$type<{
+    latitude: number;
+    longitude: number;
+    accuracy?: number;
+    district?: string;
+    office?: string;
+    building?: string;
+    timestamp: string;
+  }>(),
+  
+  currentSession: jsonb('current_session').$type<{
+    sessionId: string;
+    startTime: string;
+    ipAddress: string;
+    userAgent: string;
+    deviceFingerprint: string;
+  }>(),
+  
+  // حالة الطوارئ
+  emergencyStatus: jsonb('emergency_status').$type<{
+    isActive: boolean;
+    level: number; // 1-5
+    type: string;
+    activatedAt?: string;
+    activatedBy?: string;
+    reason?: string;
+  }>(),
+  
+  // الصلاحيات النشطة حالياً
+  activePermissions: jsonb('active_permissions').$type<string[]>(),
+  contextualPermissions: jsonb('contextual_permissions').$type<string[]>(), // مُفعلة بواسطة السياق
+  
+  // إحصائيات الجلسة
+  sessionStats: jsonb('session_stats').$type<{
+    requestCount: number;
+    lastActivityAt: string;
+    riskScore: number;
+    unusualActivity: boolean;
+  }>(),
+  
+  // التحديث والمتابعة
+  updatedAt: timestamp('updated_at').defaultNow(),
+  lastContextCheck: timestamp('last_context_check').defaultNow(),
+  contextVersion: integer('context_version').default(1),
+}, (table) => ({
+  userIdx: index('user_context_state_user_idx').on(table.userId),
+  projectIdx: index('user_context_state_project_idx').on(table.currentProject),
+  updatedIdx: index('user_context_state_updated_idx').on(table.updatedAt),
+}));
+
+// جدول سجل الأحداث السياقية
+export const contextualEvents = pgTable('contextual_events', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: varchar('user_id', { length: 255 }).notNull(),
+  triggerId: uuid('trigger_id').references(() => contextualTriggers.id),
+  
+  // تفاصيل الحدث
+  eventType: varchar('event_type', { length: 100 }).notNull(), // trigger_activated, trigger_deactivated, context_changed, permission_granted, permission_revoked
+  eventData: jsonb('event_data'),
+  
+  // السياق عند وقوع الحدث
+  contextSnapshot: jsonb('context_snapshot').$type<{
+    project?: string;
+    location?: any;
+    timeOfDay?: string;
+    emergencyLevel?: number;
+    riskScore?: number;
+  }>(),
+  
+  // الإجراءات المتخذة
+  actionsPerformed: jsonb('actions_performed').$type<{
+    permissionsActivated?: string[];
+    permissionsDeactivated?: string[];
+    notificationsSent?: string[];
+    alertsGenerated?: string[];
+  }>(),
+  
+  // النتائج والأثر
+  success: boolean('success').default(true),
+  errorMessage: text('error_message'),
+  duration: integer('duration'), // milliseconds
+  
+  // التصنيف والأولوية
+  severity: varchar('severity', { length: 50 }).default('info'), // info, warning, error, critical
+  category: varchar('category', { length: 100 }), // security, workflow, automation, monitoring
+  
+  // التوقيتات
+  createdAt: timestamp('created_at').defaultNow(),
+  processedAt: timestamp('processed_at'),
+  
+  // المعلومات الإضافية
+  metadata: jsonb('metadata'),
+  tags: jsonb('tags').$type<string[]>(),
+}, (table) => ({
+  userEventIdx: index('contextual_events_user_idx').on(table.userId),
+  triggerIdx: index('contextual_events_trigger_idx').on(table.triggerId),
+  typeIdx: index('contextual_events_type_idx').on(table.eventType),
+  createdIdx: index('contextual_events_created_idx').on(table.createdAt),
+  severityIdx: index('contextual_events_severity_idx').on(table.severity),
+}));
+
+// أنواع البيانات للجداول الجديدة
+export const ContextualTriggerInsertSchema = createInsertSchema(contextualTriggers);
+export const ContextualTriggerSelectSchema = createSelectSchema(contextualTriggers);
+export type ContextualTriggerInsert = z.infer<typeof ContextualTriggerInsertSchema>;
+export type ContextualTrigger = z.infer<typeof ContextualTriggerSelectSchema>;
+
+export const UserContextStateInsertSchema = createInsertSchema(userContextState);
+export const UserContextStateSelectSchema = createSelectSchema(userContextState);
+export type UserContextStateInsert = z.infer<typeof UserContextStateInsertSchema>;
+export type UserContextState = z.infer<typeof UserContextStateSelectSchema>;
+
+export const ContextualEventInsertSchema = createInsertSchema(contextualEvents);
+export const ContextualEventSelectSchema = createSelectSchema(contextualEvents);
+export type ContextualEventInsert = z.infer<typeof ContextualEventInsertSchema>;
+export type ContextualEvent = z.infer<typeof ContextualEventSelectSchema>;

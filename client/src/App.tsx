@@ -56,6 +56,7 @@ import SimpleDigitizationTool from "@/pages/gis/simple-digitization-tool";
 import RolesAndPermissions from "@/pages/admin/RolesAndPermissions";
 import AdvancedRBACManagement from "@/pages/admin/AdvancedRBACManagement";
 import AdminDashboardEnhanced from "@/pages/admin/AdminDashboardEnhanced";
+import { ContextAwareManagement } from "@/pages/admin/ContextAwareManagement";
 import QGISWebTool from "@/pages/gis/qgis-web-tool";
 import Phase0Test from "@/pages/Phase0Test";
 import Phase1Processing from "@/pages/Phase1Processing";
@@ -299,6 +300,13 @@ function Router() {
             {() => (
               <ProtectedRoute role="admin">
                 <AdvancedRBACManagement />
+              </ProtectedRoute>
+            )}
+          </Route>
+          <Route path="/admin/context-aware">
+            {() => (
+              <ProtectedRoute role="admin">
+                <ContextAwareManagement />
               </ProtectedRoute>
             )}
           </Route>
