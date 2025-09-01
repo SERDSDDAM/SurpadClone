@@ -22,6 +22,7 @@ import workingAuth, { authenticateToken } from "./routes/working-auth";
 import rbacRoutes from './routes/rbac-routes';
 import advancedRbacRoutes from './routes/advanced-rbac-routes';
 import contextAwareRoutes from './routes/context-aware-routes';
+import predictiveRoutes from './routes/predictive-routes';
 import { requireAuth, requireRole } from './middleware/auth';
 import rateLimit from 'express-rate-limit';
 import cookieParser from 'cookie-parser';
@@ -179,6 +180,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // Context-Aware Intelligence Routes
   app.use('/api/context-aware', contextAwareRoutes);
+  
+  // Predictive Intelligence Routes (Phase 2)
+  app.use('/api/predictive', predictiveRoutes);
   
   // app.use("/api/auth", authManagementRoutes); // Old system - disabled
   // OLD auth system disabled permanently - using new JWT system only

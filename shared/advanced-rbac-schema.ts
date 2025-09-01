@@ -653,6 +653,90 @@ export const contextualTriggers = pgTable('contextual_triggers', {
   priorityIdx: index('contextual_triggers_priority_idx').on(table.priority),
 }));
 
+// ===== المرحلة 2: الذكاء التنبؤي =====
+
+// جدول تحليل أنماط المستخدمين
+export const userPatterns = pgTable('user_patterns', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: varchar('user_id', { length: 255 }).notNull(),
+  patternType: varchar('pattern_type', { length: 100 }).notNull(),
+  patternData: jsonb('pattern_data').notNull(),
+  frequency: integer('frequency').default(1),
+  confidenceScore: decimal('confidence_score', { precision: 3, scale: 2 }).default('0.5'),
+  lastUpdated: timestamp('last_updated').defaultNow(),
+  createdAt: timestamp('created_at').defaultNow(),
+}, (table) => ({
+  userPatternIdx: index('user_patterns_user_idx').on(table.userId),
+  typeIdx: index('user_patterns_type_idx').on(table.patternType),
+  confidenceIdx: index('user_patterns_confidence_idx').on(table.confidenceScore),
+}));
+
+// جدول النماذج التنبؤية
+export const predictiveModels = pgTable('predictive_models', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  modelName: varchar('model_name', { length: 255 }).notNull(),
+  modelType: varchar('model_type', { length: 100 }).notNull(),
+  accuracyScore: decimal('accuracy_score', { precision: 3, scale: 2 }),
+  trainingDataSize: integer('training_data_size'),
+  modelParameters: jsonb('model_parameters'),
+  lastTrained: timestamp('last_trained'),
+  isActive: boolean('is_active').default(true),
+  createdAt: timestamp('created_at').defaultNow(),
+}, (table) => ({
+  nameIdx: index('predictive_models_name_idx').on(table.modelName),
+  typeIdx: index('predictive_models_type_idx').on(table.modelType),
+  activeIdx: index('predictive_models_active_idx').on(table.isActive),
+}));
+
+// جدول سجل التنبؤات
+export const predictionsLog = pgTable('predictions_log', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: varchar('user_id', { length: 255 }).notNull(),
+  predictionType: varchar('prediction_type', { length: 100 }).notNull(),
+  predictedValue: jsonb('predicted_value').notNull(),
+  actualValue: jsonb('actual_value'),
+  accuracyAchieved: decimal('accuracy_achieved', { precision: 3, scale: 2 }),
+  predictionTimestamp: timestamp('prediction_timestamp').defaultNow(),
+  verificationTimestamp: timestamp('verification_timestamp'),
+}, (table) => ({
+  userIdx: index('predictions_log_user_idx').on(table.userId),
+  typeIdx: index('predictions_log_type_idx').on(table.predictionType),
+  timestampIdx: index('predictions_log_timestamp_idx').on(table.predictionTimestamp),
+}));
+
+// جدول التوصيات الذكية
+export const smartRecommendations = pgTable('smart_recommendations', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: varchar('user_id', { length: 255 }).notNull(),
+  recommendationType: varchar('recommendation_type', { length: 100 }).notNull(),
+  title: varchar('title', { length: 500 }).notNull(),
+  description: text('description'),
+  priority: integer('priority').default(5), // 1-10
+  
+  // محتوى التوصية
+  recommendationData: jsonb('recommendation_data').notNull(),
+  expectedBenefit: varchar('expected_benefit', { length: 255 }),
+  confidenceScore: decimal('confidence_score', { precision: 3, scale: 2 }).default('0.7'),
+  
+  // الحالة والتفاعل
+  status: varchar('status', { length: 50 }).default('pending'), // pending, accepted, rejected, implemented
+  userFeedback: jsonb('user_feedback'),
+  implementedAt: timestamp('implemented_at'),
+  effectivenessScore: decimal('effectiveness_score', { precision: 3, scale: 2 }),
+  
+  // صالح حتى
+  validUntil: timestamp('valid_until'),
+  
+  // التدقيق
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
+}, (table) => ({
+  userIdx: index('smart_recommendations_user_idx').on(table.userId),
+  typeIdx: index('smart_recommendations_type_idx').on(table.recommendationType),
+  statusIdx: index('smart_recommendations_status_idx').on(table.status),
+  priorityIdx: index('smart_recommendations_priority_idx').on(table.priority),
+}));
+
 // جدول حالات السياق الحالية للمستخدمين
 export const userContextState = pgTable('user_context_state', {
   id: uuid('id').primaryKey().defaultRandom(),
