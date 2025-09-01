@@ -16,7 +16,8 @@ import {
   Building2,
   Users,
   MessageSquare,
-  Layers
+  Layers,
+  Brain
 } from "lucide-react";
 import { useState } from "react";
 import Dashboard from "@/pages/dashboard";
@@ -66,6 +67,7 @@ import LoginPage from "@/pages/LoginPage";
 import AdminUsers from "@/pages/admin/AdminUsers";
 import SimpleTestPage from "@/pages/SimpleTestPage";
 import { useSimpleAuth } from "@/hooks/useSimpleAuth";
+import { SmartAutomationDashboard } from "@/pages/SmartAutomationDashboard";
 
 function Navigation() {
   const [location] = useLocation();
@@ -86,6 +88,7 @@ function Navigation() {
     { name: "🧪 Phase 0 Test Suite", href: "/phase0-test", icon: Layers },
     { name: "🚀 Phase 1 Processing", href: "/phase1-processing", icon: Layers },
     { name: "⚡ Phase 2 - الرقمنة المتقدمة", href: "/phase2-digitization", icon: Layers },
+    { name: "🧠 Phase 3 - الأتمتة الذكية", href: "/smart-automation", icon: Brain },
     { name: "إدارة المهنيين", href: "/professionals", icon: Users },
     { name: "تطبيق المساح", href: "/field-app", icon: Smartphone },
     { name: "التطبيق النظيف", href: "/clean-field-app", icon: MapPin },
@@ -259,6 +262,7 @@ function Router() {
           <Route path="/phase0-test" component={Phase0Test} />
           <Route path="/phase1-processing" component={Phase1Processing} />
           <Route path="/phase2-digitization" component={Phase2DigitizationTool} />
+        <Route path="/smart-automation" component={SmartAutomationDashboard} />
           <Route path="/simple-digitization" component={SimpleDigitizationTool} />
           <Route path="/qgis-web-tool" component={QGISWebTool} />
           <Route path="/professionals" component={ProfessionalsManagement} />
