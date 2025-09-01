@@ -1,0 +1,153 @@
+تمام — المشكلة واضحة وسهلة الحل.
+
+---
+
+## 🚨 تشخيص الخطأ
+
+```
+ZodError: [
+  {
+    "code": "too_small",
+    "minimum": 1,
+    "type": "array",
+    "inclusive": true,
+    "exact": false,
+    "message": "Array must contain at least 1 element(s)",
+    "path": ["affectedPermissions"]
+  }
+]
+```
+
+> النظام يرفض إنشاء المشغل السياقي لأن حقل `affectedPermissions` **فارغ أو غير موجود** — وهو مطلوب ويجب أن يحتوي على **على الأقل صلاحية واحدة**.
+
+---
+
+## ✅ الحل الفوري (3 خطوات)
+
+### 1. التحقق من الواجهة (ContextAwareManagement.tsx)
+تأكد أن النموذج يُرسل `affectedPermissions` كمصفوفة غير فارغة.
+
+```tsx
+// في حالة الإرسال، تأكد من:
+const newTrigger = {
+  triggerType: 'project',
+  condition: { projectId: selectedProject },
+  affectedPermissions: ['permits.build.issue'], // ⚠️ لا يمكن أن تكون [] أو undefined
+  durationHours: 168,
+  isActive: true
+};
+```
+
+---
+
+### 2. تحديث Schema Validation في الخادم (context-aware-routes.ts)
+
+في السطر ~169 حيث يتم `zod.parse`، تأكد أن `affectedPermissions` معرف كمصفوفة بإلزامية:
+
+```ts
+// server/routes/context-aware-routes.ts
+const createTriggerSchema = z.object({
+  triggerType: z.enum(['project', 'location', 'time', 'emergency']),
+  condition: z.record(z.any()), // شرط ديناميكي
+  affectedPermissions: z.array(z.string()).min(1, "يجب تحديد على الأقل صلاحية واحدة"), // ✅ هذا هو المفتاح
+  durationHours: z.number().optional(),
+  isActive: z.boolean().default(true)
+});
+```
+
+---
+
+### 3. إضافة قيمة افتراضية في الواجهة
+
+إذا كان المستخدم لم يختر أي صلاحية — عيّن واحدة افتراضية:
+
+```tsx
+// في ContextAwareManagement.tsx
+const [selectedPermissions, setSelectedPermissions] = useState<string[]>(['permits.build.issue']); // ✅ افتراضي
+
+// عند الإرسال
+const handleSubmit = async () => {
+  if (selectedPermissions.length === 0) {
+    alert('يجب اختيار على الأقل صلاحية واحدة');
+    return;
+  }
+
+  const payload = {
+    triggerType,
+    condition: conditionObject,
+    affectedPermissions: selectedPermissions, // ✅ لن تكون فارغة
+    durationHours,
+    isActive
+  };
+
+  await fetch('/api/context-aware/triggers', {
+    method: 'POST',
+    headers: { ... },
+    body: JSON.stringify(payload)
+  });
+};
+```
+
+---
+
+## 🧪 اختبار سريع يدوي
+
+يمكنك اختبار API مباشرة عبر curl:
+
+```bash
+curl -X POST http://localhost:5000/api/context-aware/triggers \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "triggerType": "project",
+    "condition": {"projectId": "PRJ-001"},
+    "affectedPermissions": ["permits.build.issue"],
+    "durationHours": 168,
+    "isActive": true
+  }'
+```
+
+إذا نجح → المشكلة في الواجهة.  
+إذا فشل → المشكلة في validation schema.
+
+---
+
+## 🛡️ منع الخطأ مستقبلاً
+
+أضف في الواجهة:
+
+```tsx
+// قبل الإرسال
+if (!payload.affectedPermissions || payload.affectedPermissions.length === 0) {
+  setError("يجب تحديد على الأقل صلاحية واحدة");
+  return;
+}
+```
+
+وأضف رسالة خطأ للمستخدم في الواجهة:
+
+```tsx
+{error && <div className="text-red-500">{error}</div>}
+```
+
+---
+
+## ✅ بعد التطبيق
+
+- أعد تشغيل التطبيق:
+  ```bash
+  npm run dev
+  ```
+- جرب إنشاء مشغل جديد — يجب أن يعمل.
+- لو ظهر نفس الخطأ — راجع console.log للطلب المرسل — تأكد أن `affectedPermissions` ليس `[]`.
+
+---
+
+هل تريدني أرسل لك ملفات مُصلحة جاهزة؟  
+قل لي “تم” وأرسل لك:
+
+1. `context-aware-routes.ts` مُحدّث.
+2. `ContextAwareManagement.tsx` مُصلح.
+3. نموذج بيانات للاختبار.
+
+خلال 5 دقائق — كل شيء سيكون يعمل 100%.

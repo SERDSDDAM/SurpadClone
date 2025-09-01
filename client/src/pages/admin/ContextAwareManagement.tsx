@@ -622,7 +622,7 @@ function TriggerDialog({
         name: '',
         description: '',
         triggerType: 'project',
-        affectedPermissions: [],
+        affectedPermissions: ["permits.build.issue", "permits.build.modify"],
         priority: 5,
         notes: ''
       });
@@ -631,6 +631,13 @@ function TriggerDialog({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // تأكد من وجود صلاحيات قبل الإرسال
+    if (formData.affectedPermissions.length === 0) {
+      alert('يجب تحديد على الأقل صلاحية واحدة');
+      return;
+    }
+    
     onSubmit(formData);
   };
 
@@ -700,6 +707,44 @@ function TriggerDialog({
               onChange={(e) => setFormData({ ...formData, priority: parseInt(e.target.value) })}
               data-testid="input-trigger-priority"
             />
+          </div>
+
+          <div>
+            <Label>الصلاحيات المتأثرة</Label>
+            <div className="space-y-2 mt-2 p-3 border rounded">
+              {[
+                { id: "permits.build.issue", label: "إصدار تراخيص البناء" },
+                { id: "permits.build.modify", label: "تعديل تراخيص البناء" },
+                { id: "permits.survey.approve", label: "اعتماد المسوحات" },
+                { id: "certificates.occupancy.issue", label: "إصدار شهادات الإشغال" },
+                { id: "inspection.schedule", label: "جدولة التفتيش" }
+              ].map((permission) => (
+                <div key={permission.id} className="flex items-center space-x-2">
+                  <input
+                    type="checkbox"
+                    id={permission.id}
+                    checked={formData.affectedPermissions.includes(permission.id)}
+                    onChange={(e) => {
+                      if (e.target.checked) {
+                        setFormData({
+                          ...formData,
+                          affectedPermissions: [...formData.affectedPermissions, permission.id]
+                        });
+                      } else {
+                        setFormData({
+                          ...formData,
+                          affectedPermissions: formData.affectedPermissions.filter(p => p !== permission.id)
+                        });
+                      }
+                    }}
+                    className="w-4 h-4"
+                  />
+                  <label htmlFor={permission.id} className="text-sm mr-2">
+                    {permission.label}
+                  </label>
+                </div>
+              ))}
+            </div>
           </div>
 
           <div>
