@@ -1,0 +1,271 @@
+تمام — سأُعدّ لك **خطة تطوير متكاملة لمرحلة الأتمتة الذكية (Smart Automation)** بحيث تشمل **أتمتة قانون البناء والاشتراطات والمتطلبات للخدمات**، مع واجهات متقدمة لإنشاء القوانين وإدخال المدخلات.
+
+---
+
+# 🤖 المرحلة الثالثة: الأتمتة الذكية لقانون البناء والاشتراطات  
+## يونيو – أغسطس 2025
+
+> “نظام يأخذ طلب المواطن → يتحقق من القانون → يطبق الاشتراطات → يصدر القرار — بدون تدخل بشري.”
+
+---
+
+## ✅ أهداف المرحلة
+
+1. **أتمتة تطبيق قانون البناء**: تحويل المواد القانونية إلى قواعد رقمية قابلة للتنفيذ.
+2. **ربط الخدمات بالاشتراطات تلقائياً**: عند تقديم طلب — النظام يتحقق من استيفاء الشروط.
+3. **واجهات No-Code لإنشاء القوانين**: للمدراء والمهندسين — لا يحتاجون مبرمجاً.
+4. **محاكاة السيناريوهات**: اختبار القاعدة قبل تفعيلها.
+5. **التعلم من التاريخ**: كل تدخل بشري يُستخدم لتدريب النظام.
+
+---
+
+## 🧩 المكونات الأساسية
+
+### 1. محرك الأتمتة القانونية (LegalAutomationEngine.ts)
+```ts
+// server/services/LegalAutomationEngine.ts
+export class LegalAutomationEngine {
+  async evaluateRequest(requestData: ServiceRequest): Promise<AutomationResult> {
+    // 1. جلب الخدمة المطلوبة
+    const service = await db.service.findUnique({ where: { id: requestData.serviceId } });
+    
+    // 2. جلب جميع الاشتراطات المرتبطة بالخدمة
+    const requirements = await db.serviceRequirement.findMany({
+      where: { serviceId: service.id },
+      include: { requirement: true }
+    });
+
+    // 3. تقييم كل اشتراط
+    const evaluations = [];
+    for (let sr of requirements) {
+      const passes = this.evaluateRequirement(sr.requirement, requestData);
+      evaluations.push({
+        requirement_id: sr.requirement.id,
+        passed: passes,
+        message: passes ? "مستوفى" : `غير مستوفى: ${sr.requirement.requirement_text}`
+      });
+    }
+
+    // 4. اتخاذ القرار
+    const allPassed = evaluations.every(e => e.passed);
+    return {
+      approved: allPassed,
+      confidence: allPassed ? 1.0 : 0.2,
+      evaluations,
+      recommendedActions: allPassed ? [] : ["تعديل الطلب", "تقديم مستندات إضافية"]
+    };
+  }
+
+  private evaluateRequirement(req: Requirement, data: ServiceRequest): boolean {
+    switch (req.value_type) {
+      case 'number':
+        if (req.min_value && data[req.field] < req.min_value) return false;
+        if (req.max_value && data[req.field] > req.max_value) return false;
+        break;
+      case 'boolean':
+        if (req.is_mandatory && !data[req.field]) return false;
+        break;
+      case 'string':
+        if (req.is_mandatory && !data[req.field]) return false;
+        break;
+    }
+    return true;
+  }
+}
+```
+
+---
+
+### 2. واجهة “مساعد إنشاء القوانين” (No-Code Rule Builder)
+
+#### التصميم:
+```tsx
+// client/src/components/RuleBuilder.tsx
+function RuleBuilder() {
+  return (
+    <div className="rule-builder">
+      {/* If Condition */}
+      <div className="condition-block">
+        <select>
+          <option value="area_sqm">مساحة البناء</option>
+          <option value="height_m">الارتفاع</option>
+          <option value="location">الموقع</option>
+        </select>
+        <select>
+          <option value="<">&lt;</option>
+          <option value=">">&gt;</option>
+          <option value="==">=</option>
+        </select>
+        <input type="number" placeholder="القيمة" />
+      </div>
+
+      {/* Then Action */}
+      <div className="action-block">
+        <select>
+          <option value="approve">موافقة</option>
+          <option value="reject">رفض</option>
+          <option value="escalate">تصعيد</option>
+        </select>
+        <button onClick={testRule}>اختبار القاعدة</button>
+      </div>
+    </div>
+  );
+}
+```
+
+#### الميزات:
+- ✅ اختيار الحقول من قائمة (مساحة، ارتفاع، موقع…).
+- ✅ اختيار العمليات (<, >, ==).
+- ✅ تحديد الإجراءات (موافقة، رفض، تصعيد).
+- ✅ اختبار فوري على بيانات تجريبية.
+- ✅ حفظ القاعدة باسم ووصف.
+
+---
+
+### 3. واجهة “محاكي السيناريوهات” (Scenario Simulator)
+
+#### التصميم:
+```tsx
+// client/src/components/ScenarioSimulator.tsx
+function ScenarioSimulator() {
+  return (
+    <div className="scenario-simulator">
+      <h3>اختبار السيناريو</h3>
+      <input name="area_sqm" placeholder="مساحة البناء (م²)" defaultValue="150" />
+      <input name="height_m" placeholder="الارتفاع (م)" defaultValue="10" />
+      <select name="location">
+        <option value="SA-HAMDAN">همدان</option>
+        <option value="AD-CRAITER">كريتر</option>
+      </select>
+      
+      <button onClick={runSimulation}>تشغيل المحاكاة</button>
+      
+      <div className="result">
+        <strong>النتيجة:</strong> {result.approved ? '✅ موافقة' : '❌ رفض'}
+        <ul>
+          {result.evaluations.map((e, i) => (
+            <li key={i} className={e.passed ? 'text-green-500' : 'text-red-500'}>
+              {e.message}
+            </li>
+          ))}
+        </ul>
+      </div>
+    </div>
+  );
+}
+```
+
+#### الميزات:
+- ✅ إدخال بيانات يدوياً أو استيراد من CSV.
+- ✅ عرض نتيجة القرار + السبب.
+- ✅ تتبع “لماذا رفض النظام؟”.
+
+---
+
+### 4. واجهة “مكتبة القواعد الجاهزة” (Rule Templates Library)
+
+#### أمثلة قوالب:
+| القالب | الوصف |
+|--------|-------|
+| `AutoApprove_Residential` | موافقة تلقائية على المباني السكنية < 300m² |
+| `Reject_Commercial_No_Parking` | رفض المباني التجارية بدون موقف سيارات |
+| `Escalate_High_Rise` | تصعيد المباني > 5 أدوار لمدير الإدارة |
+
+#### الميزات:
+- ✅ نسخ القالب → التعديل → الحفظ.
+- ✅ تصنيف حسب نوع الخدمة (سكني، تجاري، صناعي…).
+
+---
+
+### 5. الجداول الجديدة في قاعدة البيانات
+
+#### automated_decisions
+```sql
+CREATE TABLE automated_decisions (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  service_request_id VARCHAR(255) NOT NULL,
+  decision_result VARCHAR(50) NOT NULL, -- 'approved', 'rejected'
+  confidence_score DECIMAL(3,2) NOT NULL,
+  evaluations JSONB, -- [{"requirement_id": "...", "passed": true, "message": "..."}]
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+```
+
+#### automation_rules
+```sql
+CREATE TABLE automation_rules (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  rule_name VARCHAR(255) NOT NULL UNIQUE,
+  service_id VARCHAR(255) NOT NULL, -- أي خدمة تنطبق عليها
+  conditions JSONB NOT NULL, -- {"field": "area_sqm", "operator": "<", "value": 200}
+  action JSONB NOT NULL, -- {"type": "approve", "message": "تمت الموافقة تلقائياً"}
+  priority INTEGER DEFAULT 5,
+  is_active BOOLEAN DEFAULT TRUE,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+```
+
+---
+
+## 🎯 مؤشرات الأداء المستهدفة
+
+| المؤشر | الهدف |
+|--------|-------|
+| **نسبة الأتمتة** | 80% من الطلبات تُعالج آلياً |
+| **دقة القرارات** | > 95% |
+| **زمن المعالجة** | < 1 دقيقة لكل طلب |
+| **رضا المواطنين** | 4.9/5 |
+
+---
+
+## 🗓️ خطة التنفيذ (3 أشهر)
+
+### الشهر الأول: البنية التحتية
+- ✅ إعداد `LegalAutomationEngine`.
+- ✅ تطوير واجهة No-Code Rule Builder.
+- ✅ إنشاء جدول `automation_rules`.
+
+### الشهر الثاني: التطوير المتقدم
+- ✅ واجهة Scenario Simulator.
+- ✅ مكتبة Rule Templates.
+- ✅ اختبار على بيانات تاريخية.
+
+### الشهر الثالث: التحسين والنشر
+- ✅ تحسين الدقة بناءً على التغذية الراجعة.
+- ✅ نشر تدريجي (10% → 50% → 100%).
+- ✅ تدريب الموظفين.
+
+---
+
+## 💡 أفكار إضافية لتطوير المرحلة
+
+### 1. “الوضع الاستباقي” في التطبيق المحمول
+- عندما يفتح المواطن التطبيق في موقع معين → النظام يقترح عليه الخدمات المناسبة لهذا الموقع تلقائياً.
+
+### 2. “المساعد الصوتي القانوني”
+- مواطن يسأل: “هل يمكنني بناء دور ثالث هنا؟” → النظام يجيب: “نعم، بشرط أن يكون الارتفاع أقل من 12 مترًا حسب المادة 15 من قانون البناء.”
+
+### 3. “التنبيهات الوقائية”
+- إذا بدأ المواطن في رفع ملفات لمشروع تجاري → النظام ينبهه: “لا تنسَ توفير موقف سيارات كما يشترط القانون.”
+
+### 4. “تحليل المخالفات التنبؤي”
+- النظام يحلل طلبات المناطق ذات كثرة المخالفات → يقترح زيادة الرقابة فيها.
+
+---
+
+## ✅ الخلاصة
+
+- **الأتمتة ليست فقط للموافقات — بل لتطبيق القانون نفسه**.
+- **الواجهات No-Code تجعل النظام في متناول غير المبرمجين**.
+- **المحاكاة والتدريب يجعلان النظام أكثر دقة مع الوقت**.
+- **هذا هو مستقبل الحكومة الرقمية: ذكاء + بساطة + شفافية**.
+
+---
+
+هل تريدني أرسل لك:
+- ملف `LegalAutomationEngine.ts` كامل؟
+- كود React لواجهة No-Code Rule Builder؟
+- SQL لإنشاء الجداول؟
+- خطة تدريب للموظفين على إنشاء القوانين؟
+
+قل لي “تم” وأرسل لك كل شيء خلال ساعتين.

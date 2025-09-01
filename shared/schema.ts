@@ -603,8 +603,7 @@ export const insertUserSchema = createInsertSchema(users).omit({
   lockedUntil: true,
 });
 
-export type User = typeof users.$inferSelect;
-export type InsertUser = z.infer<typeof insertUserSchema>;
+// User types are defined at the end of file to avoid duplicates
 
 // Phase 4: Enhanced Authentication and Security System (Use auth-schema.ts instead)
 
@@ -672,14 +671,39 @@ export const insertApiKeySchema = createInsertSchema(apiKeys).omit({
 
 // Types for Authentication System
 export type User = typeof users.$inferSelect;
+export type InsertUser = z.infer<typeof insertUserSchema>;
+
+// Legal Requirements and Service Integration
+export const serviceRequirements = pgTable("service_requirements", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  serviceId: varchar("service_id", { length: 100 }).notNull(),
+  requirementId: varchar("requirement_id", { length: 100 }).notNull(),
+  isRequired: boolean("is_required").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const requirements = pgTable("requirements", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  requirementName: varchar("requirement_name", { length: 255 }).notNull(),
+  requirementText: text("requirement_text").notNull(),
+  fieldName: varchar("field_name", { length: 100 }),
+  valueType: varchar("value_type", { length: 50 }).notNull(), // 'number', 'boolean', 'string', 'array'
+  minValue: real("min_value"),
+  maxValue: real("max_value"),
+  allowedValues: jsonb("allowed_values"),
+  isMandatory: boolean("is_mandatory").default(true),
+  category: varchar("category", { length: 100 }),
+  createdAt: timestamp("created_at").defaultNow(),
+});
 
 // Re-export survey schema types and tables
 export * from "./survey-schema";
 export * from "./smart-automation-schema";
-export type InsertUser = z.infer<typeof insertUserSchema>;
 
-export type UserSession = typeof userSessions.$inferSelect;
-export type InsertUserSession = z.infer<typeof insertUserSessionSchema>;
+export type ServiceRequirement = typeof serviceRequirements.$inferSelect;
+export type InsertServiceRequirement = typeof serviceRequirements.$inferInsert;
+export type Requirement = typeof requirements.$inferSelect;
+export type InsertRequirement = typeof requirements.$inferInsert;
 
 export type AuditLog = typeof auditLogs.$inferSelect;
 export type InsertAuditLog = z.infer<typeof insertAuditLogSchema>;

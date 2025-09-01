@@ -10,6 +10,7 @@ import { Switch } from '@/components/ui/switch';
 import { Plus, Trash2, Play, Save, Copy } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { apiRequest } from '@/lib/queryClient';
+import { LegalCodeBuilder } from './LegalCodeBuilder';
 
 interface Condition {
   id: string;

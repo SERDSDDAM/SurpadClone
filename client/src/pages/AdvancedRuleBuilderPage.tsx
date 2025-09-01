@@ -9,6 +9,7 @@ import { RuleTemplatesLibrary } from '@/components/rule-builder/RuleTemplatesLib
 import { ScenarioSimulator } from '@/components/rule-builder/ScenarioSimulator';
 import { RulePerformanceMonitor } from '@/components/rule-builder/RulePerformanceMonitor';
 import { AITrainerInterface } from '@/components/rule-builder/AITrainerInterface';
+import { LegalCodeBuilder } from '@/components/rule-builder/LegalCodeBuilder';
 import { useAuth } from '@/hooks/useAuth';
 
 export function AdvancedRuleBuilderPage() {
@@ -86,10 +87,14 @@ export function AdvancedRuleBuilderPage() {
 
       {/* الواجهات الرئيسية */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="grid w-full grid-cols-5">
+        <TabsList className="grid w-full grid-cols-6">
           <TabsTrigger value="builder" className="flex items-center gap-2" data-testid="tab-rule-builder">
             <Wrench className="h-4 w-4" />
             إنشاء قاعدة
+          </TabsTrigger>
+          <TabsTrigger value="legal-builder" className="flex items-center gap-2" data-testid="tab-legal-builder">
+            <Settings className="h-4 w-4" />
+            قوانين البناء
           </TabsTrigger>
           <TabsTrigger value="templates" className="flex items-center gap-2" data-testid="tab-templates">
             <BookOpen className="h-4 w-4" />
@@ -104,7 +109,7 @@ export function AdvancedRuleBuilderPage() {
             مراقبة الأداء
           </TabsTrigger>
           <TabsTrigger value="trainer" className="flex items-center gap-2" data-testid="tab-trainer">
-            <Settings className="h-4 w-4" />
+            <Zap className="h-4 w-4" />
             مدرب الذكاء الاصطناعي
           </TabsTrigger>
         </TabsList>
@@ -186,11 +191,29 @@ export function AdvancedRuleBuilderPage() {
           </Card>
         </TabsContent>
 
-        <TabsContent value="trainer" className="space-y-6">
+        <TabsContent value="legal-builder" className="space-y-6">
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Settings className="h-5 w-5" />
+                مولد قوانين البناء والاشتراطات
+              </CardTitle>
+              <p className="text-sm text-muted-foreground">
+                أنشئ قوانين تلقائية لتطبيق اشتراطات البناء والتراخيص بدون كتابة كود.
+                حوّل اللوائح القانونية إلى قواعد آلية ذكية.
+              </p>
+            </CardHeader>
+            <CardContent>
+              <LegalCodeBuilder />
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="trainer" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Zap className="h-5 w-5" />
                 مدرب الذكاء الاصطناعي
               </CardTitle>
               <p className="text-sm text-muted-foreground">
