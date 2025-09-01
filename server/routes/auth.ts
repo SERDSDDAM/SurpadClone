@@ -4,7 +4,7 @@ import crypto from 'crypto';
 import { db } from '../db';
 import { users } from '../../shared/schema';
 import { eq, and, sql } from 'drizzle-orm';
-import { createAuthToken, loginRateLimit } from '../middleware/auth';
+import { loginRateLimit } from '../middleware/auth';
 import { z } from 'zod';
 import jwt from 'jsonwebtoken';
 

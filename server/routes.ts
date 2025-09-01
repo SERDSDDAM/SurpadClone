@@ -15,6 +15,7 @@ import {
 } from "@shared/schema";
 
 import authRoutes from "./routes/auth";
+import simpleAuthRoutes from "./routes/simple-auth";
 import { authMiddleware, requireSurveyor, apiRateLimit } from './middleware/auth';
 import cookieParser from 'cookie-parser';
 import surveyRoutes from "./routes/survey-routes";
@@ -74,8 +75,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     },
   }));
 
-  // Auth routes (BEFORE other API routes)
-  app.use("/api/auth", authRoutes);
+  // Auth routes (BEFORE other API routes) - Simple auth without WebSocket
+  app.use("/api/simple-auth", simpleAuthRoutes);
+  app.use("/api/auth", simpleAuthRoutes);
+  // app.use("/api/auth", authRoutes); // معطل مؤقتاً بسبب مشكلة WebSocket
   
   // Admin routes (protected)
   app.use('/api/admin', adminRoutes);

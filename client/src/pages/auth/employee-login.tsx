@@ -44,8 +44,12 @@ export default function EmployeeLogin() {
 
   const loginMutation = useMutation({
     mutationFn: async (data: LoginFormValues) => {
+      console.log('🔑 Attempting employee login for:', data.employeeId);
       return await apiRequest("/api/auth/login", {
         method: "POST",
+        headers: {
+          'Content-Type': 'application/json',
+        },
         body: JSON.stringify({
           username: data.employeeId, // تحويل employeeId إلى username
           password: data.password,
@@ -53,18 +57,19 @@ export default function EmployeeLogin() {
       });
     },
     onSuccess: (response) => {
+      console.log('✅ Login successful:', response);
       localStorage.setItem("auth_token", response.token);
       localStorage.setItem("user_data", JSON.stringify(response.user));
       
       toast({
         title: "تم تسجيل الدخول بنجاح",
-        description: "مرحباً بك في نظام الموظفين",
+        description: `مرحباً ${response.user.firstName} ${response.user.lastName}`,
       });
       
       // Redirect based on role
       const role = response.user.role;
       if (role === "admin" || role === "super_admin") {
-        window.location.href = "/analytics-dashboard";
+        window.location.href = "/admin-dashboard";
       } else if (role === "inspector") {
         window.location.href = "/inspector-field-app";
       } else if (role === "surveyor") {
