@@ -38,7 +38,7 @@ export function useSimpleAuth() {
 
   const checkAuthStatus = async (token: string) => {
     try {
-      const response = await fetch('/api/auth/me', {
+      const response = await fetch('/api/auth/profile', {
         headers: {
           'Authorization': `Bearer ${token}`,
         },
@@ -64,7 +64,7 @@ export function useSimpleAuth() {
       }
     } catch (error) {
       console.error('Error checking auth status:', error);
-      localStorage.removeItem('auth_token');
+      // بدلاً من إزالة التوكن، قم بتحديد الحالة مباشرة
       setAuthState({
         user: null,
         token: null,

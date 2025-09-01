@@ -64,6 +64,7 @@ import Phase2DigitizationTool from "@/pages/Phase2DigitizationTool";
 import NotFound from "@/pages/not-found";
 import LoginPage from "@/pages/LoginPage";
 import AdminUsers from "@/pages/admin/AdminUsers";
+import SimpleTestPage from "@/pages/SimpleTestPage";
 import { useSimpleAuth } from "@/hooks/useSimpleAuth";
 
 function Navigation() {
@@ -234,7 +235,8 @@ function Router() {
       {!hideNavigation && <Navigation />}
       <main className={hideNavigation ? "" : "max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6"}>
         <Switch>
-          <Route path="/" component={PortalSelection} />
+          <Route path="/" component={SimpleTestPage} />
+          <Route path="/portal-selection" component={PortalSelection} />
           <Route path="/admin" component={Dashboard} />
           <Route path="/admin-dashboard">
             {() => (
