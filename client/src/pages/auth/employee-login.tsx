@@ -66,9 +66,12 @@ export default function EmployeeLogin() {
         description: `مرحباً ${response.user.firstName} ${response.user.lastName}`,
       });
       
-      // Redirect based on role
+      // Redirect based on role - تأكيد التوجيه الصحيح
       const role = response.user.role;
+      console.log('🚀 Redirecting user with role:', role);
+      
       if (role === "admin" || role === "super_admin") {
+        console.log('📍 Redirecting admin to /admin-dashboard');
         window.location.href = "/admin-dashboard";
       } else if (role === "inspector") {
         window.location.href = "/inspector-field-app";

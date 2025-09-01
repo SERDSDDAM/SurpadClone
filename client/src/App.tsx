@@ -28,6 +28,7 @@ import ProfessionalLogin from "@/pages/auth/professional-login";
 import EmployeeLogin from "@/pages/auth/employee-login";
 import EmployeeLoginPage from "@/pages/EmployeeLoginPage";
 import AdminDashboard from "@/pages/AdminDashboard";
+import AdminDashboardNew from "@/pages/admin/AdminDashboardNew";
 import SimpleLoginPage from "@/pages/SimpleLoginPage";
 import PortalSelection from "@/pages/auth/portal-selection";
 import CitizenDashboard from "@/pages/citizen/citizen-dashboard";
@@ -190,6 +191,7 @@ function Router() {
         <Switch>
           <Route path="/" component={PortalSelection} />
           <Route path="/admin" component={Dashboard} />
+          <Route path="/admin-dashboard" component={AdminDashboardNew} />
           <Route path="/dashboard" component={Dashboard} />
           <Route path="/citizen-portal" component={CitizenPortal} />
           <Route path="/building-permits" component={BuildingPermits} />
