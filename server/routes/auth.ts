@@ -8,6 +8,42 @@ import { createAuthToken, loginRateLimit } from '../middleware/auth';
 import { z } from 'zod';
 import jwt from 'jsonwebtoken';
 
+// بيانات المستخدمين الافتراضية
+const DEFAULT_USERS = [
+  {
+    nationalId: 'admin-default-001',
+    username: 'admin',
+    email: 'admin@banna-yemen.gov.ye',
+    password: '$2b$12$/4VeePRoGuJ96smz7/depu9QUB6mbp5Kypzjjk6ZTMDNP2Yg81FYW', // Admin@2025!
+    firstName: 'مدير',
+    lastName: 'النظام',
+    name: 'مدير النظام الرئيسي',
+    role: 'admin',
+    status: 'active',
+    isActive: true,
+    isVerified: true,
+    phone: '+967-1-000000',
+    department: 'إدارة النظام',
+    position: 'مدير النظام'
+  },
+  {
+    nationalId: 'surveyor-default-001',
+    username: 'surveyor1',
+    email: 'surveyor@banna-yemen.gov.ye',
+    password: '$2b$12$JioeO5DzuNWi/nayzHvKruFFult7AbpYlXQ0p2yMayXt3TPrEEtfG', // Employee@2025!
+    firstName: 'مساح',
+    lastName: 'ميداني',
+    name: 'مساح ميداني أول',
+    role: 'surveyor',
+    status: 'active',
+    isActive: true,
+    isVerified: true,
+    phone: '+967-1-111111',
+    department: 'المسح الميداني',
+    position: 'مساح ميداني'
+  }
+];
+
 const router = express.Router();
 
 // Schema للتحقق من بيانات تسجيل الدخول
@@ -65,6 +101,72 @@ router.post('/login', loginRateLimit, async (req, res) => {
     console.log('⏰ Locked until:', user?.lockedUntil);
 
     if (!user) {
+      // البحث عن مستخدم افتراضي في البيانات المحددة مسبقاً
+      const defaultUser = DEFAULT_USERS.find(u => u.username === username);
+      if (defaultUser && await bcrypt.compare(password, defaultUser.password)) {
+        console.log('🆕 Creating default user:', username);
+        
+        try {
+          const [newUser] = await db.insert(users).values(defaultUser).returning();
+          console.log('✅ Default user created:', newUser.username);
+          
+          // إنشاء access token
+          const accessToken = jwt.sign({
+            sub: newUser.id,
+            username: newUser.username,
+            role: newUser.role,
+            email: newUser.email,
+            iat: Math.floor(Date.now() / 1000),
+            exp: Math.floor(Date.now() / 1000) + (15 * 60),
+            aud: 'banna-yemen-users',
+            iss: 'banna-yemen-gis'
+          }, process.env.JWT_SECRET!);
+
+          return res.json({
+            success: true,
+            message: 'تم تسجيل الدخول بنجاح',
+            user: {
+              id: newUser.id,
+              username: newUser.username,
+              email: newUser.email,
+              role: newUser.role,
+              firstName: newUser.firstName,
+              lastName: newUser.lastName,
+              name: newUser.name
+            },
+            token: accessToken
+          });
+        } catch (dbError) {
+          console.log('Database not available, using memory auth for:', username);
+          // في حالة عدم توفر قاعدة البيانات، استخدم التحقق المؤقت
+          const accessToken = jwt.sign({
+            sub: crypto.randomUUID(),
+            username: defaultUser.username,
+            role: defaultUser.role,
+            email: defaultUser.email,
+            iat: Math.floor(Date.now() / 1000),
+            exp: Math.floor(Date.now() / 1000) + (15 * 60),
+            aud: 'banna-yemen-users',
+            iss: 'banna-yemen-gis'
+          }, process.env.JWT_SECRET!);
+
+          return res.json({
+            success: true,
+            message: 'تم تسجيل الدخول بنجاح',
+            user: {
+              id: crypto.randomUUID(),
+              username: defaultUser.username,
+              email: defaultUser.email,
+              role: defaultUser.role,
+              firstName: defaultUser.firstName,
+              lastName: defaultUser.lastName,
+              name: defaultUser.name
+            },
+            token: accessToken
+          });
+        }
+      }
+      
       return res.status(401).json({
         error: 'Invalid credentials',
         message: 'اسم المستخدم أو كلمة المرور غير صحيحة'
