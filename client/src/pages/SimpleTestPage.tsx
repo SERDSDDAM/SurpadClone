@@ -65,18 +65,41 @@ export default function SimpleTestPage() {
           </div>
         </div>
         
-        <div className="flex gap-4">
-          <Link href="/employee-login">
+        <div className="flex gap-4 flex-wrap">
+          <a href="/employee-login">
             <button className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg transition-colors">
               🔐 تسجيل الدخول للموظفين
             </button>
-          </Link>
+          </a>
           
-          <Link href="/admin/context-management">
+          <a href="/admin/context-management">
             <button className="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg transition-colors">
               ⚙️ إدارة الذكاء السياقي
             </button>
-          </Link>
+          </a>
+
+          <button 
+            onClick={() => {
+              // اختبار مباشر للتوجه للنظام الذكي
+              fetch('/api/auth/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username: 'admin', password: 'admin123' })
+              })
+              .then(res => res.json())
+              .then(data => {
+                if (data.success) {
+                  localStorage.setItem('auth_token', data.token);
+                  window.location.href = '/admin/context-management';
+                } else {
+                  alert('فشل تسجيل الدخول');
+                }
+              })
+              .catch(err => alert('خطأ: ' + err.message));
+            }}
+            className="bg-red-600 hover:bg-red-700 text-white px-6 py-3 rounded-lg transition-colors">
+            🚀 دخول مباشر للنظام الذكي
+          </button>
         </div>
         
         <div className="mt-8 text-center text-gray-600">
