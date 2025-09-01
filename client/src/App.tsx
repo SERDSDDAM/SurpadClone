@@ -68,6 +68,7 @@ import AdminUsers from "@/pages/admin/AdminUsers";
 import SimpleTestPage from "@/pages/SimpleTestPage";
 import { useSimpleAuth } from "@/hooks/useSimpleAuth";
 import { SmartAutomationDashboard } from "@/pages/SmartAutomationDashboard";
+import { AdvancedRuleBuilderPage } from "@/pages/AdvancedRuleBuilderPage";
 
 function Navigation() {
   const [location] = useLocation();
@@ -89,6 +90,7 @@ function Navigation() {
     { name: "🚀 Phase 1 Processing", href: "/phase1-processing", icon: Layers },
     { name: "⚡ Phase 2 - الرقمنة المتقدمة", href: "/phase2-digitization", icon: Layers },
     { name: "🧠 Phase 3 - الأتمتة الذكية", href: "/smart-automation", icon: Brain },
+    { name: "🔧 إنشاء قوانين الأتمتة", href: "/rule-builder", icon: Brain },
     { name: "إدارة المهنيين", href: "/professionals", icon: Users },
     { name: "تطبيق المساح", href: "/field-app", icon: Smartphone },
     { name: "التطبيق النظيف", href: "/clean-field-app", icon: MapPin },
@@ -263,6 +265,7 @@ function Router() {
           <Route path="/phase1-processing" component={Phase1Processing} />
           <Route path="/phase2-digitization" component={Phase2DigitizationTool} />
         <Route path="/smart-automation" component={SmartAutomationDashboard} />
+          <Route path="/rule-builder" component={AdvancedRuleBuilderPage} />
           <Route path="/simple-digitization" component={SimpleDigitizationTool} />
           <Route path="/qgis-web-tool" component={QGISWebTool} />
           <Route path="/professionals" component={ProfessionalsManagement} />
