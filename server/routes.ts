@@ -14,9 +14,11 @@ import {
   insertReviewCommentSchema 
 } from "@shared/schema";
 
-import authRoutes from "./routes/auth";
+// import authRoutes from "./routes/auth"; // Disabled - using auth-management.ts instead
 import simpleAuthRoutes from "./routes/simple-auth";
 import authManagementRoutes from "./routes/auth-management";
+import simpleJwtAuth from "./routes/simple-jwt-auth";
+import workingAuth from "./routes/working-auth";
 import { requireAuth, requireRole } from './middleware/auth';
 import rateLimit from 'express-rate-limit';
 import cookieParser from 'cookie-parser';
@@ -86,8 +88,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Auth routes (BEFORE other API routes) - Simple auth without WebSocket
   app.use("/api/simple-auth", simpleAuthRoutes);
-  app.use("/api/auth", authManagementRoutes); // نظام المصادقة الجديد
-  // app.use("/api/auth", authRoutes); // معطل مؤقتاً بسبب مشكلة WebSocket
+  
+  // Working JWT Auth system
+  app.use("/api/auth", workingAuth);
+  
+  // app.use("/api/auth", authManagementRoutes); // Old system - disabled
+  // OLD auth system disabled permanently - using new JWT system only
   
   // Admin routes (protected)
   app.use('/api/admin', adminRoutes);

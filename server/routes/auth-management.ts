@@ -5,6 +5,58 @@ import { eq } from 'drizzle-orm';
 import { db } from '../db';
 import { authUsers, authSessions, DEFAULT_USERS } from '@shared/auth-schema';
 
+// دالة لإنشاء المستخدمين الافتراضيين
+async function ensureDefaultUsers() {
+  try {
+    // التحقق من وجود المدير
+    const [existingAdmin] = await db
+      .select()
+      .from(authUsers)
+      .where(eq(authUsers.username, 'admin'))
+      .limit(1);
+    
+    if (!existingAdmin) {
+      // إنشاء المستخدمين الافتراضيين
+      const defaultUsers = [
+        {
+          username: 'admin',
+          password: await bcrypt.hash('Admin@2025!', 10),
+          email: 'admin@banna-yemen.gov.ye',
+          firstName: 'مدير',
+          lastName: 'النظام',
+          role: 'admin',
+          isActive: true,
+        },
+        {
+          username: 'surveyor1',
+          password: await bcrypt.hash('Employee@2025!', 10),
+          email: 'surveyor1@banna-yemen.gov.ye',
+          firstName: 'أحمد',
+          lastName: 'المساح',
+          role: 'staff',
+          isActive: true,
+        },
+        {
+          username: 'deputy_technical',
+          password: await bcrypt.hash('Deputy@2025!', 10),
+          email: 'deputy.technical@banna-yemen.gov.ye',
+          firstName: 'محمد',
+          lastName: 'الهندسي',
+          role: 'deputy_admin_technical',
+          isActive: true,
+        }
+      ];
+
+      for (const user of defaultUsers) {
+        await db.insert(authUsers).values(user);
+      }
+      console.log('✅ Default users created successfully');
+    }
+  } catch (error) {
+    console.log('ℹ️  Default users might already exist:', error.message);
+  }
+}
+
 const router = express.Router();
 
 // تسجيل الدخول
@@ -15,6 +67,9 @@ router.post('/login', async (req, res) => {
     if (!username || !password) {
       return res.status(400).json({ error: 'Username and password are required' });
     }
+
+    // إنشاء المستخدمين الافتراضيين إذا لم يكونوا موجودين
+    await ensureDefaultUsers();
 
     // البحث عن المستخدم
     const [user] = await db
@@ -71,7 +126,7 @@ router.post('/login', async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Login error:', error);
+    console.error('🔴 Auth Management Login error:', error.message || error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
