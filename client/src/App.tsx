@@ -54,6 +54,8 @@ import NotificationsSystem from "@/pages/notifications-system";
 import { GISDataManagement, DigitizationTool } from "@/pages/gis";
 import SimpleDigitizationTool from "@/pages/gis/simple-digitization-tool";
 import RolesAndPermissions from "@/pages/admin/RolesAndPermissions";
+import AdvancedRBACManagement from "@/pages/admin/AdvancedRBACManagement";
+import AdminDashboardEnhanced from "@/pages/admin/AdminDashboardEnhanced";
 import QGISWebTool from "@/pages/gis/qgis-web-tool";
 import Phase0Test from "@/pages/Phase0Test";
 import Phase1Processing from "@/pages/Phase1Processing";
@@ -236,7 +238,7 @@ function Router() {
           <Route path="/admin-dashboard">
             {() => (
               <ProtectedRoute role="admin">
-                <AdminDashboardNew />
+                <AdminDashboardEnhanced />
               </ProtectedRoute>
             )}
           </Route>
@@ -290,6 +292,13 @@ function Router() {
             {() => (
               <ProtectedRoute role="admin">
                 <RolesAndPermissions />
+              </ProtectedRoute>
+            )}
+          </Route>
+          <Route path="/admin-advanced-rbac">
+            {() => (
+              <ProtectedRoute role="admin">
+                <AdvancedRBACManagement />
               </ProtectedRoute>
             )}
           </Route>

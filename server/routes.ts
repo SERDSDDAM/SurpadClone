@@ -20,6 +20,7 @@ import authManagementRoutes from "./routes/auth-management";
 import simpleJwtAuth from "./routes/simple-jwt-auth";
 import workingAuth, { authenticateToken } from "./routes/working-auth";
 import rbacRoutes from './routes/rbac-routes';
+import advancedRbacRoutes from './routes/advanced-rbac-routes';
 import { requireAuth, requireRole } from './middleware/auth';
 import rateLimit from 'express-rate-limit';
 import cookieParser from 'cookie-parser';
@@ -171,6 +172,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // RBAC Routes
   app.use('/api/rbac', rbacRoutes);
+  
+  // Advanced RBAC Routes
+  app.use('/api/advanced-rbac', advancedRbacRoutes);
   
   // app.use("/api/auth", authManagementRoutes); // Old system - disabled
   // OLD auth system disabled permanently - using new JWT system only
