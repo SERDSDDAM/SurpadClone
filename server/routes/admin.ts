@@ -2,12 +2,12 @@ import express from 'express';
 import { db } from '../db';
 import { users, surveyRequests } from '../../shared/schema';
 import { count, eq, sql, and, gte } from 'drizzle-orm';
-import { authMiddleware } from '../middleware/auth';
+import { requireAuth } from '../middleware/auth';
 
 const router = express.Router();
 
 // Apply authentication middleware to all admin routes
-router.use(authMiddleware);
+router.use(requireAuth);
 
 // Additional admin role check
 const requireAdminRole = (req: any, res: any, next: any) => {

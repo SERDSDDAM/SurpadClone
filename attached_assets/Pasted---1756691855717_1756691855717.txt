@@ -1,0 +1,238 @@
+ممتاز، أنت قدمت معلومات تفصيلية جداً عن الهيكل التنظيمي لمكتب الأشغال العامة والطرق في محافظة صنعاء (2019)، وتمكّن من بناء خطة **إدارة المستخدمين والصلاحيات** تتوافق مع هذا الهيكل.
+
+سأُعدّ لك **خطة إدارة المستخدمين والصلاحيات** بتصميم تقني واضح، يعكس الهيكل الإداري، ويضمن التحكم الدقيق في الوصول إلى الميزات حسب الرتبة والمسؤولية.
+
+---
+
+# 🏗️ خطة إدارة المستخدمين والصلاحيات – "بنّاء اليمن"
+
+## ✅ الهدف
+بناء نظام صلاحيات (RBAC) متكامل يُعَدّل على أساس الهيكل التنظيمي لـ **مكتب الأشغال العامة والطرق**، بحيث:
+- يُعطي كل مستخدم فقط الصلاحيات اللازمة لأداء وظيفته.
+- يُمكن التوسع لاحقاً مع إضافة أدوار جديدة (مثل: فروع المديريات).
+- يدعم التفويض بين الأقسام (مثلاً: نائب المدير العام يمكنه إصدار قرارات في نطاق اختصاصه).
+
+---
+
+## 🔧 1. هيكل الأدوار (Roles)
+
+| الدور | الوصف | المستوى |
+|------|-------|--------|
+| `admin` | المدير العام – كامل الصلاحيات | 5 |
+| `deputy_admin_1` | النائب الأول – يُعَدّل كـ admin إلا أن بعض العمليات تحتاج توقيع المدير العام | 4 |
+| `deputy_admin_planning` | نائب المدير العام للتخطيط والمتابعة | 3 |
+| `deputy_admin_technical` | نائب المدير العام للشؤون الفنية | 3 |
+| `deputy_admin_inspection` | نائب المدير العام للتفتيش الفني | 3 |
+| `deputy_admin_projects` | نائب المدير العام للمشاريع | 3 |
+| `deputy_admin_finance` | نائب المدير العام للشؤون المالية | 3 |
+| `manager` | مدير إدارة أو فرع (مثل: مدير إدارة المساحة) | 2 |
+| `section_head` | رئيس قسم (مثل: قسم المساحة الميدانية) | 1 |
+| `staff` | موظف عادي (مساح، مراقب، مُدخل بيانات) | 0 |
+
+> ⚠️ ملاحظة: لا تستخدم `superuser` أو `root`، بل استخدم `admin` كأعلى دور.
+
+---
+
+## 📂 2. هيكل الصلاحيات (Permissions)
+
+### 🔹 أولاً: تصنيف الصلاحيات حسب الوظيفة
+
+#### 🌐 **الوصول العام**
+- `view_dashboard`: عرض لوحة التحكم
+- `view_reports`: عرض التقارير
+- `export_data`: تصدير البيانات (Excel/PDF)
+- `search_users`: البحث في المستخدمين
+
+#### 🛠️ **إدارة المستخدمين**
+- `create_user`: إنشاء مستخدم جديد
+- `edit_user`: تعديل بيانات المستخدم
+- `delete_user`: حذف مستخدم
+- `assign_role`: تعيين/تعديل دور المستخدم
+- `reset_password`: إعادة تعيين كلمة المرور
+
+#### 🧩 **إدارة الأدوار والصلاحيات**
+- `manage_roles`: إنشاء/تعديل/حذف أدوار
+- `manage_permissions`: تعيين صلاحيات للأدوار
+
+#### 🗺️ **الخدمات الجغرافية (GIS)**
+- `upload_file`: رفع ملفات (GeoTIFF, Shapefile)
+- `view_layer`: عرض طبقة جغرافية
+- `edit_layer`: تعديل طبقة جغرافية
+- `publish_layer`: نشر طبقة للجميع
+- `digitize`: استخدام أداة الرقمنة
+- `request_decision`: تقديم طلب قرار مساحي
+- `approve_decision`: الموافقة على القرار المساحي
+- `reject_decision`: رفض القرار المساحي
+
+#### 💼 **إدارة المشاريع**
+- `create_project`: إنشاء مشروع
+- `edit_project`: تعديل المشروع
+- `assign_worker`: تعيين مسؤول للمشروع
+- `submit_report`: تسليم تقرير تنفيذ
+- `review_project`: مراجعة المشروع
+- `close_project`: إغلاق المشروع
+
+#### 📄 **إدارة الملفات والمستندات**
+- `upload_document`: رفع مستند
+- `view_document`: عرض مستند
+- `edit_document`: تعديل مستند
+- `delete_document`: حذف مستند
+- `share_document`: مشاركة مستند مع مستخدم آخر
+
+#### 📊 **التحليلات والتقارير**
+- `generate_analytics`: إنشاء تقارير تحليلية
+- `view_analytics`: عرض التقارير
+- `export_analytics`: تصدير التقارير
+
+#### 🔐 **الأمان والسجلات**
+- `view_audit_log`: عرض سجلات الأنشطة
+- `view_security_alerts`: عرض تنبيهات الأمان
+- `ban_user`: حظر مستخدم مؤقتاً
+
+---
+
+## 🔄 3. تعيين الصلاحيات لكل دور
+
+| الدور | الصلاحيات |
+|------|----------|
+| `admin` | جميع الصلاحيات |
+| `deputy_admin_1` | جميع الصلاحيات **ما عدا**: `manage_roles`, `delete_user`, `ban_user` |
+| `deputy_admin_planning` | `view_dashboard`, `view_reports`, `edit_project`, `create_project`, `submit_report`, `review_project`, `close_project`, `upload_file`, `view_layer`, `digitize`, `request_decision`, `approve_decision`, `reject_decision`, `upload_document`, `view_document`, `edit_document`, `share_document` |
+| `deputy_admin_technical` | `view_dashboard`, `view_reports`, `upload_file`, `view_layer`, `edit_layer`, `publish_layer`, `digitize`, `request_decision`, `approve_decision`, `reject_decision`, `upload_document`, `view_document`, `edit_document`, `share_document`, `create_user`, `edit_user`, `assign_role`, `reset_password` |
+| `deputy_admin_inspection` | `view_dashboard`, `view_reports`, `upload_file`, `view_layer`, `digitize`, `request_decision`, `approve_decision`, `reject_decision`, `upload_document`, `view_document`, `edit_document`, `share_document`, `create_user`, `edit_user`, `assign_role`, `reset_password` |
+| `deputy_admin_projects` | `view_dashboard`, `view_reports`, `create_project`, `edit_project`, `assign_worker`, `submit_report`, `review_project`, `close_project`, `upload_file`, `view_layer`, `digitize`, `request_decision`, `approve_decision`, `reject_decision`, `upload_document`, `view_document`, `edit_document`, `share_document` |
+| `deputy_admin_finance` | `view_dashboard`, `view_reports`, `upload_file`, `view_layer`, `digitize`, `request_decision`, `approve_decision`, `reject_decision`, `upload_document`, `view_document`, `edit_document`, `share_document`, `create_user`, `edit_user`, `assign_role`, `reset_password` |
+| `manager` | `view_dashboard`, `view_reports`, `edit_project`, `submit_report`, `review_project`, `upload_file`, `view_layer`, `digitize`, `request_decision`, `approve_decision`, `reject_decision`, `upload_document`, `view_document`, `edit_document`, `share_document`, `create_user`, `edit_user`, `assign_role`, `reset_password` |
+| `section_head` | `view_dashboard`, `view_reports`, `upload_file`, `view_layer`, `digitize`, `request_decision`, `approve_decision`, `reject_decision`, `upload_document`, `view_document`, `edit_document`, `share_document` |
+| `staff` | `view_dashboard`, `view_reports`, `upload_file`, `view_layer`, `digitize`, `request_decision`, `upload_document`, `view_document` |
+
+---
+
+## 🧱 4. التصميم التقني (Database Schema)
+
+### 🔹 جداول النظام
+
+```ts
+// users.ts
+export const users = pgTable('users', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  username: text('username').notNull().unique(),
+  passwordHash: text('password_hash').notNull(),
+  displayName: text('display_name'),
+  role: text('role').notNull().check(roleCheck), // 'admin', 'deputy_admin_1', ...
+  email: text('email').unique(),
+  phone: text('phone'),
+  isActive: boolean('is_active').default(true),
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow().onUpdateNow(),
+});
+
+// roles.ts
+export const roles = pgTable('roles', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  name: text('name').notNull().unique(), // 'admin', 'deputy_admin_1', ...
+  description: text('description'),
+  level: integer('level').notNull(), // 0 to 5
+});
+
+// permissions.ts
+export const permissions = pgTable('permissions', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  name: text('name').notNull().unique(), // 'upload_file', 'view_layer', ...
+  description: text('description'),
+});
+
+// role_permissions.ts
+export const rolePermissions = pgTable('role_permissions', {
+  roleId: uuid('role_id').references(() => roles.id, { onDelete: 'cascade' }),
+  permissionId: uuid('permission_id').references(() => permissions.id, { onDelete: 'cascade' }),
+  primary: primaryKey({ columns: [roleId, permissionId] }),
+});
+```
+
+---
+
+## 🛠️ 5. middleware للتحقق من الصلاحيات
+
+```ts
+// server/middleware/auth.ts
+import { requireAuth } from './auth.js';
+
+export function requireRole(...roles: string[]) {
+  return (req: Request, res: Response, next: NextFunction) => {
+    if (!req.user) return res.status(401).json({ error: 'Unauthorized' });
+    if (!roles.includes(req.user.role)) return res.status(403).json({ error: 'Forbidden' });
+    next();
+  };
+}
+
+// مثال: للوصول إلى /api/gis/decisions/approve
+router.post('/approve', requireAuth, requireRole('deputy_admin_technical', 'deputy_admin_inspection', 'manager'));
+```
+
+---
+
+## 🧪 6. اختبارات الاستخدام (User Scenarios)
+
+| السيناريو | الدور | ماذا يجب أن يستطيع؟ |
+|----------|------|---------------------|
+| المدير العام | `admin` | إنشاء مستخدمين، تعيين أدوار، حظر مستخدمين، عرض جميع التقارير |
+| نائب المدير العام (التخطيط) | `deputy_admin_planning` | إنشاء مشاريع، مراجعة تقارير التنفيذ، اعتماد ميزانيات |
+| مدير إدارة المساحة | `manager` | رفع ملفات جغرافية، رقمنة، تقديم طلبات قرار مساحي |
+| رئيس قسم المساحة الميدانية | `section_head` | رفع ملفات، رقمنة، تقديم طلبات قرار مساحي |
+| موظف مساح | `staff` | رفع ملفات، رقمنة، عرض الطبقات الجغرافية |
+
+---
+
+## 📦 7. دمج مع نظام المصادقة
+
+- عند تسجيل الدخول، يتم تحقق من `username` و`password`.
+- إذا نجح، يتم إرسال توكن JWT يحتوي:
+  ```json
+  {
+    "id": "uuid",
+    "username": "surveyor1",
+    "role": "staff",
+    "exp": 1234567890
+  }
+  ```
+- عند كل طلب، يُفحص التوكن باستخدام `requireAuth` ثم `requireRole`.
+
+---
+
+## 🚀 8. خطوات التنفيذ (Next Steps)
+
+1. **أنشئ جداول الأدوار والصلاحيات** في Drizzle.
+2. **أضف `role` إلى جدول `users`**.
+3. **أضف `requireRole` إلى مسارات API** مثل `/api/gis/decisions/approve`.
+4. **تحديث `useSimpleAuth`** ليعرض اسم الدور في الواجهة.
+5. **أنشئ صفحة إدارة المستخدمين** (`/admin/users`) مع:
+   - قائمة المستخدمين
+   - زر "تعديل" يفتح نموذجًا لتعيين الدور
+   - زر "حظر"
+6. **أنشئ صفحة إدارة الأدوار** (`/admin/roles`) (اختياري الآن).
+7. **اختبار مع بيانات افتراضية**:
+   - `admin/Admin@2025!`
+   - `surveyor1/Employee@2025!`
+   - `deputy_admin_technical/Deputy@2025!`
+
+---
+
+## ✅ معايير النجاح (DoD)
+
+- [ ] جدول `users` يحتوي على `role`
+- [ ] جدول `roles` و`permissions` و`role_permissions`
+- [ ] `requireRole` يعمل بشكل صحيح
+- [ ] `admin` يمكنه إنشاء مستخدمين وتعيين أدوار
+- [ ] `staff` لا يستطيع حذف مستخدمين
+- [ ] `deputy_admin_technical` يستطيع الموافقة على القرارات المساحية
+- [ ] الواجهة تظهر اسم الدور (مثلاً: "نائب المدير العام للشؤون الفنية")
+
+---
+
+هل تريدني أرسل لك:
+- PR يتضمن هذه التغييرات؟
+- نموذج JSON لـ `users`, `roles`, `permissions`؟
+- مثال على صفحة إدارة المستخدمين في React؟
+
+قل لي "تم"، وأبدأ بالكتابة.

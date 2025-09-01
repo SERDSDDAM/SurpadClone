@@ -1,76 +1,63 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
-import rateLimit from 'express-rate-limit';
+import { ROLE_HIERARCHY, type RoleCode } from '@shared/auth-schema';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'fallback-secret-change-in-production';
-
-// Interface للمستخدم المصادق عليه
-export interface AuthenticatedUser {
-  id: string;
-  username: string;
-  role: string;
-  email?: string;
-}
-
-// Extend Request type لتشمل user
+// تمديد نوع Request ليشمل user
 declare global {
   namespace Express {
     interface Request {
-      user?: AuthenticatedUser;
+      user?: {
+        id: string;
+        username: string;
+        role: string;
+        email?: string;
+        firstName?: string;
+        lastName?: string;
+      };
     }
   }
 }
 
-/**
- * Middleware للتحقق من JWT token
- */
-export function authMiddleware(req: Request, res: Response, next: NextFunction) {
-  // البحث عن التوكن في الكوكي أو header
-  const token = req.cookies?.authToken || 
-                req.headers.authorization?.replace('Bearer ', '');
-
-  if (!token) {
-    return res.status(401).json({ 
-      error: 'Unauthorized', 
-      message: 'مطلوب تسجيل دخول للوصول لهذا المورد' 
-    });
-  }
-
+// التحقق من المصادقة
+export function requireAuth(req: Request, res: Response, next: NextFunction) {
   try {
-    const payload = jwt.verify(token, JWT_SECRET) as any;
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({ error: 'Unauthorized', message: 'مطلوب تسجيل الدخول' });
+    }
+
+    const token = authHeader.substring(7);
+    const decoded = jwt.verify(token, process.env.JWT_SECRET!) as any;
     
     req.user = {
-      id: payload.sub || payload.id,
-      username: payload.username,
-      role: payload.role,
-      email: payload.email
+      id: decoded.sub,
+      username: decoded.username,
+      role: decoded.role,
+      email: decoded.email,
+      firstName: decoded.firstName,
+      lastName: decoded.lastName,
     };
-    
+
     next();
   } catch (error) {
-    return res.status(401).json({ 
-      error: 'Invalid token', 
-      message: 'رمز المصادقة غير صحيح أو منتهي الصلاحية' 
-    });
+    console.error('Authentication error:', error);
+    return res.status(401).json({ error: 'Unauthorized', message: 'توكن غير صالح' });
   }
 }
 
-/**
- * Middleware للتحقق من دور المستخدم
- */
+// التحقق من الأدوار المطلوبة
 export function requireRole(...allowedRoles: string[]) {
   return (req: Request, res: Response, next: NextFunction) => {
     if (!req.user) {
-      return res.status(401).json({ 
-        error: 'Unauthorized', 
-        message: 'مطلوب تسجيل دخول' 
-      });
+      return res.status(401).json({ error: 'Unauthorized', message: 'مطلوب تسجيل الدخول' });
     }
 
     if (!allowedRoles.includes(req.user.role)) {
       return res.status(403).json({ 
         error: 'Forbidden', 
-        message: `مطلوب صلاحية ${allowedRoles.join(' أو ')} للوصول لهذا المورد` 
+        message: 'ليس لديك صلاحية للوصول إلى هذا المورد',
+        required: allowedRoles,
+        current: req.user.role
       });
     }
 
@@ -78,88 +65,147 @@ export function requireRole(...allowedRoles: string[]) {
   };
 }
 
-/**
- * Middleware للتحقق من أن المستخدم مدير
- */
-export function requireAdmin(req: Request, res: Response, next: NextFunction) {
-  return requireRole('admin')(req, res, next);
-}
-
-/**
- * Middleware للتحقق من أن المستخدم مساح أو مدير
- */
-export function requireSurveyor(req: Request, res: Response, next: NextFunction) {
-  return requireRole('admin', 'surveyor')(req, res, next);
-}
-
-/**
- * Rate limiting لتسجيل الدخول
- */
-export const loginRateLimit = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 5, // حد أقصى 5 محاولات لكل IP
-  message: {
-    error: 'Too many login attempts',
-    message: 'تم تجاوز عدد محاولات تسجيل الدخول المسموحة. حاول مرة أخرى خلال 15 دقيقة',
-    retryAfter: '15 minutes'
-  },
-  standardHeaders: true,
-  legacyHeaders: false,
-});
-
-/**
- * Rate limiting عام للـ API
- */
-export const apiRateLimit = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // 100 requests per window
-  message: {
-    error: 'Too many requests',
-    message: 'تم تجاوز عدد الطلبات المسموحة. حاول مرة أخرى لاحقاً'
-  },
-  standardHeaders: true,
-  legacyHeaders: false,
-});
-
-/**
- * Utility function لإنشاء JWT token
- */
-export function createAuthToken(user: {
-  id: string;
-  username: string;
-  role: string;
-  email?: string;
-}): string {
-  return jwt.sign(
-    {
-      sub: user.id,
-      username: user.username,
-      role: user.role,
-      email: user.email,
-      iat: Math.floor(Date.now() / 1000),
-    },
-    JWT_SECRET,
-    { 
-      expiresIn: '8h',
-      issuer: 'banna-yemen-gis',
-      audience: 'banna-yemen-users'
+// التحقق من مستوى الصلاحية الأدنى
+export function requireMinLevel(minLevel: number) {
+  return (req: Request, res: Response, next: NextFunction) => {
+    if (!req.user) {
+      return res.status(401).json({ error: 'Unauthorized', message: 'مطلوب تسجيل الدخول' });
     }
-  );
+
+    const userLevel = ROLE_HIERARCHY[req.user.role as RoleCode] ?? 0;
+    if (userLevel < minLevel) {
+      return res.status(403).json({ 
+        error: 'Forbidden', 
+        message: 'مستوى الصلاحية غير كافي',
+        required: minLevel,
+        current: userLevel
+      });
+    }
+
+    next();
+  };
 }
 
-/**
- * Utility function للتحقق من صحة التوكن
- */
-export function verifyAuthToken(token: string): AuthenticatedUser | null {
-  try {
-    const payload = jwt.verify(token, JWT_SECRET) as any;
-    return {
-      id: payload.sub || payload.id,
-      username: payload.username,
-      role: payload.role,
-      email: payload.email
-    };
-  } catch {
-    return null;
+// التحقق من صلاحية محددة
+export function requirePermission(permission: string) {
+  return (req: Request, res: Response, next: NextFunction) => {
+    if (!req.user) {
+      return res.status(401).json({ error: 'Unauthorized', message: 'مطلوب تسجيل الدخول' });
+    }
+
+    // تحديد الصلاحيات بناءً على الدور
+    const permissions = getRolePermissions(req.user.role);
+    
+    if (!permissions.includes(permission)) {
+      return res.status(403).json({ 
+        error: 'Forbidden', 
+        message: `ليس لديك صلاحية: ${permission}`,
+        required: permission,
+        available: permissions
+      });
+    }
+
+    next();
+  };
+}
+
+// الحصول على صلاحيات الدور
+function getRolePermissions(role: string): string[] {
+  const basePermissions = [
+    'dashboard.view',
+    'reports.view',
+    'gis.view_layer',
+    'documents.read'
+  ];
+
+  switch (role) {
+    case 'admin':
+      return ['*']; // جميع الصلاحيات
+
+    case 'deputy_admin_first':
+      return [
+        ...basePermissions,
+        'users.create', 'users.read', 'users.update', 'users.assign_role',
+        'gis.upload_file', 'gis.edit_layer', 'gis.publish_layer', 'gis.digitize',
+        'survey.request_decision', 'survey.approve_decision', 'survey.reject_decision',
+        'projects.create', 'projects.read', 'projects.update', 'projects.assign_worker',
+        'projects.submit_report', 'projects.review', 'projects.close',
+        'documents.upload', 'documents.update', 'documents.share',
+        'analytics.view', 'analytics.generate'
+      ];
+
+    case 'deputy_admin_technical':
+      return [
+        ...basePermissions,
+        'users.create', 'users.read', 'users.update', 'users.assign_role',
+        'gis.upload_file', 'gis.edit_layer', 'gis.publish_layer', 'gis.digitize',
+        'survey.request_decision', 'survey.approve_decision', 'survey.reject_decision',
+        'documents.upload', 'documents.update', 'documents.share',
+        'analytics.view'
+      ];
+
+    case 'deputy_admin_planning':
+      return [
+        ...basePermissions,
+        'projects.create', 'projects.read', 'projects.update', 'projects.assign_worker',
+        'projects.submit_report', 'projects.review', 'projects.close',
+        'gis.upload_file', 'gis.digitize',
+        'survey.request_decision', 'survey.approve_decision',
+        'documents.upload', 'documents.update', 'documents.share',
+        'analytics.view', 'analytics.generate'
+      ];
+
+    case 'deputy_admin_inspection':
+    case 'deputy_admin_projects':
+    case 'deputy_admin_finance':
+      return [
+        ...basePermissions,
+        'users.create', 'users.read', 'users.update',
+        'gis.upload_file', 'gis.digitize',
+        'survey.request_decision', 'survey.approve_decision',
+        'documents.upload', 'documents.update', 'documents.share',
+        'analytics.view'
+      ];
+
+    case 'manager':
+      return [
+        ...basePermissions,
+        'users.create', 'users.read', 'users.update',
+        'gis.upload_file', 'gis.digitize',
+        'survey.request_decision', 'survey.approve_decision',
+        'projects.read', 'projects.update', 'projects.submit_report', 'projects.review',
+        'documents.upload', 'documents.update', 'documents.share'
+      ];
+
+    case 'section_head':
+      return [
+        ...basePermissions,
+        'gis.upload_file', 'gis.digitize',
+        'survey.request_decision', 'survey.approve_decision',
+        'documents.upload', 'documents.update', 'documents.share'
+      ];
+
+    case 'staff':
+      return [
+        ...basePermissions,
+        'gis.upload_file', 'gis.digitize',
+        'survey.request_decision',
+        'documents.upload'
+      ];
+
+    default:
+      return basePermissions;
   }
+}
+
+// تحقق من وجود صلاحية
+export function hasPermission(role: string, permission: string): boolean {
+  const permissions = getRolePermissions(role);
+  return permissions.includes('*') || permissions.includes(permission);
+}
+
+// تحقق من مستوى الدور
+export function hasMinLevel(role: string, minLevel: number): boolean {
+  const userLevel = ROLE_HIERARCHY[role as RoleCode] ?? 0;
+  return userLevel >= minLevel;
 }

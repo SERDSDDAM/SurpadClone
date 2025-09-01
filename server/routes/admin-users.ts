@@ -1,318 +1,300 @@
-import { Router } from "express";
-import { eq, like, desc, sql } from "drizzle-orm";
-import { db } from "../db";
-import { users, auditLogs, userSessions } from "@shared/schema";
-import bcrypt from "bcryptjs";
-import { z } from "zod";
+import { Router, Request, Response } from 'express';
+import bcrypt from 'bcryptjs';
+import { eq, like, desc } from 'drizzle-orm';
+import { db } from '../db';
+import { authUsers, insertAuthUserSchema, ROLE_NAMES_AR, ROLE_HIERARCHY } from '@shared/auth-schema';
+import { requireAuth, requireRole, requireMinLevel } from '../middleware/auth';
 
 const router = Router();
 
-// Get user details by ID
-router.get("/:id", async (req, res) => {
+// الحصول على جميع المستخدمين (للمديرين فقط)
+router.get('/', requireAuth, requireMinLevel(2), async (req: Request, res: Response) => {
   try {
-    const userId = req.params.id;
-    
-    const [user] = await db
-      .select({
-        id: users.id,
-        username: users.username,
-        email: users.email,
-        name: users.name,
-        role: users.role,
-        status: users.status,
-        phone: users.phone,
-        department: users.department,
-        position: users.position,
-        lastLogin: users.lastLogin,
-        createdAt: users.createdAt,
-        updatedAt: users.updatedAt,
-      })
-      .from(users)
-      .where(eq(users.id, userId));
+    const { search, role, page = 1, limit = 20 } = req.query;
+    let query = db.select({
+      id: authUsers.id,
+      username: authUsers.username,
+      email: authUsers.email,
+      firstName: authUsers.firstName,
+      lastName: authUsers.lastName,
+      role: authUsers.role,
+      isActive: authUsers.isActive,
+      lastLoginAt: authUsers.lastLoginAt,
+      createdAt: authUsers.createdAt,
+    }).from(authUsers);
 
-    if (!user) {
-      return res.status(404).json({ error: "المستخدم غير موجود" });
+    // تصفية البحث
+    if (search) {
+      const searchTerm = `%${search}%`;
+      query = query.where(
+        like(authUsers.username, searchTerm)
+      );
     }
 
-    res.json(user);
-  } catch (error) {
-    console.error("Error fetching user details:", error);
-    res.status(500).json({ error: "خطأ في الخادم الداخلي" });
-  }
-});
+    // تصفية الدور
+    if (role && typeof role === 'string') {
+      query = query.where(eq(authUsers.role, role));
+    }
 
-// Get user audit logs
-router.get("/:id/audit-logs", async (req, res) => {
-  try {
-    const userId = req.params.id;
-    const { page = 1, limit = 50 } = req.query;
-    
+    // ترتيب وحد الصفحات
     const offset = (Number(page) - 1) * Number(limit);
-    
-    const logs = await db
-      .select({
-        id: auditLogs.id,
-        action: auditLogs.action,
-        tableName: auditLogs.tableName,
-        timestamp: auditLogs.timestamp,
-        ipAddress: auditLogs.ipAddress,
-        success: auditLogs.success,
-        errorMessage: auditLogs.errorMessage,
-      })
-      .from(auditLogs)
-      .where(eq(auditLogs.userId, userId))
-      .orderBy(desc(auditLogs.timestamp))
+    const users = await query
+      .orderBy(desc(authUsers.createdAt))
       .limit(Number(limit))
       .offset(offset);
 
-    res.json(logs);
-  } catch (error) {
-    console.error("Error fetching audit logs:", error);
-    res.status(500).json({ error: "خطأ في الخادم الداخلي" });
-  }
-});
-
-// Get user sessions
-router.get("/:id/sessions", async (req, res) => {
-  try {
-    const userId = req.params.id;
-    const { page = 1, limit = 20 } = req.query;
-    
-    const offset = (Number(page) - 1) * Number(limit);
-    
-    const sessions = await db
-      .select({
-        id: userSessions.id,
-        ipAddress: userSessions.ipAddress,
-        userAgent: userSessions.userAgent,
-        loginAt: userSessions.loginAt,
-        lastActivity: userSessions.lastActivity,
-        logoutAt: userSessions.logoutAt,
-        active: userSessions.active,
-      })
-      .from(userSessions)
-      .where(eq(userSessions.userId, userId))
-      .orderBy(desc(userSessions.lastActivity))
-      .limit(Number(limit))
-      .offset(offset);
-
-    res.json(sessions);
-  } catch (error) {
-    console.error("Error fetching user sessions:", error);
-    res.status(500).json({ error: "خطأ في الخادم الداخلي" });
-  }
-});
-
-// Reset user password
-router.post("/:id/reset-password", async (req, res) => {
-  try {
-    const userId = req.params.id;
-    
-    // Generate a temporary password
-    const tempPassword = Math.random().toString(36).slice(-8);
-    const hashedPassword = await bcrypt.hash(tempPassword, 10);
-    
-    await db
-      .update(users)
-      .set({ 
-        password: hashedPassword,
-        passwordResetRequired: true,
-        updatedAt: new Date()
-      })
-      .where(eq(users.id, userId));
-
-    // Log the action
-    await db.insert(auditLogs).values({
-      userId: req.user?.id || 'system',
-      action: 'password_reset',
-      tableName: 'users',
-      recordId: userId,
-      ipAddress: req.ip,
-      userAgent: req.get('User-Agent'),
-      success: true,
-    });
+    // تحويل أسماء الأدوار للعربية
+    const usersWithRoleNames = users.map(user => ({
+      ...user,
+      roleNameAr: ROLE_NAMES_AR[user.role as keyof typeof ROLE_NAMES_AR] || user.role,
+      roleLevel: ROLE_HIERARCHY[user.role as keyof typeof ROLE_HIERARCHY] || 0,
+    }));
 
     res.json({ 
-      message: "تم إعادة تعيين كلمة المرور بنجاح",
-      tempPassword: tempPassword 
+      users: usersWithRoleNames,
+      pagination: {
+        page: Number(page),
+        limit: Number(limit),
+        total: users.length // TODO: إضافة العد الكامل
+      }
     });
   } catch (error) {
-    console.error("Error resetting password:", error);
-    
-    // Log the failed action
-    await db.insert(auditLogs).values({
-      userId: req.user?.id || 'system',
-      action: 'password_reset',
-      tableName: 'users',
-      recordId: req.params.id,
-      ipAddress: req.ip,
-      userAgent: req.get('User-Agent'),
-      success: false,
-      errorMessage: error.message,
-    });
-    
-    res.status(500).json({ error: "خطأ في الخادم الداخلي" });
+    console.error('Error fetching users:', error);
+    res.status(500).json({ error: 'حدث خطأ أثناء جلب المستخدمين' });
   }
 });
 
-// Update user status
-router.patch("/:id", async (req, res) => {
+// الحصول على مستخدم محدد
+router.get('/:id', requireAuth, requireMinLevel(2), async (req: Request, res: Response) => {
   try {
-    const userId = req.params.id;
-    const updateSchema = z.object({
-      status: z.enum(['active', 'inactive', 'suspended']).optional(),
-      role: z.string().optional(),
-      department: z.string().optional(),
-      position: z.string().optional(),
-      phone: z.string().optional(),
-    });
+    const { id } = req.params;
+    const [user] = await db
+      .select({
+        id: authUsers.id,
+        username: authUsers.username,
+        email: authUsers.email,
+        firstName: authUsers.firstName,
+        lastName: authUsers.lastName,
+        role: authUsers.role,
+        isActive: authUsers.isActive,
+        lastLoginAt: authUsers.lastLoginAt,
+        createdAt: authUsers.createdAt,
+        loginAttempts: authUsers.loginAttempts,
+      })
+      .from(authUsers)
+      .where(eq(authUsers.id, id))
+      .limit(1);
 
-    const validatedData = updateSchema.parse(req.body);
-    
-    // Get current user data for audit log
-    const [currentUser] = await db
-      .select()
-      .from(users)
-      .where(eq(users.id, userId));
-
-    if (!currentUser) {
-      return res.status(404).json({ error: "المستخدم غير موجود" });
+    if (!user) {
+      return res.status(404).json({ error: 'المستخدم غير موجود' });
     }
 
-    // Update user
-    await db
-      .update(users)
-      .set({ 
-        ...validatedData,
-        updatedAt: new Date()
-      })
-      .where(eq(users.id, userId));
+    const userWithRoleName = {
+      ...user,
+      roleNameAr: ROLE_NAMES_AR[user.role as keyof typeof ROLE_NAMES_AR] || user.role,
+      roleLevel: ROLE_HIERARCHY[user.role as keyof typeof ROLE_HIERARCHY] || 0,
+    };
 
-    // Log the action
-    await db.insert(auditLogs).values({
-      userId: req.user?.id || 'system',
-      action: 'user_update',
-      tableName: 'users',
-      recordId: userId,
-      oldValues: currentUser,
-      newValues: validatedData,
-      ipAddress: req.ip,
-      userAgent: req.get('User-Agent'),
-      success: true,
-    });
-
-    res.json({ message: "تم تحديث المستخدم بنجاح" });
+    res.json({ user: userWithRoleName });
   } catch (error) {
-    console.error("Error updating user:", error);
-    
-    // Log the failed action
-    await db.insert(auditLogs).values({
-      userId: req.user?.id || 'system',
-      action: 'user_update',
-      tableName: 'users',
-      recordId: req.params.id,
-      ipAddress: req.ip,
-      userAgent: req.get('User-Agent'),
-      success: false,
-      errorMessage: error.message,
-    });
-    
-    res.status(500).json({ error: "خطأ في الخادم الداخلي" });
+    console.error('Error fetching user:', error);
+    res.status(500).json({ error: 'حدث خطأ أثناء جلب بيانات المستخدم' });
   }
 });
 
-// Delete user (soft delete)
-router.delete("/:id", async (req, res) => {
+// إنشاء مستخدم جديد
+router.post('/', requireAuth, requireRole('admin', 'deputy_admin_first'), async (req: Request, res: Response) => {
   try {
-    const userId = req.params.id;
+    const userData = insertAuthUserSchema.parse(req.body);
     
-    // Get current user data for audit log
-    const [currentUser] = await db
+    // تشفير كلمة المرور
+    const hashedPassword = await bcrypt.hash(userData.password, 10);
+    
+    // التحقق من عدم وجود مستخدم بنفس اسم المستخدم أو الإيميل
+    const [existingUser] = await db
       .select()
-      .from(users)
-      .where(eq(users.id, userId));
+      .from(authUsers)
+      .where(eq(authUsers.username, userData.username))
+      .limit(1);
 
-    if (!currentUser) {
-      return res.status(404).json({ error: "المستخدم غير موجود" });
+    if (existingUser) {
+      return res.status(400).json({ error: 'اسم المستخدم موجود بالفعل' });
     }
 
-    // Soft delete - mark as deleted
-    await db
-      .update(users)
-      .set({ 
-        status: 'deleted',
-        deletedAt: new Date(),
-        updatedAt: new Date()
+    if (userData.email) {
+      const [existingEmail] = await db
+        .select()
+        .from(authUsers)
+        .where(eq(authUsers.email, userData.email))
+        .limit(1);
+
+      if (existingEmail) {
+        return res.status(400).json({ error: 'الإيميل موجود بالفعل' });
+      }
+    }
+
+    // إنشاء المستخدم
+    const [newUser] = await db
+      .insert(authUsers)
+      .values({
+        ...userData,
+        password: hashedPassword,
       })
-      .where(eq(users.id, userId));
+      .returning({
+        id: authUsers.id,
+        username: authUsers.username,
+        email: authUsers.email,
+        firstName: authUsers.firstName,
+        lastName: authUsers.lastName,
+        role: authUsers.role,
+        isActive: authUsers.isActive,
+        createdAt: authUsers.createdAt,
+      });
 
-    // Log the action
-    await db.insert(auditLogs).values({
-      userId: req.user?.id || 'system',
-      action: 'user_delete',
-      tableName: 'users',
-      recordId: userId,
-      oldValues: currentUser,
-      ipAddress: req.ip,
-      userAgent: req.get('User-Agent'),
-      success: true,
+    const userWithRoleName = {
+      ...newUser,
+      roleNameAr: ROLE_NAMES_AR[newUser.role as keyof typeof ROLE_NAMES_AR] || newUser.role,
+    };
+
+    res.status(201).json({ 
+      message: 'تم إنشاء المستخدم بنجاح',
+      user: userWithRoleName 
     });
-
-    res.json({ message: "تم حذف المستخدم بنجاح" });
   } catch (error) {
-    console.error("Error deleting user:", error);
-    
-    // Log the failed action
-    await db.insert(auditLogs).values({
-      userId: req.user?.id || 'system',
-      action: 'user_delete',
-      tableName: 'users',
-      recordId: req.params.id,
-      ipAddress: req.ip,
-      userAgent: req.get('User-Agent'),
-      success: false,
-      errorMessage: error.message,
-    });
-    
-    res.status(500).json({ error: "خطأ في الخادم الداخلي" });
+    console.error('Error creating user:', error);
+    res.status(500).json({ error: 'حدث خطأ أثناء إنشاء المستخدم' });
   }
 });
 
-// Get user statistics
-router.get("/:id/statistics", async (req, res) => {
+// تحديث مستخدم
+router.put('/:id', requireAuth, requireRole('admin', 'deputy_admin_first'), async (req: Request, res: Response) => {
   try {
-    const userId = req.params.id;
-    
-    // Get user activity statistics
-    const [activityStats] = await db
-      .select({
-        totalLogins: sql<number>`count(${userSessions.id})`,
-        activeSessionsCount: sql<number>`count(case when ${userSessions.active} = true then 1 end)`,
-        lastLoginDate: sql<string>`max(${userSessions.loginAt})`,
-      })
-      .from(userSessions)
-      .where(eq(userSessions.userId, userId));
+    const { id } = req.params;
+    const updateData = req.body;
 
-    // Get audit activity count by day (last 30 days)
-    const auditActivity = await db
-      .select({
-        date: sql<string>`date(${auditLogs.timestamp})`,
-        actionCount: sql<number>`count(*)`,
-      })
-      .from(auditLogs)
-      .where(eq(auditLogs.userId, userId))
-      .groupBy(sql`date(${auditLogs.timestamp})`)
-      .orderBy(desc(sql`date(${auditLogs.timestamp})`))
-      .limit(30);
+    // إزالة الحقول التي لا يجب تحديثها مباشرة
+    delete updateData.id;
+    delete updateData.createdAt;
+    delete updateData.updatedAt;
+    delete updateData.password; // يتم تحديث كلمة المرور من endpoint منفصل
 
-    res.json({
-      activity: activityStats,
-      dailyActivity: auditActivity,
+    const [updatedUser] = await db
+      .update(authUsers)
+      .set({
+        ...updateData,
+        updatedAt: new Date(),
+      })
+      .where(eq(authUsers.id, id))
+      .returning({
+        id: authUsers.id,
+        username: authUsers.username,
+        email: authUsers.email,
+        firstName: authUsers.firstName,
+        lastName: authUsers.lastName,
+        role: authUsers.role,
+        isActive: authUsers.isActive,
+        updatedAt: authUsers.updatedAt,
+      });
+
+    if (!updatedUser) {
+      return res.status(404).json({ error: 'المستخدم غير موجود' });
+    }
+
+    const userWithRoleName = {
+      ...updatedUser,
+      roleNameAr: ROLE_NAMES_AR[updatedUser.role as keyof typeof ROLE_NAMES_AR] || updatedUser.role,
+    };
+
+    res.json({ 
+      message: 'تم تحديث المستخدم بنجاح',
+      user: userWithRoleName 
     });
   } catch (error) {
-    console.error("Error fetching user statistics:", error);
-    res.status(500).json({ error: "خطأ في الخادم الداخلي" });
+    console.error('Error updating user:', error);
+    res.status(500).json({ error: 'حدث خطأ أثناء تحديث المستخدم' });
   }
+});
+
+// حذف مستخدم (إلغاء تفعيل)
+router.delete('/:id', requireAuth, requireRole('admin'), async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+
+    // التحقق من أن المستخدم لا يحذف نفسه
+    if (req.user?.id === id) {
+      return res.status(400).json({ error: 'لا يمكنك حذف حسابك الخاص' });
+    }
+
+    const [deactivatedUser] = await db
+      .update(authUsers)
+      .set({
+        isActive: false,
+        updatedAt: new Date(),
+      })
+      .where(eq(authUsers.id, id))
+      .returning({
+        id: authUsers.id,
+        username: authUsers.username,
+        isActive: authUsers.isActive,
+      });
+
+    if (!deactivatedUser) {
+      return res.status(404).json({ error: 'المستخدم غير موجود' });
+    }
+
+    res.json({ message: 'تم إلغاء تفعيل المستخدم بنجاح' });
+  } catch (error) {
+    console.error('Error deactivating user:', error);
+    res.status(500).json({ error: 'حدث خطأ أثناء إلغاء تفعيل المستخدم' });
+  }
+});
+
+// إعادة تعيين كلمة المرور
+router.post('/:id/reset-password', requireAuth, requireRole('admin', 'deputy_admin_first'), async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { newPassword } = req.body;
+
+    if (!newPassword || newPassword.length < 8) {
+      return res.status(400).json({ error: 'كلمة المرور يجب أن تحتوي على 8 أحرف على الأقل' });
+    }
+
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+    const [updatedUser] = await db
+      .update(authUsers)
+      .set({
+        password: hashedPassword,
+        loginAttempts: 0,
+        lockedUntil: null,
+        updatedAt: new Date(),
+      })
+      .where(eq(authUsers.id, id))
+      .returning({
+        id: authUsers.id,
+        username: authUsers.username,
+      });
+
+    if (!updatedUser) {
+      return res.status(404).json({ error: 'المستخدم غير موجود' });
+    }
+
+    res.json({ message: 'تم إعادة تعيين كلمة المرور بنجاح' });
+  } catch (error) {
+    console.error('Error resetting password:', error);
+    res.status(500).json({ error: 'حدث خطأ أثناء إعادة تعيين كلمة المرور' });
+  }
+});
+
+// الحصول على الأدوار المتاحة
+router.get('/meta/roles', requireAuth, requireMinLevel(2), async (req: Request, res: Response) => {
+  const roles = Object.entries(ROLE_NAMES_AR).map(([code, nameAr]) => ({
+    code,
+    nameAr,
+    level: ROLE_HIERARCHY[code as keyof typeof ROLE_HIERARCHY] || 0,
+  }));
+
+  res.json({ roles });
 });
 
 export default router;

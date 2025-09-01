@@ -16,7 +16,9 @@ import {
 
 import authRoutes from "./routes/auth";
 import simpleAuthRoutes from "./routes/simple-auth";
-import { authMiddleware, requireSurveyor, apiRateLimit } from './middleware/auth';
+import authManagementRoutes from "./routes/auth-management";
+import { requireAuth, requireRole } from './middleware/auth';
+import rateLimit from 'express-rate-limit';
 import cookieParser from 'cookie-parser';
 import surveyRoutes from "./routes/survey-routes";
 import gisRoutes from "./routes/gis-routes";
@@ -40,6 +42,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
   // API rate limiting
+  const apiRateLimit = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 1000, // limit each IP to 1000 requests per windowMs
+    message: 'Too many requests from this IP, please try again later.',
+    standardHeaders: true,
+    legacyHeaders: false,
+  });
   app.use('/api', apiRateLimit);
   
   // CORS middleware FIRST (before any other middleware)
@@ -77,7 +86,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Auth routes (BEFORE other API routes) - Simple auth without WebSocket
   app.use("/api/simple-auth", simpleAuthRoutes);
-  app.use("/api/auth", simpleAuthRoutes);
+  app.use("/api/auth", authManagementRoutes); // نظام المصادقة الجديد
   // app.use("/api/auth", authRoutes); // معطل مؤقتاً بسبب مشكلة WebSocket
   
   // Admin routes (protected)

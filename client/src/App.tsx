@@ -58,6 +58,9 @@ import Phase0Test from "@/pages/Phase0Test";
 import Phase1Processing from "@/pages/Phase1Processing";
 import Phase2DigitizationTool from "@/pages/Phase2DigitizationTool";
 import NotFound from "@/pages/not-found";
+import LoginPage from "@/pages/LoginPage";
+import AdminUsers from "@/pages/admin/AdminUsers";
+import { useSimpleAuth } from "@/hooks/useSimpleAuth";
 
 function Navigation() {
   const [location] = useLocation();
@@ -178,11 +181,49 @@ function Navigation() {
   );
 }
 
+function ProtectedRoute({ children, role }: { children: React.ReactNode; role?: string }) {
+  const { isAuthenticated, isLoading, user } = useSimpleAuth();
+  const [location] = useLocation();
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">جاري التحقق من المصادقة...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    // حفظ الرابط المطلوب للعودة إليه بعد تسجيل الدخول
+    localStorage.setItem('redirect_after_login', location);
+    window.location.href = '/login';
+    return null;
+  }
+
+  // فحص الصلاحيات إذا كان مطلوباً
+  if (role && user?.role !== role && user?.role !== 'admin') {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <h2 className="text-2xl font-bold text-red-600">ليس لديك صلاحية للوصول</h2>
+          <p className="mt-2 text-gray-600">الدور المطلوب: {role}</p>
+          <p className="text-gray-600">دورك الحالي: {user?.role}</p>
+        </div>
+      </div>
+    );
+  }
+
+  return <>{children}</>;
+}
+
 function Router() {
   const [location] = useLocation();
   
   // Check if current route should hide navigation
-  const hideNavigation = location === "/" || location === "/dashboard" || location === "/clean-field-app";
+  const hideNavigation = location === "/" || location === "/dashboard" || location === "/clean-field-app" || location === "/login";
   
   return (
     <div className="min-h-screen bg-gray-50">
@@ -191,7 +232,13 @@ function Router() {
         <Switch>
           <Route path="/" component={PortalSelection} />
           <Route path="/admin" component={Dashboard} />
-          <Route path="/admin-dashboard" component={AdminDashboardNew} />
+          <Route path="/admin-dashboard">
+            {() => (
+              <ProtectedRoute role="admin">
+                <AdminDashboardNew />
+              </ProtectedRoute>
+            )}
+          </Route>
           <Route path="/dashboard" component={Dashboard} />
           <Route path="/citizen-portal" component={CitizenPortal} />
           <Route path="/building-permits" component={BuildingPermits} />
@@ -222,6 +269,7 @@ function Router() {
           <Route path="/auth/employee-login" component={EmployeeLogin} />
           <Route path="/employee-login" component={EmployeeLoginPage} />
           <Route path="/simple-login" component={SimpleLoginPage} />
+          <Route path="/login" component={LoginPage} />
           {/* Admin Dashboard System - Fixed Routes */}
           <Route path="/admin">
             {() => {
@@ -259,21 +307,19 @@ function Router() {
           </Route>
 
           <Route path="/admin/users">
-            {() => {
-              const AdminDashboardLayout = React.lazy(() => import('@/layouts/AdminDashboardLayout'));
-              const AdminUsers = React.lazy(() => import('@/pages/admin/AdminUsers'));
-              const RequireAuth = React.lazy(() => import('@/components/RequireAuth'));
-              
-              return (
-                <React.Suspense fallback={<div className="min-h-screen flex items-center justify-center"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-red-600"></div></div>}>
-                  <RequireAuth role="admin">
-                    <AdminDashboardLayout>
-                      <AdminUsers />
-                    </AdminDashboardLayout>
-                  </RequireAuth>
-                </React.Suspense>
-              );
-            }}
+            {() => (
+              <ProtectedRoute role="admin">
+                <AdminUsers />
+              </ProtectedRoute>
+            )}
+          </Route>
+          
+          <Route path="/admin-users">
+            {() => (
+              <ProtectedRoute role="admin">
+                <AdminUsers />
+              </ProtectedRoute>
+            )}
           </Route>
 
           <Route path="/admin/users/:id">
@@ -350,12 +396,6 @@ function Router() {
           </Route>
           
           {/* Legacy admin routes - redirect to new system */}
-          <Route path="/admin-dashboard">
-            {() => {
-              window.location.href = '/admin';
-              return null;
-            }}
-          </Route>
           <Route path="/analytics-dashboard">
             {() => {
               window.location.href = '/admin/analytics';

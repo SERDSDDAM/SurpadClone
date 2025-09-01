@@ -1,81 +1,137 @@
 import { useState, useEffect } from 'react';
+import { apiRequest } from '@/lib/queryClient';
 
 interface User {
   id: string;
   username: string;
-  email: string;
-  role: string;
+  email?: string;
   firstName: string;
   lastName: string;
-  name: string;
+  role: string;
+  isActive: boolean;
 }
 
 interface AuthState {
   user: User | null;
-  isLoading: boolean;
+  token: string | null;
   isAuthenticated: boolean;
+  isLoading: boolean;
 }
 
-export function useSimpleAuth(): AuthState {
-  const [state, setState] = useState<AuthState>({
+export function useSimpleAuth() {
+  const [authState, setAuthState] = useState<AuthState>({
     user: null,
+    token: null,
+    isAuthenticated: false,
     isLoading: true,
-    isAuthenticated: false
   });
 
   useEffect(() => {
-    const checkAuth = async () => {
-      try {
-        const token = localStorage.getItem('auth_token');
-        const userData = localStorage.getItem('user_data');
-        
-        if (token && userData) {
-          const user = JSON.parse(userData);
-          console.log('🔍 Found auth data:', user);
-          
-          // التحقق من صحة التوكن
-          const response = await fetch('/api/auth/verify', {
-            method: 'GET',
-            headers: {
-              'Authorization': `Bearer ${token}`,
-              'Content-Type': 'application/json',
-            },
-          });
-
-          if (response.ok) {
-            const verifyData = await response.json();
-            if (verifyData.valid) {
-              setState({
-                user: verifyData.user,
-                isLoading: false,
-                isAuthenticated: true
-              });
-              return;
-            }
-          }
-        }
-        
-        // إذا لم يكن هناك توكن صحيح
-        localStorage.removeItem('auth_token');
-        localStorage.removeItem('user_data');
-        setState({
-          user: null,
-          isLoading: false,
-          isAuthenticated: false
-        });
-        
-      } catch (error) {
-        console.error('Auth check error:', error);
-        setState({
-          user: null,
-          isLoading: false,
-          isAuthenticated: false
-        });
-      }
-    };
-
-    checkAuth();
+    // فحص التوكن المحفوظ عند تحميل التطبيق
+    const token = localStorage.getItem('auth_token');
+    if (token) {
+      checkAuthStatus(token);
+    } else {
+      setAuthState(prev => ({ ...prev, isLoading: false }));
+    }
   }, []);
 
-  return state;
+  const checkAuthStatus = async (token: string) => {
+    try {
+      const response = await fetch('/api/auth/me', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setAuthState({
+          user: data.user,
+          token,
+          isAuthenticated: true,
+          isLoading: false,
+        });
+      } else {
+        // توكن غير صالح
+        localStorage.removeItem('auth_token');
+        setAuthState({
+          user: null,
+          token: null,
+          isAuthenticated: false,
+          isLoading: false,
+        });
+      }
+    } catch (error) {
+      console.error('Error checking auth status:', error);
+      localStorage.removeItem('auth_token');
+      setAuthState({
+        user: null,
+        token: null,
+        isAuthenticated: false,
+        isLoading: false,
+      });
+    }
+  };
+
+  const login = async (username: string, password: string) => {
+    try {
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ username, password }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Login failed');
+      }
+
+      const data = await response.json();
+
+      if (data.token && data.user) {
+        localStorage.setItem('auth_token', data.token);
+        setAuthState({
+          user: data.user,
+          token: data.token,
+          isAuthenticated: true,
+          isLoading: false,
+        });
+        return { success: true };
+      } else {
+        return { success: false, error: 'Invalid response from server' };
+      }
+    } catch (error: any) {
+      console.error('Login error:', error);
+      return { success: false, error: error.message || 'Login failed' };
+    }
+  };
+
+  const logout = () => {
+    localStorage.removeItem('auth_token');
+    setAuthState({
+      user: null,
+      token: null,
+      isAuthenticated: false,
+      isLoading: false,
+    });
+  };
+
+  const getAuthHeaders = () => {
+    if (authState.token) {
+      return {
+        'Authorization': `Bearer ${authState.token}`,
+      };
+    }
+    return {};
+  };
+
+  return {
+    ...authState,
+    login,
+    logout,
+    getAuthHeaders,
+  };
 }

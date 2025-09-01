@@ -2,6 +2,25 @@ import { sql } from "drizzle-orm";
 import { pgTable, text, varchar, timestamp, real, integer, jsonb, boolean } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
+import { roles, permissions, rolePermissions } from "./roles-permissions";
+
+// Users table - Enhanced with roles and permissions
+export const users = pgTable("users", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  username: varchar("username").unique().notNull(),
+  password: varchar("password").notNull(), // password hash
+  email: varchar("email").unique(),
+  firstName: varchar("first_name"),
+  lastName: varchar("last_name"),
+  role: varchar("role").notNull().default("staff"), // admin, deputy_admin_technical, manager, section_head, staff
+  profileImageUrl: varchar("profile_image_url"),
+  isActive: boolean("is_active").default(true),
+  loginAttempts: integer("login_attempts").default(0),
+  lockedUntil: timestamp("locked_until"),
+  lastLoginAt: timestamp("last_login_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
 
 // Survey Requests - Enhanced for Yemen construction permits
 export const surveyRequests = pgTable("survey_requests", {
@@ -574,66 +593,20 @@ export const insertInspectionReportSchema = createInsertSchema(inspectionReports
 export type InsertInspectionReport = z.infer<typeof insertInspectionReportSchema>;
 export type InspectionReport = typeof inspectionReports.$inferSelect;
 
-// Phase 4: Authentication and Security System
-
-// Users Authentication Table
-export const users = pgTable("users", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  nationalId: varchar("national_id").notNull().unique(),
-  username: varchar("username").unique(),
-  email: varchar("email"),
-  password: varchar("password"), // hashed password
-  firstName: varchar("first_name").notNull(),
-  lastName: varchar("last_name").notNull(),
-  name: text("name").notNull(),
-  middleName: varchar("middle_name"),
-  dateOfBirth: varchar("date_of_birth"),
-  gender: varchar("gender"), // male, female
-  address: jsonb("address").$type<{
-    governorate: string;
-    district: string;
-    area: string;
-    street?: string;
-    building?: string;
-  }>(),
-  role: varchar("role").notNull().default("citizen"), // citizen, inspector, admin, surveyor, engineer, contractor
-  permissions: jsonb("permissions").$type<string[]>().default([]),
-  status: varchar("status").notNull().default("active"), // active, inactive, suspended, deleted
-  isActive: boolean("is_active").default(true),
-  isVerified: boolean("is_verified").default(false),
-  loginAttempts: integer("login_attempts").default(0),
-  lockedUntil: timestamp("locked_until"),
-  twoFactorEnabled: boolean("two_factor_enabled").default(false),
-  twoFactorSecret: varchar("two_factor_secret"),
-  backupCodes: jsonb("backup_codes").$type<string[]>().default([]),
-  refreshTokenHash: varchar("refresh_token_hash"),
-  profilePicture: varchar("profile_picture"),
-  passwordResetRequired: boolean("password_reset_required").default(false),
-  phone: varchar("phone").notNull(),
-  department: varchar("department"),
-  position: varchar("position"),
-  lastLogin: timestamp("last_login"),
-  deletedAt: timestamp("deleted_at"),
-  preferences: jsonb("preferences").$type<{
-    language: string;
-    theme: string;
-    notifications: {
-      email: boolean;
-      sms: boolean;
-      system: boolean;
-    };
-  }>().default({
-    language: "ar",
-    theme: "light",
-    notifications: {
-      email: true,
-      sms: true,
-      system: true
-    }
-  }),
-  createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
+// إضافة schema للمستخدمين المحدث
+export const insertUserSchema = createInsertSchema(users).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  lastLoginAt: true,
+  loginAttempts: true,
+  lockedUntil: true,
 });
+
+export type User = typeof users.$inferSelect;
+export type InsertUser = z.infer<typeof insertUserSchema>;
+
+// Phase 4: Enhanced Authentication and Security System (Use auth-schema.ts instead)
 
 
 
@@ -673,21 +646,7 @@ export const apiKeys = pgTable("api_keys", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
-// Insert Schemas for Authentication
-export const insertUserSchema = createInsertSchema(users).omit({
-  id: true,
-  createdAt: true,
-  updatedAt: true,
-  lastLogin: true,
-  loginAttempts: true,
-  lockedUntil: true,
-});
-
-export const insertUserSessionSchema = createInsertSchema(userSessions).omit({
-  id: true,
-  createdAt: true,
-  lastAccessedAt: true,
-});
+// Insert Schemas for Legacy Authentication (Deprecated - Use auth-schema instead)
 
 export const insertAuditLogSchema = createInsertSchema(auditLogs).omit({
   id: true,

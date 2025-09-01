@@ -1,0 +1,215 @@
+على عيني. هذه خطة إدارة المستخدمين والصلاحيات متوافقة 100% مع الهيكل التنظيمي لمكتب الأشغال العامة والطرق بمحافظة صنعاء (فبراير 2019)، مع تضمين “صفحة 20” الخاصة بهيكل فروع المديريات. الخطة عملية (قابلة للتنفيذ) وتقنية (RBAC هرمي + نطاقات عمل + سياسات وصول على مستوى البيانات).
+
+المحتوى
+- مبادئ التصميم
+- نموذج الأدوار والصلاحيات aligned مع الهيكل
+- نطاقات الوصول (HQ/المديريات/الإدارات/الأقسام)
+- مصفوفة ربط الوظائف بالتراخيص (Permissions Taxonomy)
+- خرائط الأدوار لكل مستوى تنظيمي
+- تدفقات الموافقات الأساسية (نماذج حاكمة)
+- نموذج قاعدة البيانات والـ Middleware
+- “الصفحة رقم 20”: هيكل فروع المديريات
+- خطوات التنفيذ والتهيئة
+- معايير الإنجاز
+
+1) مبادئ التصميم
+- RBAC هرمي + Scopes: الدور يحدد ماذا يفعل، والنطاق يحدد أين (المحافظة كاملة، قطاع، إدارة، قسم، فرع/مديرية).
+- قابلية التفويض: المدير العام/النواب يمكنهم تفويض جزئي بزمن محدد.
+- صلاحيات وظيفية دقيقة: تُعرَّف بالأسماء domain:action (مثال: permits.review، gis.layers.publish).
+- سياسات على مستوى البيانات: تقييد الرؤية والتعديل حسب org_unit_id و/أو district_id (RLS أو طبقة التطبيق).
+- توافق تام مع الهيكل: كل كيان تنظيمي = OrgUnit، وكل منصب قيادي = Role Template.
+
+2) نموذج الأدوار والصلاحيات aligned مع الهيكل
+المستويات
+- القيادة العليا: المدير العام، المستشارون.
+- الإدارات التابعة مباشرة: فروع المكتب، مكتب المدير العام، السكرتارية والعلاقات (ق. العلاقات، ق. القيد)، الموارد البشرية (شؤون الموظفين، الوثائق والإجازات، الاستحقاق، التدريب)، نظم المعلومات (العمليات، الطباعة، الشبكات والبرامج، الأجهزة)، الشؤون القانونية، الرقابة الداخلية (الرقابة، المراجعة)، أمن المكتب.
+- نواب المدير العام وقطاعاتهم:
+  - النائب الأول
+  - نائب التخطيط والمتابعة: التخطيط والإحصاء (ق. التخطيط)، المتابعة وتقييم الأداء (ق. المتابعة وتقييم الأداء)
+  - نائب الشؤون الفنية: الشؤون الفنية والمباني (الإشراف والمراجعة والتوثيق، ترخيص المباني، مراجعة المخططات، الأرشفة وحفظ البيانات)، المساحة (ق. المساحة الميدانية)، رفع المخلفات، الجمعيات السكنية، التصنيف
+  - نائب التفتيش الفني: الرقابة والتفتيش (ق. التخطيط، ق. التفتيش)، العقال، المرافق والأسواق (ق. الأسواق، ق. المرافق)، الإصحاح البيئي (الرقابة الغذائية، التوعية البيئية)، تراخيص المهن (ترخيص المهن، الدعاية والإعلان)
+  - نائب المشاريع: المشاريع (الجودة، المراجعة والتطوير)، الشق والطوارئ، تحسين أحياء المحافظة
+  - نائب المالية: الشؤون المالية، الحسابات، الإيرادات، المشتريات (ق. المشتريات، ق. المناقصات والعقود)، التجهيزات (الحركة والمحروقات، الصيانة، الأثاث، المخازن والخدمات)
+
+قوالب الأدوار الأساسية (Role Templates)
+- admin.general_director: المدير العام – كل الصلاحيات على مستوى المكتب والفروع
+- advisor: مستشار – وصول قراءة موسّع + توصية دون اعتماد
+- deputy.first | deputy.planning | deputy.technical | deputy.inspection | deputy.projects | deputy.finance
+- director.[الإدارة]: مدير إدارة – إدارة كاملة ضمن الإدارة ونطاقها
+- section_head.[القسم]: رئيس قسم – إدارة عمليات القسم + اعتماد أولي
+- staff.[القسم]: موظف تنفيذي في القسم
+- branch.director | branch.deputy | branch.section_head.[القسم] | branch.staff.[القسم]
+- crosscutting:
+  - legal.officer: الشؤون القانونية
+  - audit.controller | audit.reviewer: الرقابة الداخلية (ق. الرقابة/ق. المراجعة)
+  - security.officer: أمن المكتب
+  - it.admin | it.operator: نظم المعلومات
+  - hr.manager | hr.officer: الموارد البشرية
+  - finance.manager | accounts.officer | revenue.officer | procurement.officer | equipment.manager
+
+3) نطاقات الوصول (Scopes)
+- scope=office: المحافظة كاملة (HQ + الفروع)
+- scope=sector: قطاع نائب محدد (التخطيط، الفنية، التفتيش، المشاريع، المالية)
+- scope=department: إدارة محددة (مثلاً إدارة المساحة)
+- scope=section: قسم محدد (مثلاً ق. المساحة الميدانية)
+- scope=branch: فرع مديرية محدد (district_id)
+- كل تعيين دور يأتي مع org_unit_id وscope وoptional district_id
+
+4) مصفوفة الصلاحيات (Permissions Taxonomy)
+أسماء الصلاحيات بصيغة domain.action (عينات عملية):
+- users: create, read, update, delete, assign_role, deactivate, reset_password
+- roles: create, read, update, delete, grant, revoke
+- auth: impersonate, view_audit_log
+- gis.layers: upload, read, edit, publish, archive
+- gis.digitize: use
+- permits.building: submit, review, approve, issue, renew, revoke
+- plans: review_drawing, approve_drawing, archive
+- survey: create_job, assign_job, field_capture, validate_job, approve_output
+- inspection: schedule, visit, record_violation, impose_fine, remove_violation, detain
+- sanitation: sample, destroy, campaign_spray, awareness_campaign
+- markets: allocate_spot, kiosk_permit, evict, collect_fees
+- prof_licensing: license_issue, license_renew, ad_board_permit, ad_remove
+- debris: plan, dispatch, confirm_disposal
+- associations: register, approve_plat, audit_accounts
+- classification: classify_contractor, certify
+- projects: create, plan, tender, award, supervise, quality_check, progress_cert, close
+- emergency: dispatch, clear_flood, incident_report
+- hr: hire, transfer, leave_approve, payroll_view, training_plan
+- finance: budget_plan, voucher_approve, payment_release, revenue_post, bank_reconcile
+- accounts: journal_post, period_close, report_generate
+- procurement: requisition_approve, tender_open, contract_sign, grn_post
+- equipment: assign, maintenance_order, parts_request, workshop_report
+- legal: case_register, opinion_issue, prosecute, detainee_release_review
+- audit: audit_run, compliance_check, report_file
+- security: guard_assign, incident_log, detainee_register
+- docs: upload, read, edit, share, destroy
+- admin: settings_update, backup_run
+
+5) خرائط الأدوار إلى الصلاحيات (مختصر)
+- المدير العام (admin.general_director): جميع الصلاحيات + التفويض + الاطلاع على كل السجلات
+- المستشارون (advisor): view_* عبر القطاعات + رأي/مذكرة دون اعتماد
+- النواب:
+  - deputy.[sector]: كل صلاحيات القطاع بما فيها approvals النهائية داخل القطاع، بلا إدارة مستخدمين على مستوى المكتب إلا بحدود التفويض
+- مديرو الإدارات: جميع صلاحيات الإدارة + اعتماد أولي/نهائي حسب اللائحة
+- رؤساء الأقسام: تشغيل يومي + اعتماد أولي ورفع للتصعيد
+- موظفو الأقسام: تنفيذ، رفع، تحرير ضمن القسم
+- أدوار عرضية:
+  - legal.officer: legal.*
+  - audit.controller/reviewer: audit.* + view_audit_log
+  - security.officer: security.* + detention flows
+  - it.admin: admin.settings_update, users.assign_role (ضمن تذاكر معتمدة), backup_run
+  - hr.manager/officer: hr.*, users.create (سياق توظيف), users.deactivate
+  - finance/accounts/procurement/equipment: حسب المجالات أعلاه
+
+6) تدفقات الموافقات (أمثلة حاكمة)
+- ترخيص بناء
+  1) staff.ترخيص المباني: permits.building.submit
+  2) section_head.مراجعة المخططات: plans.review_drawing
+  3) director.الشؤون الفنية والمباني: permits.building.approve
+  4) deputy.technical: permits.building.issue (حالات خاصة/استثنائية)
+  5) التوثيق: docs.archive
+- مهمة مساحية
+  1) director.المساحة: survey.create_job
+  2) section_head.المساحة الميدانية: assign_job
+  3) staff.المساحة الميدانية: field_capture
+  4) director.المساحة: validate_job, approve_output
+- إزالة مخالفة
+  1) inspection.schedule + record_violation
+  2) legal.opinion_issue (في الحالات الجسيمة)
+  3) security.guard_assign + detain (إن لزم قانوناً)
+  4) inspection.remove_violation + debris.dispatch
+
+7) نموذج قاعدة البيانات
+- org_units(id, name, type: [hq, sector, department, section, branch], parent_id, path ltree, district_id nullable)
+- roles(id, code, name_ar, scope_level, sector nullable)
+- permissions(id, code, name_ar)
+- role_permissions(role_id, permission_id)
+- users(id, username, password_hash, is_active, display_name, email, phone)
+- user_assignments(id, user_id, role_id, org_unit_id, district_id nullable, start_at, end_at, delegated_by nullable)
+- delegations(id, from_user_id, to_user_id, role_id, scope_org_unit_id, valid_from, valid_to)
+- audit_logs(id, user_id, action, entity, entity_id, ts, meta)
+
+ملاحظة تقنية:
+- استخدم RLS أو فلاتر تطبيق: WHERE entity.org_unit_path @> user_scope_path AND (entity.district_id IS NULL OR entity.district_id = assigned.district_id)
+
+8) Middleware مختصر
+- requireAuth
+- requireRole(…roles)
+- requirePermission(permissionCode, { scopeMatcher })
+- scopeMatcher(entity, userAssignments): يتحقق من توافق org_unit_path والدائرة (district)
+
+9) “الصفحة رقم 20” — الهيكل التنظيمي لفروع المديريات
+الهيكل التنظيمي لفروع مكتب الأشغال العامة والطرق بمحافظة صنعاء – فبراير 2019
+
+- القيادة العليا (على مستوى المحافظة):
+  - المدير العام
+
+- قيادة الفرع (على مستوى المديرية):
+  - مدير الفرع
+  - نائب مدير الفرع
+
+- الأقسام التابعة لنائب مدير الفرع:
+  - قسم الشؤون الفنية
+  - قسم ترخيص البناء
+  - قسم المساحة
+  - قسم التفتيش
+  - قسم الرقابة
+  - قسم الحجز
+  - قسم الإصحاح البيئي
+  - قسم المرافق والأسواق
+  - قسم تراخيص المهن
+  - قسم المشاريع
+  - قسم الشؤون القانونية
+  - قسم الشؤون الإدارية
+  - القسم المالي والأرشفة
+
+خرائط الأدوار للفروع
+- branch.director: جميع صلاحيات الفرع داخل المديرية (scope=branch/district)
+- branch.deputy: نفس الصلاحيات مع قيود اعتماد نهائي في بعض العمليات
+- branch.section_head.[القسم]: قيادة القسم + اعتماد أولي
+- branch.staff.[القسم]: تنفيذ عمليات القسم
+- ربط السياسات: كل كيان ينشأ بالفرع يحمل district_id، ويُقصر الوصول على مستخدمي نفس الفرع
+
+10) Seed أولي (عملي)
+- roles: أنشئ جميع قوالب الأدوار المذكورة
+- permissions: استورد الـ taxonomy
+- role_permissions: اربط حسب القطاع/الإدارة/القسم
+- org_units: أبنية HQ كاملة + إنشاء فروع المديريات
+- users: admin العام + مدراء قطاعات + مدراء إدارات + عيّن طاقم تجريبي لكل فرع
+- user_assignments: اربط كل مستخدم بالدور والوحدة والنطاق
+
+عينات تعيين
+- المدير العام: (admin.general_director, scope=office, org_unit=HQ)
+- نائب الشؤون الفنية: (deputy.technical, scope=sector:technical)
+- مدير إدارة المساحة: (director.survey, scope=department:survey)
+- رئيس قسم المساحة الميدانية: (section_head.survey_field, scope=section)
+- مدير فرع همدان: (branch.director, scope=branch, district_id=همدان)
+- موظف ترخيص مهن فرع سنحان: (branch.staff.prof_licensing, district_id=سنحان)
+
+11) واجهات الإدارة
+- /admin/users: CRUD + تعيين الأدوار والنطاقات + التفويض الزمني
+- /admin/roles: عرض المصفوفة وربط الصلاحيات
+- /admin/org: شجرة الهيكل (HQ → قطاعات → إدارات → أقسام → فروع)
+- /admin/audit: سجلات الأنشطة
+- /admin/security: سياسات القفل، 2FA، قيود الشبكة
+
+12) معايير الإنجاز (DoD)
+- جداول org/roles/permissions/assignments موجودة ومهاجرة
+- تغطية الهيكل بالكامل HQ + الفروع
+- فرض النطاقات في كل استعلام يخص بيانات عمليات (RLS أو طبقة الخدمة)
+- المستخدم يرى فقط ما يخص نطاقه
+- مسارات حساسة محمية بـ requirePermission مع scopeMatcher
+- سيناريوهات الموافقات (ترخيص بناء/إزالة مخالفة/مهمة مساحية) تعمل بنهاية كاملة
+- تقارير التدقيق تظهر من عمل ماذا ومتى
+
+13) خطوات التنفيذ السريعة
+- إنشاء الجداول + Seeder (JSON/YAML) للأدوار والصلاحيات والوحدات
+- تطبيق middleware للترخيص + ربطه مع GIS/القرارات/التراخيص/المشاريع
+- بناء صفحات الإدارة الثلاث: المستخدمين، الأدوار، الهيكل
+- اختبار 3 سيناريوهات أساسية عبر أدوار مختلفة (HQ وفرع)
+
+هل تريدني أزودك بـ:
+- ملف seed جاهز (JSON) للأدوار والصلاحيات حسب هذا الهيكل؟
+- مخطط Drizzle/SQL كامل للجداول؟
+- مصفوفة Excel قابلة للاستيراد تربط الدور بالصلاحيات لكل إدارة/قسم؟
+جهز لي أسماء المديريات (الفروع) المعتمدة الآن لأضمّنها في seeding مع district_id.
