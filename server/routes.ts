@@ -960,6 +960,97 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Legal automation API endpoints
+  app.post('/api/smart-automation/legal-rules', async (req, res) => {
+    try {
+      const { ruleName, description, category, conditions, actions, priority, isActive } = req.body;
+
+      if (!ruleName || !conditions || !actions) {
+        return res.status(400).json({ error: 'البيانات المطلوبة غير مكتملة' });
+      }
+
+      console.log('🏛️ إنشاء قانون جديد:', ruleName);
+      res.json({ 
+        success: true, 
+        ruleId: 'legal_' + Date.now(),
+        message: 'تم إنشاء القانون بنجاح'
+      });
+    } catch (error: any) {
+      console.error('❌ خطأ في إنشاء القانون:', error);
+      res.status(500).json({ error: error.message || 'فشل في إنشاء القانون' });
+    }
+  });
+
+  // Test legal rule endpoint
+  app.post('/api/smart-automation/test-legal-rule', async (req, res) => {
+    try {
+      const { rule, testData } = req.body;
+
+      if (!rule || !testData) {
+        return res.status(400).json({ error: 'يجب توفير القانون والبيانات التجريبية' });
+      }
+
+      // Simulate rule evaluation
+      const evaluations = [];
+      let approved = true;
+      const reasoning = [];
+
+      for (const condition of rule.conditions) {
+        const actualValue = testData[condition.field];
+        const conditionPassed = evaluateCondition(condition, actualValue);
+        
+        evaluations.push({
+          requirementId: `${rule.ruleName}_${condition.field}`,
+          requirementName: condition.fieldDisplayName || condition.field,
+          passed: conditionPassed,
+          message: conditionPassed 
+            ? `${condition.fieldDisplayName}: ${actualValue} ✓`
+            : `${condition.fieldDisplayName}: ${actualValue} لا يحقق الشرط ${condition.operator} ${condition.value}`,
+          value: actualValue,
+          expectedValue: condition.value
+        });
+
+        if (!conditionPassed) {
+          approved = false;
+          reasoning.push(`فشل في شرط: ${condition.fieldDisplayName}`);
+        }
+      }
+
+      const result = {
+        approved,
+        decision: approved ? 'approve' : (rule.actions[0]?.type || 'reject'),
+        confidence: approved ? 0.9 : 0.6,
+        evaluations,
+        recommendedActions: approved ? [] : [rule.actions[0]?.message || 'يتطلب مراجعة'],
+        reasoning,
+        riskLevel: approved ? 'low' : 'medium'
+      };
+
+      console.log('🧪 اختبار قانون:', rule.ruleName, '- النتيجة:', result.decision);
+      res.json(result);
+    } catch (error: any) {
+      console.error('❌ خطأ في اختبار القانون:', error);
+      res.status(500).json({ error: error.message || 'فشل في اختبار القانون' });
+    }
+  });
+
+  // Helper function for condition evaluation
+  function evaluateCondition(condition: any, actualValue: any): boolean {
+    if (actualValue === undefined || actualValue === null) return false;
+
+    switch (condition.operator) {
+      case '<': return Number(actualValue) < Number(condition.value);
+      case '<=': return Number(actualValue) <= Number(condition.value);
+      case '>': return Number(actualValue) > Number(condition.value);
+      case '>=': return Number(actualValue) >= Number(condition.value);
+      case '==': return actualValue == condition.value;
+      case '!=': return actualValue != condition.value;
+      case 'in': return Array.isArray(condition.value) && condition.value.includes(actualValue);
+      case 'contains': return String(actualValue).includes(String(condition.value));
+      default: return false;
+    }
+  }
+
   const httpServer = createServer(app);
 
   // WebSocket server for real-time updates
@@ -1092,5 +1183,4 @@ function generateKML(data: any): string {
   
   return kml;
 }
-
 
