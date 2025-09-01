@@ -96,4 +96,62 @@ router.post('/login', (req, res) => {
   }
 });
 
+// endpoint للتحقق من صحة التوكن
+router.get('/me', (req, res) => {
+  try {
+    const authHeader = req.headers.authorization;
+    
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({ 
+        error: 'No token provided',
+        message: 'لم يتم توفير رمز المصادقة'
+      });
+    }
+
+    const token = authHeader.substring(7); // Remove 'Bearer ' prefix
+    
+    try {
+      const decoded = jwt.verify(token, process.env.JWT_SECRET || 'dev-secret-key') as any;
+      
+      // البحث عن المستخدم
+      const user = TEST_USERS.find(u => u.id === decoded.sub);
+      if (!user) {
+        return res.status(401).json({ 
+          error: 'User not found',
+          message: 'المستخدم غير موجود'
+        });
+      }
+
+      console.log('✅ Token verified for user:', user.username);
+
+      res.json({
+        success: true,
+        user: {
+          id: user.id,
+          username: user.username,
+          email: user.email,
+          role: user.role,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          fullName: `${user.firstName} ${user.lastName}`
+        }
+      });
+
+    } catch (jwtError) {
+      console.log('❌ Invalid token:', jwtError);
+      return res.status(401).json({ 
+        error: 'Invalid token',
+        message: 'رمز المصادقة غير صالح'
+      });
+    }
+
+  } catch (error) {
+    console.error('🔴 Token verification error:', error);
+    res.status(500).json({ 
+      error: 'Internal server error',
+      message: 'خطأ في الخادم'
+    });
+  }
+});
+
 export default router;

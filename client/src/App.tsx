@@ -199,7 +199,7 @@ function ProtectedRoute({ children, role }: { children: React.ReactNode; role?: 
   if (!isAuthenticated) {
     // حفظ الرابط المطلوب للعودة إليه بعد تسجيل الدخول
     localStorage.setItem('redirect_after_login', location);
-    window.location.href = '/login';
+    window.location.href = '/employee-login';
     return null;
   }
 
@@ -272,6 +272,20 @@ function Router() {
           <Route path="/login" component={LoginPage} />
           {/* Admin Dashboard System - Fixed Routes */}
           <Route path="/admin">
+            {() => (
+              <ProtectedRoute role="admin">
+                <AdminDashboardNew />
+              </ProtectedRoute>
+            )}
+          </Route>
+          <Route path="/admin-users">
+            {() => (
+              <ProtectedRoute role="admin">
+                <AdminUsers />
+              </ProtectedRoute>
+            )}
+          </Route>
+          <Route path="/admin-dashboard">
             {() => {
               const AdminDashboardLayout = React.lazy(() => import('@/layouts/AdminDashboardLayout'));
               const AdminHome = React.lazy(() => import('@/pages/admin/AdminHome'));

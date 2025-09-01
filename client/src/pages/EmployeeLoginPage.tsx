@@ -70,19 +70,30 @@ export default function EmployeeLoginPage() {
       const responseData = await response.json();
 
       if (responseData.success) {
+        // حفظ التوكن في localStorage
+        localStorage.setItem('auth_token', responseData.token);
+        
         toast({
           title: "تم تسجيل الدخول بنجاح",
           description: `مرحباً ${responseData.user.fullName || responseData.user.username}`,
           variant: "default"
         });
 
-        // إعادة توجيه حسب دور المستخدم
-        if (responseData.user.role === 'admin') {
-          setLocation('/admin-dashboard');
-        } else if (responseData.user.role === 'surveyor') {
-          setLocation('/phase2-digitization');
+        // فحص الصفحة المحفوظة للعودة إليها
+        const redirectPath = localStorage.getItem('redirect_after_login');
+        localStorage.removeItem('redirect_after_login');
+        
+        if (redirectPath && redirectPath !== '/employee-login') {
+          setLocation(redirectPath);
         } else {
-          setLocation('/');
+          // إعادة توجيه حسب دور المستخدم
+          if (responseData.user.role === 'admin') {
+            setLocation('/admin-dashboard');
+          } else if (responseData.user.role === 'surveyor') {
+            setLocation('/phase2-digitization');
+          } else {
+            setLocation('/');
+          }
         }
       } else {
         throw new Error(responseData.message || 'فشل تسجيل الدخول');
