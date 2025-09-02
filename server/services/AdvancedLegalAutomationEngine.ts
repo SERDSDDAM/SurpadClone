@@ -1,4 +1,5 @@
 // محرك الأتمتة القانونية المتقدم - المرحلة الثالثة المطورة
+// يشمل إدارة الإدارة والقوانين النافذة مع أتمتة شاملة
 
 // تعريف الأنواع المطلوبة محلياً
 interface LegalRule {
@@ -10,6 +11,21 @@ interface LegalRule {
   priority: number;
   isActive: boolean;
   applicableServices: string[];
+  // إضافات جديدة لإدارة الإدارة
+  administrativeLevel?: 'federal' | 'regional' | 'local' | 'municipal';
+  governingAuthority?: string;
+  legalSource?: string;
+  effectiveDate?: string;
+  expiryDate?: string;
+  amendments?: Amendment[];
+}
+
+interface Amendment {
+  id: string;
+  date: string;
+  description: string;
+  amendedBy: string;
+  status: 'draft' | 'approved' | 'implemented';
 }
 
 interface LegalCondition {
@@ -113,7 +129,337 @@ export interface NextStep {
 }
 
 export class AdvancedLegalAutomationEngine {
-  
+  private activatedRules: LegalRule[] = [];
+  private administrativeHierarchy: Map<string, string[]> = new Map();
+  private legalRegistry: Map<string, LegalRule> = new Map();
+
+  constructor() {
+    console.log('🏛️ تهيئة محرك الأتمتة القانونية المتقدم مع إدارة الإدارة');
+    this.initializeAdministrativeHierarchy();
+    this.loadActiveRulesFromRegistry();
+    this.initializeLegalRegistry();
+  }
+
+  /**
+   * تهيئة الهيكل الإداري لليمن
+   */
+  private initializeAdministrativeHierarchy(): void {
+    // المستوى الاتحادي
+    this.administrativeHierarchy.set('federal', [
+      'وزارة الأشغال العامة والطرق',
+      'وزارة التخطيط والتعاون الدولي',
+      'هيئة المساحة العامة',
+      'الهيئة العامة للمواصفات والمقاييس'
+    ]);
+
+    // المستوى الإقليمي
+    this.administrativeHierarchy.set('regional', [
+      'محافظة صنعاء',
+      'محافظة عدن',
+      'محافظة تعز',
+      'محافظة الحديدة',
+      'محافظة إب',
+      'محافظة ذمار'
+    ]);
+
+    // المستوى المحلي
+    this.administrativeHierarchy.set('local', [
+      'مديرية الأزبكية',
+      'مديرية شعوب',
+      'مديرية معين',
+      'مديرية الوحدة',
+      'مديرية السبعين'
+    ]);
+
+    // المستوى البلدي
+    this.administrativeHierarchy.set('municipal', [
+      'أمانة العاصمة',
+      'مجلس بلدي عدن',
+      'مجلس بلدي تعز',
+      'مجلس بلدي الحديدة'
+    ]);
+
+    console.log('📋 تم تهيئة الهيكل الإداري:', this.administrativeHierarchy.size, 'مستويات');
+  }
+
+  /**
+   * تهيئة سجل القوانين النافذة
+   */
+  private initializeLegalRegistry(): void {
+    const effectiveRules: LegalRule[] = [
+      {
+        ruleName: 'قانون البناء الموحد رقم 5 لسنة 2007',
+        description: 'القانون الأساسي لتنظيم أعمال البناء والتشييد في الجمهورية اليمنية',
+        category: 'building_permit',
+        conditions: [],
+        actions: [],
+        priority: 1,
+        isActive: true,
+        applicableServices: ['building_permit', 'demolition_permit'],
+        administrativeLevel: 'federal',
+        governingAuthority: 'وزارة الأشغال العامة والطرق',
+        legalSource: 'الجريدة الرسمية - العدد 15 لسنة 2007',
+        effectiveDate: '2007-08-15',
+        amendments: [
+          {
+            id: 'amend_2015_01',
+            date: '2015-03-10',
+            description: 'تعديل المادة 25 بشأن ارتفاع المباني',
+            amendedBy: 'قرار وزاري رقم 45 لسنة 2015',
+            status: 'implemented'
+          }
+        ]
+      },
+      {
+        ruleName: 'لائحة السلامة الإنشائية رقم 12 لسنة 2010',
+        description: 'تنظيم متطلبات السلامة الإنشائية للمباني والمنشآت',
+        category: 'safety_compliance',
+        conditions: [],
+        actions: [],
+        priority: 2,
+        isActive: true,
+        applicableServices: ['building_permit', 'occupancy_certificate'],
+        administrativeLevel: 'federal',
+        governingAuthority: 'الهيئة العامة للمواصفات والمقاييس',
+        legalSource: 'قرار مجلس الوزراء رقم 123 لسنة 2010',
+        effectiveDate: '2010-12-01'
+      },
+      {
+        ruleName: 'قانون المحافظة على التراث العمراني رقم 8 لسنة 2013',
+        description: 'حماية المناطق التراثية والمباني ذات القيمة التاريخية',
+        category: 'heritage_protection',
+        conditions: [],
+        actions: [],
+        priority: 3,
+        isActive: true,
+        applicableServices: ['building_permit', 'demolition_permit'],
+        administrativeLevel: 'federal',
+        governingAuthority: 'الهيئة العامة للآثار والمتاحف',
+        legalSource: 'قانون رقم 8 لسنة 2013',
+        effectiveDate: '2013-06-20'
+      }
+    ];
+
+    effectiveRules.forEach(rule => {
+      this.legalRegistry.set(rule.ruleName, rule);
+    });
+
+    console.log('⚖️ تم تهيئة سجل القوانين:', this.legalRegistry.size, 'قانون نافذ');
+  }
+
+  /**
+   * الحصول على القوانين المطبقة حسب المستوى الإداري
+   */
+  async getRulesByAdministrativeLevel(level: string): Promise<LegalRule[]> {
+    const rules: LegalRule[] = [];
+    
+    this.legalRegistry.forEach((rule, _) => {
+      if (rule.administrativeLevel === level && rule.isActive) {
+        // التحقق من صلاحية القانون
+        if (this.isRuleEffective(rule)) {
+          rules.push(rule);
+        }
+      }
+    });
+
+    return rules.sort((a, b) => a.priority - b.priority);
+  }
+
+  /**
+   * التحقق من فعالية القانون (ساري المفعول)
+   */
+  private isRuleEffective(rule: LegalRule): boolean {
+    const now = new Date();
+    
+    // التحقق من تاريخ البدء
+    if (rule.effectiveDate) {
+      const effectiveDate = new Date(rule.effectiveDate);
+      if (now < effectiveDate) {
+        return false;
+      }
+    }
+
+    // التحقق من تاريخ الانتهاء
+    if (rule.expiryDate) {
+      const expiryDate = new Date(rule.expiryDate);
+      if (now > expiryDate) {
+        return false;
+      }
+    }
+
+    return true;
+  }
+
+  /**
+   * إضافة قانون جديد إلى السجل
+   */
+  async addLegalRule(rule: LegalRule): Promise<{ success: boolean; message: string }> {
+    try {
+      // التحقق من صحة البيانات
+      if (!rule.ruleName || !rule.description || !rule.category) {
+        return {
+          success: false,
+          message: 'بيانات القانون غير مكتملة'
+        };
+      }
+
+      // التحقق من عدم وجود القانون مسبقاً
+      if (this.legalRegistry.has(rule.ruleName)) {
+        return {
+          success: false,
+          message: 'القانون موجود مسبقاً في السجل'
+        };
+      }
+
+      // إضافة القانون
+      this.legalRegistry.set(rule.ruleName, rule);
+      
+      // إضافة للقوانين النشطة إذا كان فعال
+      if (rule.isActive && this.isRuleEffective(rule)) {
+        this.activatedRules.push(rule);
+      }
+
+      console.log('✅ تم إضافة قانون جديد:', rule.ruleName);
+      
+      return {
+        success: true,
+        message: 'تم إضافة القانون بنجاح'
+      };
+    } catch (error) {
+      console.error('❌ خطأ في إضافة القانون:', error);
+      return {
+        success: false,
+        message: 'حدث خطأ في إضافة القانون'
+      };
+    }
+  }
+
+  /**
+   * تحديث قانون موجود
+   */
+  async updateLegalRule(ruleName: string, updates: Partial<LegalRule>): Promise<{ success: boolean; message: string }> {
+    try {
+      const existingRule = this.legalRegistry.get(ruleName);
+      if (!existingRule) {
+        return {
+          success: false,
+          message: 'القانون غير موجود في السجل'
+        };
+      }
+
+      // دمج التحديثات مع القانون الموجود
+      const updatedRule = { ...existingRule, ...updates };
+      
+      // إضافة معلومات التعديل
+      if (updates.description || updates.conditions || updates.actions) {
+        const amendment: Amendment = {
+          id: `amend_${Date.now()}`,
+          date: new Date().toISOString().split('T')[0],
+          description: 'تحديث القانون عبر النظام المتقدم',
+          amendedBy: 'نظام الأتمتة القانونية',
+          status: 'implemented'
+        };
+        
+        updatedRule.amendments = [...(existingRule.amendments || []), amendment];
+      }
+
+      // تحديث السجل
+      this.legalRegistry.set(ruleName, updatedRule);
+      
+      // تحديث القوانين النشطة
+      const activeIndex = this.activatedRules.findIndex(r => r.ruleName === ruleName);
+      if (activeIndex !== -1) {
+        if (updatedRule.isActive && this.isRuleEffective(updatedRule)) {
+          this.activatedRules[activeIndex] = updatedRule;
+        } else {
+          this.activatedRules.splice(activeIndex, 1);
+        }
+      } else if (updatedRule.isActive && this.isRuleEffective(updatedRule)) {
+        this.activatedRules.push(updatedRule);
+      }
+
+      console.log('✅ تم تحديث القانون:', ruleName);
+      
+      return {
+        success: true,
+        message: 'تم تحديث القانون بنجاح'
+      };
+    } catch (error) {
+      console.error('❌ خطأ في تحديث القانون:', error);
+      return {
+        success: false,
+        message: 'حدث خطأ في تحديث القانون'
+      };
+    }
+  }
+
+  /**
+   * الحصول على تقرير شامل للقوانين النافذة
+   */
+  async getLegalComplianceReport(): Promise<{
+    totalRules: number;
+    activeRules: number;
+    rulesByLevel: Record<string, number>;
+    recentAmendments: Amendment[];
+    effectiveRules: LegalRule[];
+  }> {
+    const rulesByLevel: Record<string, number> = {
+      federal: 0,
+      regional: 0,
+      local: 0,
+      municipal: 0
+    };
+
+    const recentAmendments: Amendment[] = [];
+    const effectiveRules: LegalRule[] = [];
+
+    this.legalRegistry.forEach((rule, _) => {
+      // تصنيف حسب المستوى الإداري
+      if (rule.administrativeLevel) {
+        rulesByLevel[rule.administrativeLevel]++;
+      }
+
+      // جمع التعديلات الحديثة
+      if (rule.amendments) {
+        recentAmendments.push(...rule.amendments.filter((a: Amendment) => {
+          const amendDate = new Date(a.date);
+          const sixMonthsAgo = new Date();
+          sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+          return amendDate > sixMonthsAgo;
+        }));
+      }
+
+      // القوانين الفعالة
+      if (rule.isActive && this.isRuleEffective(rule)) {
+        effectiveRules.push(rule);
+      }
+    });
+
+    // ترتيب التعديلات حسب التاريخ
+    recentAmendments.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+    return {
+      totalRules: this.legalRegistry.size,
+      activeRules: effectiveRules.length,
+      rulesByLevel,
+      recentAmendments: recentAmendments.slice(0, 10), // آخر 10 تعديلات
+      effectiveRules: effectiveRules.sort((a, b) => a.priority - b.priority)
+    };
+  }
+
+  /**
+   * تحميل القوانين النشطة من السجل
+   */
+  private loadActiveRulesFromRegistry(): void {
+    this.activatedRules = [];
+    this.legalRegistry.forEach((rule, _) => {
+      if (rule.isActive && this.isRuleEffective(rule)) {
+        this.activatedRules.push(rule);
+      }
+    });
+    console.log('📋 تم تحميل القوانين النشطة:', this.activatedRules.length);
+  }
+
   /**
    * تقييم طلب خدمة شامل مع تحليل متقدم
    */

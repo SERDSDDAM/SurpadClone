@@ -420,4 +420,138 @@ function getFieldValue(field: string, serviceRequest: ServiceRequest): any {
   return null;
 }
 
+// APIs جديدة لإدارة الإدارة والقوانين النافذة
+
+// الحصول على الهيكل الإداري
+router.get('/administrative-hierarchy', async (req, res) => {
+  try {
+    const hierarchy = {
+      federal: [
+        'وزارة الأشغال العامة والطرق',
+        'وزارة التخطيط والتعاون الدولي',
+        'هيئة المساحة العامة',
+        'الهيئة العامة للمواصفات والمقاييس'
+      ],
+      regional: [
+        'محافظة صنعاء',
+        'محافظة عدن',
+        'محافظة تعز',
+        'محافظة الحديدة',
+        'محافظة إب',
+        'محافظة ذمار'
+      ],
+      local: [
+        'مديرية الأزبكية',
+        'مديرية شعوب',
+        'مديرية معين',
+        'مديرية الوحدة',
+        'مديرية السبعين'
+      ],
+      municipal: [
+        'أمانة العاصمة',
+        'مجلس بلدي عدن',
+        'مجلس بلدي تعز',
+        'مجلس بلدي الحديدة'
+      ]
+    };
+
+    res.json({
+      success: true,
+      hierarchy,
+      totalLevels: Object.keys(hierarchy).length,
+      totalAuthorities: Object.values(hierarchy).flat().length
+    });
+  } catch (error) {
+    console.error('❌ خطأ في جلب الهيكل الإداري:', error);
+    res.status(500).json({
+      success: false,
+      error: 'فشل في جلب الهيكل الإداري'
+    });
+  }
+});
+
+// الحصول على القوانين حسب المستوى الإداري
+router.get('/rules-by-level/:level', async (req, res) => {
+  try {
+    const { level } = req.params;
+    const automationEngine = new AdvancedLegalAutomationEngine();
+    
+    const rules = await automationEngine.getRulesByAdministrativeLevel(level);
+    
+    res.json({
+      success: true,
+      level,
+      rules,
+      count: rules.length
+    });
+  } catch (error) {
+    console.error('❌ خطأ في جلب القوانين حسب المستوى:', error);
+    res.status(500).json({
+      success: false,
+      error: 'فشل في جلب القوانين حسب المستوى الإداري'
+    });
+  }
+});
+
+// إضافة قانون جديد
+router.post('/add-rule', async (req, res) => {
+  try {
+    const ruleData = req.body;
+    
+    if (!ruleData.ruleName || !ruleData.description || !ruleData.category) {
+      return res.status(400).json({
+        success: false,
+        error: 'بيانات القانون غير مكتملة'
+      });
+    }
+
+    const automationEngine = new AdvancedLegalAutomationEngine();
+    const result = await automationEngine.addLegalRule(ruleData);
+    
+    if (result.success) {
+      res.json({
+        success: true,
+        message: result.message,
+        rule: ruleData
+      });
+    } else {
+      res.status(400).json({
+        success: false,
+        error: result.message
+      });
+    }
+  } catch (error) {
+    console.error('❌ خطأ في إضافة القانون:', error);
+    res.status(500).json({
+      success: false,
+      error: 'فشل في إضافة القانون'
+    });
+  }
+});
+
+// تقرير الامتثال القانوني الشامل
+router.get('/compliance-report', async (req, res) => {
+  try {
+    const automationEngine = new AdvancedLegalAutomationEngine();
+    const report = await automationEngine.getLegalComplianceReport();
+    
+    res.json({
+      success: true,
+      report,
+      generatedAt: new Date().toISOString(),
+      summary: {
+        complianceRate: Math.round((report.activeRules / report.totalRules) * 100),
+        criticalAreas: report.rulesByLevel.federal > 0 ? 'متوفر' : 'يحتاج مراجعة',
+        lastUpdate: new Date().toLocaleDateString('ar-YE')
+      }
+    });
+  } catch (error) {
+    console.error('❌ خطأ في إنشاء تقرير الامتثال:', error);
+    res.status(500).json({
+      success: false,
+      error: 'فشل في إنشاء تقرير الامتثال القانوني'
+    });
+  }
+});
+
 export default router;
