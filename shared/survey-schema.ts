@@ -22,7 +22,7 @@ export const surveyRequests = pgTable("survey_requests", {
   
   // بيانات المالك
   ownerName: varchar("owner_name", { length: 255 }).notNull(),
-  ownerNationalId: varchar("owner_national_id", { length: 20 }).notNull(),
+  // ownerNationalId: varchar("owner_national_id", { length: 20 }).notNull(), // TEMP DISABLED - column doesn't exist
   ownerPhone: varchar("owner_phone", { length: 20 }),
   ownerEmail: varchar("owner_email", { length: 255 }),
   ownerAddress: text("owner_address"),
