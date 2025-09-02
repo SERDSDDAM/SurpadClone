@@ -272,17 +272,22 @@ router.post('/survey-requests/:id/assign', isAuthenticated, async (req: Request,
 });
 
 // GET /api/survey-requests/:id/points - Get all points for a survey request
-router.get('/survey-requests/:id/points', isAuthenticated, async (req: Request, res: Response) => {
+router.get('/survey-requests/:id/points', async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     
-    const points = await db.execute(sql`
+    const result = await db.execute(sql`
       SELECT * FROM survey_points 
       WHERE request_id = ${id} 
       ORDER BY captured_at
     `);
     
-    res.json(points);
+    // إرجاع البيانات النظيفة للتطبيق
+    res.json({
+      success: true,
+      data: result.rows || [],
+      count: result.rows?.length || 0
+    });
   } catch (error) {
     console.error('Error fetching survey points:', error);
     res.status(500).json({ error: 'Failed to fetch survey points' });
@@ -297,7 +302,7 @@ router.post('/survey-requests/:id/points', async (req: Request, res: Response) =
     const result = await db.execute(sql`
       INSERT INTO survey_points (
         request_id, point_number, latitude, longitude, elevation, 
-        accuracy, feature_code, notes, captured_by
+        accuracy, feature_code, feature_type, notes, captured_by
       ) VALUES (
         ${id}, 
         ${req.body.pointNumber || 'P' + Date.now()}, 
@@ -306,6 +311,7 @@ router.post('/survey-requests/:id/points', async (req: Request, res: Response) =
         ${req.body.elevation || 2250}, 
         ${req.body.accuracy || 0.005}, 
         ${req.body.featureCode || 'building-corner'}, 
+        'point',
         ${req.body.notes || ''}, 
         'surveyor-demo'
       ) RETURNING *

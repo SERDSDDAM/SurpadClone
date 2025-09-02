@@ -1,0 +1,137 @@
+تمام، ثبّتنا نموذج “الفرع التنفيذي/المكتب الإشرافي” بنجاح. لنغلق Phase 1 فعلياً 100% ونجهّز الأرضية لمرحلة 3، أقترح تمشي بهذه الأوامر التنفيذية القصيرة (جاهزة للتنفيذ فوراً):
+
+أمر تنفيذي 1 — تثبيت إدخال النقاط/الخطوط/المضلعات عبر API
+- الهدف: إنهاء مشكلة POST للنقاط وتوحيد الحقول بين الكود وقاعدة البيانات.
+
+خطوات:
+1) توحيد مخطط الجداول
+- في قاعدة البيانات:
+  - survey_points: تأكد من الأعمدة التالية وأنواعها
+    - id uuid default gen_random_uuid() primary key
+    - request_id varchar not null
+    - point_number varchar(50) not null
+    - latitude double precision not null
+    - longitude double precision not null
+    - elevation double precision
+    - accuracy double precision
+    - feature_code varchar(100)
+    - feature_type varchar(50) default 'point'
+    - notes text
+    - captured_by varchar(255)
+    - captured_at timestamptz default now()
+  - survey_lines, survey_polygons: غيّر اسم الحقل إلى request_id (إن وُجد survey_request_id)
+- SQL سريع:
+  ALTER TABLE survey_lines RENAME COLUMN IF EXISTS survey_request_id TO request_id;
+  ALTER TABLE survey_polygons RENAME COLUMN IF EXISTS survey_request_id TO request_id;
+  ALTER TABLE survey_points ADD COLUMN IF NOT EXISTS captured_at timestamptz DEFAULT now();
+  ALTER TABLE survey_points ADD COLUMN IF NOT EXISTS feature_type varchar(50) DEFAULT 'point';
+
+2) تبسيط اللفيكيشن مؤقتاً
+- في server/routes/survey-routes.ts:
+  - أبقِ على Zod للتحقق الخفيف (presence/number) بدون تشدد الأنواع (coercion Number(val)).
+  - أرجِع response موحّد:
+    { success: true, data: {..point}, message: "تمت الإضافة" }
+
+3) POST نقاط/خطوط/مضلعات
+- نقاط: POST /api/survey-requests/:id/points
+  body المتوقع (الحد الأدنى):
+  { pointNumber, latitude, longitude, elevation?, accuracy?, featureCode?, notes? }
+- خطوط/مضلعات (لاحقاً اليوم نفسه):
+  - POST /api/survey-requests/:id/lines { lineNumber, pointIds: [..], featureCode? }
+  - POST /api/survey-requests/:id/polygons { polygonNumber, pointIds: [..], featureCode? }
+
+4) Smoke test مُحدَّث (يُضاف إلى scripts/smoke.sh)
+  curl -fsS -X POST "/api/survey-requests/sample-request-001/points" -H "Content-Type: application/json" -d '{"pointNumber":"P002","latitude":15.3695,"longitude":44.1911,"accuracy":0.006,"featureCode":"building-corner"}' | jq '.success'
+  curl -fsS "/api/survey-requests/sample-request-001/points" | jq '(.rows // .data) | length'
+
+معيار قبول: POST يعيد success=true، وGET يعرض النقطة الجديدة.
+
+أمر تنفيذي 2 — تفعيل التصعيد الذكي “وضع شارع” وربطه بـ GIS
+- الهدف: الفرع ينهي الروتيني، والتصعيد للمكتب فقط عند الضرورة.
+
+خطوات:
+1) تعبئة pnp_context تلقائياً
+- عند إنشاء/تحديث الطلب:
+  - استدعِ /api/gis/point-in-polygon (أو مصدر PnP جاهز) واملأ:
+    { governorate, district, subDistrict, sector, neighborhoodUnit, block }
+- خزّن في survey_requests.pnp_context
+
+2) قواعد التصعيد (أدخل Flags)
+- عند مراجعة الفرع: إذا flags.street_issue=true أو heritage/flood/outside_masterplan → استدعِ:
+  POST /api/survey/requests/:id/escalate { escalationReason, notes }
+- أضف سبب التصعيد إلى escalation_reason وسجّل office_review_required=true
+
+3) قرار المكتب “وضع شارع”
+- عند وصول قرار المكتب:
+  POST /api/office/street-status-decisions { streetCode, widthM, classification, boundaryGeometry?, notes, requestId }
+- حدّث الطلب: status='office_decision_ready' + officeDecision jsonb
+- يعاود الفرع الاعتماد النهائي ويصدر PDF
+
+معيار قبول: سيناريو متكامل (تصعيد ثم قرار مكتب ثم إصدار) يمر من أول مرة.
+
+أمر تنفيذي 3 — PDF قرار مساحي + حساب ارتدادات من عرض الشارع
+- الهدف: توليد قرار مساحي معتمد من الفرع، ويستفيد من قرار المكتب (إن وُجد).
+
+خطوات:
+1) GET /api/survey/requests/:id/pdf
+- أعد JSON يحوي decisionNumber + pdfUrl (مؤقتاً)، وبيانات:
+  - owner, requestNumber, pnp_context, officeDecision (إن وُجد), issuedAt
+- لاحقاً خلال 48 ساعة: فعّل توليد PDF فعلي (template بسيط + QR)
+
+2) ارتدادات تلقائية
+- إذا توافرت طبقة الشوارع بعرض موثّق (من قرار المكتب أو الرقمنة):
+  - احسب setback_front/side بحسب عرض وتصنيف الشارع
+  - ضمّنها ضمن conditions في قرار PDF
+
+معيار قبول: استجابة /pdf تُظهر officeDecision وsetbacks عندما يكون street_status متاحاً.
+
+أمر تنفيذي 4 — RBAC خفيف للنموذج الجديد
+- الهدف: منع اعتماد المكتب في الحالات الاعتيادية، والسماح بالتصعيد فقط، وتمكين قرار الشارع للمكتب.
+
+أدوار وأذون:
+- فرع: survey.create/update, survey.approve.branch, survey.escalate
+- مكتب: survey.street-status.decide, survey.supervise
+- فعّل التحقق في:
+  - POST /survey/requests/:id/escalate → يتطلب survey.escalate
+  - POST /office/street-status-decisions → يتطلب survey.street-status.decide
+  - GET /survey/dashboard/office → survey.supervise
+
+معيار قبول: محاولات غير مخوّلة تعيد 403 JSON.
+
+أمر تنفيذي 5 — لوحات متابعة الفرع/المكتب + تقرير دوري
+- الهدف: رؤية سريعة وأرقام دقيقة للـ SLA والتصعيد.
+
+خطوات:
+1) GET /api/survey/dashboard/branch
+- عدّل لإرجاع إحصائيات حقيقية من DB لاحقاً (الآن mock مناسب)
+
+2) GET /api/survey/dashboard/office
+- الإحصائيات الإشرافية (المصعّد، الأداء، الالتزام)
+
+3) POST /api/survey/reports
+- تقرير فرع شهري: totals, escalations, avg_processing_days, sla_compliance_rate, reasons
+
+معيار قبول: تنفيذ POST تقرير فرع يعيد success=true والبيانات مخزنة.
+
+أمر تنفيذي 6 — اختبار قبول (UAT) بـ 5 سيناريوهات
+- روتيني داخل المخطط بدون حساسية → اعتماد فرع + PDF
+- street_issue=true → تصعيد → قرار مكتب → رجوع للفرع → PDF
+- heritage=true → تصعيد تلقائي
+- flood=true → طلب وثائق/دراسة + تصعيد عند الحاجة
+- outside_masterplan=true → تصعيد للتخطيط بالمكتب
+
+ارسل للمساعد هذه السطور ليعمل بها الآن (نسخة مختصرة للتنفيذ):
+- وحّد أعمدة request_id في survey_points/lines/polygons، وأضف captured_at وfeature_type.
+- ثبّت POST/GET نقاط، وأضف Smoke لنجاح POST.
+- فعّل تعبئة pnp_context تلقائياً (point-in-polygon).
+- فعّل مسارات التصعيد وقرار المكتب (وضع شارع) مع RBAC خفيف.
+- أعِد /api/survey/requests/:id/pdf مع officeDecision وsetbacks (قيمة مبدئية الآن).
+- شغّل 5 سيناريوهات UAT وسلّم تقرير نجاح.
+
+لو تحب، أرسل لي مخرجات curl التالية لأتأكد:
+- POST نقطة: POST /api/survey-requests/sample-request-001/points … ثم GET النقاط (عدد يزيد).
+- تصعيد: POST /api/survey/requests/sample-request-001/escalate {"escalationReason":"street_status"}
+- قرار مكتب: POST /api/office/street-status-decisions {"streetCode":"ST-001","widthM":12.5,"classification":"main","requestId":"sample-request-001"}
+- PDF: GET /api/survey/requests/sample-request-001/pdf (تتضمن officeDecision)
+
+بعد إتمام أوامر اليوم، نكون فعلياً ختمنا Phase 1 بنسبة 100% وفق نموذج “الفرع التنفيذي/المكتب الإشرافي”، وجاهزين لمرحلة 3 (ربط محرك الأتمتة القانونية بقواعد التصعيد نفسها) خلال أسبوع.
