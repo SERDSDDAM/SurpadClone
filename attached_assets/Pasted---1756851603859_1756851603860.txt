@@ -1,0 +1,145 @@
+تم اعتماد مبدأ التشغيل: الفروع في المديريات هي الذراع التنفيذي، ومكتب المحافظة إشرافي/رقابي ويبتّ في القضايا الحرِجة فقط. عدّلت الخطة وكل مسارات الأتمتة والـ GIS والاسقاط المساحي وفق هذا المبدأ.
+
+الخطة التنفيذية المعدّلة (تركّز على خدمة الاسقاط المساحي أولاً)
+
+1) سياسة التشغيل والتصعيد
+- التنفيذ الافتراضي: كل طلبات الاسقاط المساحي تُعالَج وتُعتمَد في فرع المديرية.
+- إشراف المكتب: تقارير دورية من الفروع + مراقبة المؤشرات + مراجعة عينات.
+- التصعيد التلقائي (Auto‑Escalate) للمكتب فقط عندما:
+  - نزاع أو غموض في “وضع الشارع/عرضه/حدوده” أو خارج/على حد المخطط.
+  - قطعة الأرض على شارع رئيس/مرفق استراتيجي أو تأثير مروري كبير.
+  - مناطق حساسة (تراث/فيضانات) أو تعارض واضح مع المخطط المعتمد.
+  - تعارض قانوني/ملكيّة أو شبهة تزوير بيانات أو تكرار مخالفة.
+  - تجاوز SLA في الفرع دون حسم.
+
+2) سَيْر العمل (Workflow) للاسقاط المساحي
+- حالة اعتيادية (على مستوى الفرع):
+  1) استلام الطلب + تدقيق أولي للمستندات.
+  2) تكليف مسّاح ميداني + رفع GNSS (نقاط/خطوط/مضلعات) + صور وملاحظات.
+  3) معالجة GIS تلقائية: توليد المضلعات/الأطوال/الاتجاهات + Point‑in‑Polygon لتحديد التقسيم الإداري + مطابقة مع المخطط وطبقة الشوارع.
+  4) مراجعة فنية بواجهة الفرع → اعتماد فوري + توليد PDF مع باركود وتوقيع إلكتروني.
+  5) إدراج الطلب ضمن التقرير الدوري للمكتب.
+- حالة تتطلب المكتب:
+  1) الفرع يضع “علامة إشكال شارع/وضع شارع غير محسوم”.
+  2) تصعيد تلقائي للمكتب: “طلب تحديد وضع شارع/عرض/تصنيف”.
+  3) المكتب يُصدر “قرار وضع شارع” (Street Status Decision) → يرتد للفرع.
+  4) الفرع يُكمل الاعتماد ويصدر الاسقاط.
+
+3) التعديلات المطلوبة على محرك التوجيه/التصعيد (Smart Automation)
+- قواعد توجيه:
+  - افتراضي: route → BRANCH:{district_code}-SURVEY
+  - RACI (الفرع): R قسم المساحة | A مدير الفرع | C التخطيط/القانونية بالفرع | I مكتب المحافظة.
+- قواعد تصعيد (YAML مثال مختصر):
+  routing:
+    - name: Survey – Routine
+      when: { service: survey_projection, flags: { street_issue: false, sensitive_area: false } }
+      route: { orgNode: BRANCH:{district}-SURVEY, raci: { R: [BRANCH_SURVEY], A: [BRANCH_DIR] } }
+      sla: { intake_hours: 8, decision_days: 3 }
+    - name: Survey – Street Status Required
+      when:
+        anyOf:
+          - flags.street_issue: true
+          - flags.outside_masterplan: true
+          - flags.heritage_or_flood: true
+      route:
+        orgNode: OFFICE:SURVEY_SUPERVISION
+        executes: BRANCH:{district}-SURVEY
+        raci: { R: [BRANCH_SURVEY], A: [OFFICE_TECH_DIR], C: [OFFICE_PLANNING, OFFICE_LEGAL] }
+      sla: { intake_hours: 8, decision_days: 5 }
+
+- Explainability مطلوب: لماذا صُعّد؟ ما البيانات التي حرّكت القرار (طبقة شارع/مخطط/تراث/فيضانات/SLA)؟
+
+4) نموذج البيانات (إضافات ضرورية)
+- survey_requests: id, applicant_id, district_code, branch_id, status, priority, geometry, docs, created_at …
+- حقول جديدة:
+  - executing_branch_id, office_review_required boolean, auto_escalated boolean
+  - escalation_reason enum('street_status','heritage','flood','outside_masterplan','legal_dispute','sla_timeout')
+  - office_decision jsonb (street_status_decision_id, notes, decided_by, decided_at)
+  - pnp_context jsonb (governorate/district/sub_district/sector/neighborhood/block)
+- street_status_decisions (جديد): id, office_id, street_code, width_m, classification, boundary_geometry, effective_from, effective_to, decision_doc
+- branch_periodic_reports (جديد): id, branch_id, period, totals, issues, submitted_at
+- مؤشرات SLA في جداول القرارات لقياس الالتزام (intake_time, review_time, total_time).
+
+5) طبقات GIS الأساسية الداعمة
+- التقسيم الإداري الهرمي: المحافظات → المديريات → العُزَل → القطاعات → وحدات الجوار → البلوكات.
+- المنافع العملية:
+  - Point‑in‑Polygon لتوليد pnp_context تلقائياً في الطلب.
+  - طبقة الشوارع المرقمنة (width, class, boundary) لتحديد الارتدادات تلقائياً.
+  - طبقات المخاطر (فيضانات/تراث) لتحفيز التصعيد التلقائي.
+
+6) RBAC مكيّف مع نموذج “الفرع ينفّذ”
+- الفرع:
+  - BRANCH_SURVEY (R/W) على طلبات المديرية.
+  - BRANCH_DIR (اعتماد نهائي روتيني).
+- مكتب المحافظة:
+  - OFFICE_TECH_DIR (اعتماد قضايا الشارع/المعقّدة فقط).
+  - OFFICE_PLANNING/LEGAL (استشاري C).
+- أذون حرجة:
+  - survey.approve.branch (فرع)
+  - survey.escalate (فرع)
+  - survey.street-status.decide (مكتب)
+  - survey.report.submit (فرع)
+  - survey.supervise (مكتب)
+
+7) SLA معدّلة
+- روتيني بالفرع: استقبال ≤ 8 ساعات، رفع مساحي ≤ 2 يوم، مراجعة/اعتماد ≤ 1 يوم (إجمالي ≤ 3–4 أيام).
+- مصعّد للمكتب (وضع شارع/حالة حساسة): قرار المكتب ≤ 5 أيام، ثم اعتماد الفرع ≤ 1 يوم.
+- طوارئ متعلّقة بمسارات مشاريع عامة: مسار سريع بقرار خلال 48 ساعة.
+
+8) تقارير الفرع للمكتب (دورية)
+- أسبوعي/شهري عبر /api/survey/reports:
+  - عدد الطلبات، أزمنة الإنجاز، نسبة التصعيد، أسباب التصعيد، الأخطاء المتكررة، جودة البيانات.
+- لوحة إشراف للمكتب: خرائط حرارية للتأخير/الإشكالات حسب المديريات.
+
+9) رقمنة وحدات الجوار والشوارع (لتغذية الاسقاط)
+- جداول PostGIS المقترحة (كما في دليلك) + أدوات الرسم (Leaflet/OpenLayers + snapping + topology checks).
+- سير عمل:
+  - تحميل الرستر المرجّع جغرافياً → رقمنة البلوكات/الشوارع → تحقق طوبولوجي → نشر الطبقات → استهلاكها في الاسقاط المساحي (حساب ارتدادات تلقائي حسب عرض الشارع).
+
+10) خطة Sprint مركزة (10 أيام عمل)
+- يوم 1–2:
+  - إضافة الحقول والجداول (survey_requests الإضافية + street_status_decisions + reports).
+  - مسارات API:
+    - POST/GET /api/survey/requests
+    - POST /api/survey/requests/:id/escalate (street_status)
+    - POST /api/office/street-status-decisions
+    - POST /api/survey/reports (رفع تقرير الفرع)
+- يوم 3–4:
+  - تعديل محرك التوجيه/التصعيد وExplainability.
+  - Point‑in‑Polygon لتعبئة pnp_context تلقائياً.
+- يوم 5–6:
+  - واجهة مراجعة الفرع (Routine) + زر “علامة إشكال شارع” للتصعيد.
+  - واجهة قرار المكتب “وضع شارع”.
+- يوم 7:
+  - حساب الارتدادات تلقائياً من عرض الشارع + تحديث قالب PDF.
+- يوم 8:
+  - RBAC بحسب الأدوار أعلاه + أذون المسارات.
+- يوم 9:
+  - تقارير الفرع الدورية + لوحة رقابية بالمكتب.
+- يوم 10:
+  - اختبارات E2E: خمس حالات (روتيني، تراث، فيضان، خارج مخطط، وضع شارع).
+  - قبول UAT مع فرع نموذجي + مكتب المحافظة.
+
+11) مؤشرات القبول والنجاح (DoD + KPIs)
+- 90%+ من طلبات الاسقاط تُغلق في الفرع دون تصعيد خلال أول شهر.
+- زمن إنجاز روتيني P90 ≤ 4 أيام؛ المصعَّد ≤ 6 أيام.
+- دقة Point‑in‑Polygon ≥ 98% ضمن الطبقات المدرجة.
+- تقارير الفروع تُرفع في موعدها بنسبة ≥ 95%.
+- انخفاض التصعيد غير الضروري ≥ 20% بعد شهر.
+
+12) أمر تنفيذي جاهز للمساعد (لتطبيق التعديل الآن)
+- طبّق “نموذج الفرع التنفيذي/المكتب الإشرافي” على خدمة الاسقاط المساحي:
+  1) أضف حقول التصعيد/المكتب/الفرع في survey_requests + أنشئ street_status_decisions وbranch_periodic_reports.
+  2) حدّث محرك التوجيه:
+     - الافتراضي → الفرع
+     - تصعيد تلقائي عند flags: street_issue/outside_masterplan/heritage/flood/legal_dispute/sla_timeout
+  3) أضف/ثبّت Endpoints:
+     - POST/GET /api/survey/requests
+     - POST /api/survey/requests/:id/escalate (street_status)
+     - POST /api/office/street-status-decisions (اعتماد المكتب)
+     - GET /api/survey/requests/:id/pdf (قرار مساحي معتمد)
+     - POST /api/survey/reports (تقارير الفرع)
+  4) فعّل RBAC للأدوار (branch/office) وامنع اعتماد المكتب في الحالات الاعتيادية.
+  5) اختبر 5 سيناريوهات، وأصدر تقرير نجاح مع SLA وسبب/عدم سبب التصعيد.
+
+إذا أردت، أزوّدك الآن بقوالب SQL (migrations) وملفات YAML للقواعد المصمّمة على “الفرع ينفّذ/المكتب يشرف”، مع أمثلة cURL لكل سيناريو.

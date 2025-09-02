@@ -69,6 +69,31 @@ export const surveyRequests = pgTable("survey_requests", {
   notes: text("notes"),
   internalNotes: text("internal_notes"), // ملاحظات داخلية للموظفين
   
+  // نموذج الفرع التنفيذي/المكتب الإشرافي - حقول جديدة
+  executingBranchId: varchar("executing_branch_id", { length: 100 }), // الفرع المنفذ
+  officeReviewRequired: boolean("office_review_required").default(false), // يتطلب مراجعة المكتب
+  autoEscalated: boolean("auto_escalated").default(false), // تم التصعيد تلقائياً
+  escalationReason: varchar("escalation_reason", { length: 100 }), // سبب التصعيد
+  // 'street_status','heritage','flood','outside_masterplan','legal_dispute','sla_timeout'
+  
+  // قرار المكتب (إذا كان مطلوباً)
+  officeDecision: jsonb("office_decision").$type<{
+    streetStatusDecisionId?: string;
+    notes?: string;
+    decidedBy?: string;
+    decidedAt?: string;
+  }>(),
+  
+  // السياق الجغرافي الإداري (Point-in-Polygon result)
+  pnpContext: jsonb("pnp_context").$type<{
+    governorate?: string;
+    district?: string;
+    subDistrict?: string;
+    sector?: string;
+    neighborhood?: string;
+    block?: string;
+  }>(),
+  
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 }, (table) => [
@@ -281,3 +306,60 @@ export type InsertSurveyFeature = z.infer<typeof insertSurveyFeatureSchema>;
 export type SurveyReview = typeof surveyReviews.$inferSelect;
 export type SurveyDecision = typeof surveyDecisions.$inferSelect;
 export type FeatureCode = typeof featureCodes.$inferSelect;
+
+// قرارات وضع الشوارع - للحالات المصعدة للمكتب
+export const streetStatusDecisions = pgTable("street_status_decisions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  officeId: varchar("office_id", { length: 100 }).notNull(), // مكتب المحافظة
+  streetCode: varchar("street_code", { length: 50 }).notNull(),
+  widthM: decimal("width_m", { precision: 5, scale: 2 }), // عرض الشارع بالمتر
+  classification: varchar("classification", { length: 100 }), // تصنيف الشارع
+  boundaryGeometry: jsonb("boundary_geometry"), // حدود الشارع
+  effectiveFrom: timestamp("effective_from").defaultNow(),
+  effectiveTo: timestamp("effective_to"),
+  decisionDoc: varchar("decision_doc", { length: 500 }), // رابط الوثيقة
+  decidedBy: varchar("decided_by", { length: 255 }).notNull(),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+// تقارير الفروع الدورية
+export const branchPeriodicReports = pgTable("branch_periodic_reports", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  branchId: varchar("branch_id", { length: 100 }).notNull(),
+  period: varchar("period", { length: 20 }).notNull(), // weekly, monthly
+  periodStart: timestamp("period_start").notNull(),
+  periodEnd: timestamp("period_end").notNull(),
+  
+  // إحصائيات الأداء
+  totalRequests: integer("total_requests").default(0),
+  completedRequests: integer("completed_requests").default(0),
+  escalatedRequests: integer("escalated_requests").default(0),
+  avgProcessingDays: decimal("avg_processing_days", { precision: 4, scale: 2 }),
+  slaComplianceRate: decimal("sla_compliance_rate", { precision: 5, scale: 2 }), // نسبة الالتزام بالـ SLA
+  
+  // أسباب التصعيد
+  escalationReasons: jsonb("escalation_reasons").$type<{
+    streetStatus?: number;
+    heritage?: number;
+    flood?: number;
+    outsideMasterplan?: number;
+    legalDispute?: number;
+    slaTimeout?: number;
+  }>(),
+  
+  // مسائل وتوصيات
+  issues: text("issues"),
+  recommendations: text("recommendations"),
+  
+  submittedAt: timestamp("submitted_at").notNull(),
+  submittedBy: varchar("submitted_by", { length: 255 }).notNull(),
+  reviewedBy: varchar("reviewed_by", { length: 255 }),
+  reviewedAt: timestamp("reviewed_at"),
+  
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+// Types for new tables
+export type StreetStatusDecision = typeof streetStatusDecisions.$inferSelect;
+export type BranchPeriodicReport = typeof branchPeriodicReports.$inferSelect;
