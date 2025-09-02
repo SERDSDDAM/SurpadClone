@@ -1,0 +1,407 @@
+تم. سأبدأ بإعداد نفس الواجهات (الصفحات 1–5) مع ربطها كاملاً بالمسارين (Shapefile/GNSS) وبما يتوافق مع نموذج “الفرع التنفيذي/المكتب الإشرافي”. أدناه مخطط التنقل، سقالات الشاشات، حالة المَعالج (Wizard) المشتركة، وربط REST APIs. يمكنك نسخ الكود كما هو وتوصيله.
+
+1) خريطة التنقل والربط بين الشاشات
+- /admin/login → شاشة دخول النظام الإداري (صفحة 1)
+- /services → دليل الخدمات (صفحة 2)
+- /survey/wizard
+  - ?step=choose-path → اختيار المسار (جديد)
+  - ?step=applicant → بيانات مقدم الطلب
+  - ?step=location → تحديد الموقع الجغرافي (صفحة 3)
+  - ?step=attachments → المرفقات (Shapefile أو مستندات GNSS) (صفحة 3)
+  - ?step=billing → طباعة الفاتورة والسداد (صفحة 4)
+  - بعد الدفع:
+    - /cashier/awaiting → شاشة مسؤول الصندوق “طلبات بانتظار السداد”
+    - /cashier/invoice/:invoiceId → تأكيد السداد (صفحة 5)
+
+منطق اختيار المسار
+- النظام يحاول كشف قرار سابق تلقائياً (Legacy lookup + Point-in-Polygon)
+- إذا وُجد قرار سابق مقترن بالقطعة → المسار Shapefile
+- إن لم يوجد → GNSS
+- يمكن السماح بالاختيار اليدوي وفق سياسة الفرع (مع تحذير/تقييد)
+
+2) حالة المَعالج المشتركة (Wizard State)
+client/src/features/survey/wizard/SurveyWizardContext.tsx
+import { createContext, useContext, useMemo, useState } from "react";
+
+export type WorkflowMode = 'shapefile' | 'gnss';
+
+export interface ApplicantData {
+  nationalId?: string;
+  fullName?: string;
+  phone?: string;
+  role?: 'self' | 'agent';
+  documentType?: 'deed' | 'basira' | 'other';
+  purpose?: string;
+  areaFromDoc?: number;
+}
+
+export interface LocationData {
+  governorate?: string;
+  district?: string;
+  subDistrict?: string;
+  sector?: string;
+  neighborhood?: string;
+  planNo?: string;
+  lng?: number;
+  lat?: number;
+  pnpContext?: any; // من خدمة PnP
+  legacyFound?: boolean;
+}
+
+export interface WizardState {
+  requestId?: string;
+  step: 'choose-path'|'applicant'|'location'|'attachments'|'billing';
+  mode?: WorkflowMode;
+  applicant: ApplicantData;
+  location: LocationData;
+  attachments: {
+    shapefileZip?: File | null;
+    otherDocs?: File[];
+    qc?: {
+      crsOk?: boolean;
+      topologyOk?: boolean;
+      insidePlan?: boolean;
+      areaDiffPct?: number;
+      streetsMatched?: boolean;
+      report?: any;
+    }
+  };
+  invoiceId?: string;
+}
+
+const SurveyWizardCtx = createContext<{
+  state: WizardState;
+  setState: React.Dispatch<React.SetStateAction<WizardState>>;
+} | null>(null);
+
+export function SurveyWizardProvider({ children }: { children: React.ReactNode }) {
+  const [state, setState] = useState<WizardState>({
+    step: 'choose-path',
+    applicant: {},
+    location: {},
+    attachments: {}
+  });
+  const value = useMemo(()=>({state, setState}),[state]);
+  return <SurveyWizardCtx.Provider value={value}>{children}</SurveyWizardCtx.Provider>;
+}
+export function useSurveyWizard() {
+  const ctx = useContext(SurveyWizardCtx);
+  if (!ctx) throw new Error("useSurveyWizard must be used within provider");
+  return ctx;
+}
+
+3) إعداد الراوتر وربط الصفحات
+client/src/AppRoutes.tsx
+import { Route, Switch } from "wouter";
+import AdminLogin from "./pages/admin/AdminLogin";
+import ServicesMenu from "./pages/services/ServicesMenu";
+import SurveyWizard from "./pages/survey/SurveyWizard";
+import CashierAwaiting from "./pages/cashier/CashierAwaiting";
+import CashierInvoice from "./pages/cashier/CashierInvoice";
+import { SurveyWizardProvider } from "@/features/survey/wizard/SurveyWizardContext";
+
+export default function AppRoutes() {
+  return (
+    <Switch>
+      <Route path="/admin/login" component={AdminLogin} />
+      <Route path="/services" component={ServicesMenu} />
+      <Route path="/survey/wizard">
+        <SurveyWizardProvider>
+          <SurveyWizard />
+        </SurveyWizardProvider>
+      </Route>
+      <Route path="/cashier/awaiting" component={CashierAwaiting} />
+      <Route path="/cashier/invoice/:invoiceId" component={CashierInvoice} />
+      <Route> {/* fallback */}
+        <ServicesMenu />
+      </Route>
+    </Switch>
+  );
+}
+
+4) مكوّن المَعالج (Stepper + التنقل)
+client/src/pages/survey/SurveyWizard.tsx
+import { useEffect } from "react";
+import { useLocation } from "wouter";
+import { useSurveyWizard } from "@/features/survey/wizard/SurveyWizardContext";
+import ChoosePathStep from "./steps/ChoosePathStep";
+import ApplicantStep from "./steps/ApplicantStep";
+import LocationStep from "./steps/LocationStep";
+import AttachmentsStep from "./steps/AttachmentsStep";
+import BillingStep from "./steps/BillingStep";
+import Stepper from "@/components/ui/Stepper";
+
+const steps = [
+  { key: 'choose-path', title: 'اختيار المسار' },
+  { key: 'applicant', title: 'بيانات مقدم الطلب' },
+  { key: 'location', title: 'الموقع الجغرافي' },
+  { key: 'attachments', title: 'المرفقات' },
+  { key: 'billing', title: 'الفاتورة والسداد' }
+] as const;
+
+export default function SurveyWizard() {
+  const { state } = useSurveyWizard();
+  const [, navigate] = useLocation();
+
+  useEffect(() => { navigate(`/survey/wizard?step=${state.step}`, { replace: true }); }, [state.step]);
+
+  return (
+    <div className="container mx-auto p-4 space-y-4">
+      <Stepper steps={steps.map(s=>s.title)} current={steps.findIndex(s => s.key === state.step)} />
+      {state.step === 'choose-path' && <ChoosePathStep />}
+      {state.step === 'applicant' && <ApplicantStep />}
+      {state.step === 'location' && <LocationStep />}
+      {state.step === 'attachments' && <AttachmentsStep />}
+      {state.step === 'billing' && <BillingStep />}
+    </div>
+  );
+}
+
+5) خطوة 0: اختيار المسار (مع كشف آلي)
+client/src/pages/survey/steps/ChoosePathStep.tsx
+import { useSurveyWizard } from "@/features/survey/wizard/SurveyWizardContext";
+import { useMutation } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
+import { Button } from "@/components/ui/button";
+
+export default function ChoosePathStep() {
+  const { state, setState } = useSurveyWizard();
+
+  const detectLegacy = useMutation({
+    mutationFn: async () => {
+      // كشف تلقائي (اختياري: يُستدعى بعد اختيار الموقع أو إدخال مرجع)
+      const resp = await apiRequest("GET", `/api/survey/legacy/check?planNo=${state.location.planNo ?? ''}`);
+      return resp;
+    },
+    onSuccess: (data) => {
+      if (data?.legacyFound) {
+        setState(s => ({ ...s, mode: 'shapefile' }));
+      }
+    }
+  });
+
+  const next = (mode: 'shapefile'|'gnss') => {
+    setState(s => ({ ...s, mode, step: 'applicant' }));
+  };
+
+  return (
+    <div className="grid md:grid-cols-2 gap-6">
+      <div className="p-5 border rounded-lg">
+        <h3 className="font-bold text-lg mb-2">إسقاط سابق (Shapefile)</h3>
+        <p className="text-sm text-gray-600 mb-3">للقطع التي لديها قرار/إسقاط سابق. يلزم رفع ملف ZIP (shp, shx, dbf, prj).</p>
+        <Button onClick={() => next('shapefile')}>اختيار هذا المسار</Button>
+      </div>
+      <div className="p-5 border rounded-lg">
+        <h3 className="font-bold text-lg mb-2">إسقاط جديد (GNSS)</h3>
+        <p className="text-sm text-gray-600 mb-3">جمع البيانات عبر تطبيق المسّاح باستخدام GNSS.</p>
+        <Button onClick={() => next('gnss')}>اختيار هذا المسار</Button>
+      </div>
+    </div>
+  );
+}
+
+6) خطوة 1: بيانات مقدم الطلب
+client/src/pages/survey/steps/ApplicantStep.tsx
+import { useSurveyWizard } from "@/features/survey/wizard/SurveyWizardContext";
+import { useForm } from "react-hook-form";
+import { Button } from "@/components/ui/button";
+
+export default function ApplicantStep() {
+  const { state, setState } = useSurveyWizard();
+  const { register, handleSubmit } = useForm({ defaultValues: state.applicant });
+
+  const onSubmit = (values: any) => {
+    setState(s => ({ ...s, applicant: values, step: 'location' }));
+  };
+
+  return (
+    <form onSubmit={handleSubmit(onSubmit)} className="grid md:grid-cols-2 gap-4">
+      <input className="input" placeholder="الاسم الكامل" {...register("fullName", { required: true })}/>
+      <input className="input" placeholder="رقم الهوية" {...register("nationalId", { required: true })}/>
+      <input className="input" placeholder="رقم الجوال" {...register("phone")}/>
+      <select className="input" {...register("documentType")}>
+        <option value="deed">صك</option>
+        <option value="basira">بصيرة</option>
+        <option value="other">أخرى</option>
+      </select>
+      <input className="input" placeholder="الغرض من القرار" {...register("purpose")}/>
+      <input className="input" type="number" step="0.01" placeholder="المساحة حسب الوثيقة (م²)" {...register("areaFromDoc")}/>
+      <div className="col-span-2 flex justify-between">
+        <Button type="button" variant="outline" onClick={()=>setState(s=>({...s, step:'choose-path'}))}>رجوع</Button>
+        <Button type="submit">التالي</Button>
+      </div>
+    </form>
+  );
+}
+
+7) خطوة 2: تحديد الموقع الجغرافي (مع PnP وتبديل المسار إن لزم)
+client/src/pages/survey/steps/LocationStep.tsx
+import { useSurveyWizard } from "@/features/survey/wizard/SurveyWizardContext";
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { apiRequest } from "@/lib/queryClient";
+
+export default function LocationStep() {
+  const { state, setState } = useSurveyWizard();
+  const [coords, setCoords] = useState({ lat: state.location.lat, lng: state.location.lng });
+
+  const runPnP = async () => {
+    const pnp = await apiRequest("POST", "/api/gis/point-in-polygon", { latitude: coords?.lat, longitude: coords?.lng });
+    const legacyFound = await apiRequest("GET", `/api/survey/legacy/check?lng=${coords.lng}&lat=${coords.lat}`);
+    setState(s => ({
+      ...s,
+      location: { ...s.location, lat: coords.lat, lng: coords.lng, pnpContext: pnp, legacyFound: !!legacyFound?.found },
+      mode: legacyFound?.found ? 'shapefile' : s.mode
+    }));
+  };
+
+  const next = async () => {
+    await runPnP();
+    setState(s => ({ ...s, step: 'attachments' }));
+  };
+
+  return (
+    <div className="space-y-4">
+      {/* ضع هنا مكوّن الخريطة الذي لديك */}
+      <div className="grid md:grid-cols-2 gap-4">
+        <input className="input" placeholder="المحافظة" value={state.location.governorate ?? ''} onChange={e=>setState(s=>({...s, location:{...s.location, governorate:e.target.value}}))}/>
+        <input className="input" placeholder="المديرية" value={state.location.district ?? ''} onChange={e=>setState(s=>({...s, location:{...s.location, district:e.target.value}}))}/>
+        <input className="input" placeholder="العزلة" onChange={e=>setState(s=>({...s, location:{...s.location, subDistrict:e.target.value}}))}/>
+        <input className="input" placeholder="القطاع" onChange={e=>setState(s=>({...s, location:{...s.location, sector:e.target.value}}))}/>
+        <input className="input" placeholder="رقم المخطط" onChange={e=>setState(s=>({...s, location:{...s.location, planNo:e.target.value}}))}/>
+      </div>
+      <div className="flex justify-between">
+        <Button variant="outline" onClick={()=>setState(s=>({...s, step:'applicant'}))}>رجوع</Button>
+        <Button onClick={next}>التالي</Button>
+      </div>
+    </div>
+  );
+}
+
+8) خطوة 3: المرفقات (يتبدّل حسب المسار)
+client/src/pages/survey/steps/AttachmentsStep.tsx
+import { useSurveyWizard } from "@/features/survey/wizard/SurveyWizardContext";
+import { useMutation } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
+import { Button } from "@/components/ui/button";
+import { useState } from "react";
+
+export default function AttachmentsStep() {
+  const { state, setState } = useSurveyWizard();
+  const [file, setFile] = useState<File|null>(null);
+
+  const uploadShp = useMutation({
+    mutationFn: async (file: File) => {
+      const form = new FormData();
+      form.append("file", file);
+      return fetch(`/api/survey/requests/${state.requestId ?? 'new'}/shp/upload`, { method: "POST", body: form })
+        .then(r => r.json());
+    },
+    onSuccess: (data) => {
+      setState(s => ({ ...s, attachments: { ...s.attachments, shapefileZip: file, qc: data?.qc }, step: 'billing' }));
+    }
+  });
+
+  const uploadDocs = useMutation({
+    mutationFn: async () => apiRequest("POST", `/api/survey/requests/${state.requestId ?? 'new'}/docs`, { /* وثائق الملكية... */ }),
+    onSuccess: () => setState(s => ({ ...s, step: 'billing' }))
+  });
+
+  if (state.mode === 'shapefile') {
+    return (
+      <div className="space-y-4">
+        <p className="text-sm text-gray-600">ارفع ملف ZIP يحتوي على (shp, shx, dbf, prj). سيقوم النظام بفحص CRS والطوبولوجيا والمساحة...</p>
+        <input type="file" onChange={e => setFile(e.target.files?.[0] ?? null)} />
+        <div className="flex justify-between">
+          <Button variant="outline" onClick={()=>setState(s=>({...s, step:'location'}))}>رجوع</Button>
+          <Button disabled={!file || uploadShp.isLoading} onClick={()=>file && uploadShp.mutate(file)}>رفع ومتابعة</Button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      <p className="text-sm text-gray-600">أرفق وثيقة الملكية وأي مستندات إضافية. سيتم تحديد موعد الرفع الميداني.</p>
+      {/* حقول رفع وثائق متعددة */}
+      <div className="flex justify-between">
+        <Button variant="outline" onClick={()=>setState(s=>({...s, step:'location'}))}>رجوع</Button>
+        <Button onClick={()=>uploadDocs.mutate()} disabled={uploadDocs.isLoading}>حفظ ومتابعة</Button>
+      </div>
+    </div>
+  );
+}
+
+9) خطوة 4: الفاتورة والسداد (مستخدم + صندوق)
+client/src/pages/survey/steps/BillingStep.tsx
+import { useSurveyWizard } from "@/features/survey/wizard/SurveyWizardContext";
+import { useQuery } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
+import { Button } from "@/components/ui/button";
+import { useLocation } from "wouter";
+
+export default function BillingStep() {
+  const { state } = useSurveyWizard();
+  const [, navigate] = useLocation();
+  const { data: invoice } = useQuery({
+    queryKey: ["invoice", state.requestId],
+    queryFn: async () => apiRequest("POST", `/api/billing/invoices`, { requestId: state.requestId, mode: state.mode })
+  });
+
+  return (
+    <div className="space-y-4">
+      <h3 className="font-bold text-lg">إشعار سداد</h3>
+      {/* اعرض بنود الفاتورة */}
+      <div className="flex justify-between">
+        <Button variant="outline" onClick={()=>navigate('/services')}>عودة للخدمات</Button>
+        <Button onClick={()=>navigate('/cashier/awaiting')}>طباعة الفاتورة</Button>
+      </div>
+    </div>
+  );
+}
+
+10) شاشات الصندوق (صفحة 5)
+- /cashier/awaiting: قائمة فواتير “بانتظار السداد” مع زر “تأكيد السداد”
+- /cashier/invoice/:invoiceId: نفس شكل الفاتورة مع:
+  - رقم سند التحصيل (إلزامي)
+  - ملاحظات الصندوق
+  - زر “حفظ وطباعة” → يؤكد السداد ويحول الطلب للحالة التالية
+
+11) ربط REST APIs (خلاصة)
+- الكشف عن قرار سابق:
+  GET /api/survey/legacy/check?planNo=..&lng=..&lat=..
+  → { found: boolean, referenceId?:string }
+- PnP:
+  POST /api/gis/point-in-polygon {latitude, longitude}
+- إنشاء/تحديث طلب:
+  POST /api/survey/requests (يرد requestId)
+  PUT  /api/survey/requests/:id
+- Shapefile:
+  POST /api/survey/requests/:id/shp/upload (form-data)
+  GET  /api/survey/requests/:id/shp/validation
+  POST /api/survey/requests/:id/shp/commit
+- GNSS (قائم):
+  POST /api/survey-requests/:id/points
+  POST /api/survey-requests/:id/features
+- الفوترة:
+  POST /api/billing/invoices { requestId, mode }
+  GET  /api/billing/invoices/:invoiceId
+  POST /api/billing/invoices/:invoiceId/confirm { receiptNo, notes }
+
+12) عناصر UI مشتركة ومصغّرات (microcopy)
+- بطاقات اختيار المسار:
+  - إسقاط سابق (Shapefile): “للأراضي التي لديها قرار/إسقاط سابق. هذا المسار أسرع ويعتمد على ملف SHP موثّق.”
+  - إسقاط جديد (GNSS): “للإسقاطات الجديدة عبر الرفع الميداني باستخدام GNSS.”
+- تنبيهات:
+  - “تم اكتشاف مرجع سابق مرتبط بهذه القطعة. تم تفعيل مسار Shapefile تلقائياً.”
+  - “لم يتم العثور على مرجع سابق. مسار GNSS إلزامي وفق السياسة.”
+
+13) ماذا بعد؟
+- تفعيل QC الفعلي لمسار Shapefile وربط نتيجة الفحص بجدول shapefile_uploads.
+- ربط خطوة “اختيار المسار” مع إنشـاء الطلب backend كي نستلم requestId مبكراً.
+- تكميل شاشات الصندوق بفلترة/بحث وطباعة السند.
+- إضافة حارسات RBAC على المسارات الإدارية.
+
+إذا رغبت، أتابع الآن بأحد الخيارين:
+- أزوّدك بملفات المكوّنات كاملة (Stepper, MapInput, FileDropzone) جاهزة للنسخ.
+- أو أبدأ بربط SurveyWizard بخدمة إنشاء الطلب backend كي يصدر requestId من خطوة “بيانات مقدم الطلب” ثم أكمل سريان المَعالج.

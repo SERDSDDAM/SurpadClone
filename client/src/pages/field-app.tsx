@@ -80,20 +80,25 @@ export default function FieldApp() {
   });
 
   // Query survey data for this specific request
-  const { data: surveyPoints = [] } = useQuery<SurveyPoint[]>({
+  const { data: pointsResponse } = useQuery({
     queryKey: ["/api/survey-requests", requestId, "points"],
     enabled: !!requestId,
   });
 
-  const { data: surveyLines = [] } = useQuery<SurveyLine[]>({
+  const { data: linesResponse } = useQuery({
     queryKey: ["/api/survey-requests", requestId, "lines"],
     enabled: !!requestId,
   });
 
-  const { data: surveyPolygons = [] } = useQuery<SurveyPolygon[]>({
+  const { data: polygonsResponse } = useQuery({
     queryKey: ["/api/survey-requests", requestId, "polygons"],
     enabled: !!requestId,
   });
+
+  // Extract arrays from API responses
+  const surveyPoints = Array.isArray(pointsResponse?.data) ? pointsResponse.data : [];
+  const surveyLines = Array.isArray(linesResponse) ? linesResponse : [];
+  const surveyPolygons = Array.isArray(polygonsResponse) ? polygonsResponse : [];
 
   // Mutations for creating survey data
   const createPointMutation = useMutation({
