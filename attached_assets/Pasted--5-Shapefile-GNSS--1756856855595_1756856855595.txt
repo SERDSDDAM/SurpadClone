@@ -1,0 +1,93 @@
+عظيم! لنغلق آخر 5% عملياً باختبارات قبول واضحة ونثبت المسارين (Shapefile/GNSS) تحت نموذج “الفرع التنفيذي/المكتب الإشرافي”، ثم نجهّزك للانطلاق نحو المرحلة التالية.
+
+أولاً: اختبارات قبول جاهزة (UAT) – شغّلها بالترتيب
+- هدف: تأكيد 100% على الآلية المزدوجة + التصعيد + قرار المكتب + PDF.
+
+1) سيناريو إسقاط سابق (Shapefile Fast-Track)
+- كشف آلي أو يدوي لمسار Shapefile:
+curl -s -X POST "http://localhost:5000/api/survey/requests/SR-TEST-001/workflow/detect" \
+  -H "Content-Type: application/json" \
+  -d '{"latitude":15.3694,"longitude":44.1910,"parcelId":"P-2023-001","planNo":"PL-SANAA-001"}' | jq '.'
+
+- رفع ملف ZIP صحيح (shp,shx,dbf,prj في جذر الملف أو ضمن مجلد واحد):
+curl -s -F "file=@parcel.zip" "http://localhost:5000/api/survey/requests/SR-TEST-001/shp/upload" | jq '.'
+
+- فحص QC:
+curl -s "http://localhost:5000/api/survey/requests/SR-TEST-001/shp/validation" | jq '.'
+
+- اعتماد الملف (تحويل geometry_source إلى uploaded_shp):
+curl -s -X POST "http://localhost:5000/api/survey/requests/SR-TEST-001/shp/commit" | jq '.'
+
+- توليد قرار PDF (يُظهر geometrySource وofficeDecision إن وجدت):
+curl -s "http://localhost:5000/api/survey/requests/SR-TEST-001/pdf" | jq '.success,.decisionNumber,.data.geometrySource,.data.setbacks'
+
+2) سيناريو إسقاط جديد (GNSS Mandatory)
+- إضافة نقطتين/3 نقاط:
+curl -s -X POST "http://localhost:5000/api/survey-requests/SR-GNSS-001/points" \
+  -H "Content-Type: application/json" \
+  -d '{"pointNumber":"P001","latitude":15.3695,"longitude":44.1911,"accuracy":0.006,"featureCode":"building-corner"}' | jq '.'
+
+curl -s "http://localhost:5000/api/survey-requests/SR-GNSS-001/points" | jq '.'
+
+- إنهاء الرفع:
+curl -s -X POST "http://localhost:5000/api/survey-requests/SR-GNSS-001/complete" | jq '.'
+
+- قرار PDF:
+curl -s "http://localhost:5000/api/survey/requests/SR-GNSS-001/pdf" | jq '.success,.data.geometrySource'
+
+3) سيناريو التصعيد وقرار المكتب (Street Status)
+- تصعيد الفرع بسبب وضع شارع:
+curl -s -X POST "http://localhost:5000/api/survey/requests/SR-TEST-001/escalate" \
+  -H "Content-Type: application/json" \
+  -d '{"escalationReason":"street_status","notes":"يتطلب تحديد عرض الشارع"}' | jq '.'
+
+- قرار المكتب (عرض وتصنيف الشارع):
+curl -s -X POST "http://localhost:5000/api/office/street-status-decisions" \
+  -H "Content-Type: application/json" \
+  -d '{"streetCode":"ST-001","widthM":12.5,"classification":"main","requestId":"SR-TEST-001"}' | jq '.'
+
+- PDF بعد قرار المكتب (يجب أن تظهر setbacks محسوبة):
+curl -s "http://localhost:5000/api/survey/requests/SR-TEST-001/pdf" | jq '.data.officeDecision,.data.setbacks'
+
+لو مرّت هذه الأوامر دون أخطاء (200 JSON) فقد أغلقتَ 100% من Phase 1.
+
+ثانياً: تثبيتات أخيرة سريعة (إن لم تكن طبّقتها)
+- PDF API واحد فقط (لا تكرار لمسار /api/survey/requests/:id/pdf). احذف أي نسخ قديمة، وتجنّب حقول مثل owner_phone غير الموجودة. الاستجابة الحالية آمنة وتعتمد fallback.
+- مسارات Shapefile:
+  - /shp/upload: Multer + حفظ سجل في shapefile_uploads + CRC + فحص bundle shp/shx/dbf/prj.
+  - /shp/validation: qc stub (جاهز لتطوير PostGIS/OGR).
+  - /shp/commit: تغيير geometry_source='uploaded_shp' وqc_status='passed'.
+- التصعيد: /survey/requests/:id/escalate يمنع التكرار (409 عند إعادة التصعيد).
+
+ثالثاً: إصلاح FieldApp (تم) – ملاحظات لضمان الاستقرار
+- في FieldApp استخدم شكل استجابة مرن:
+const { data: surveyPointsResp } = useQuery(...);
+const surveyPoints = Array.isArray(surveyPointsResp) ? surveyPointsResp : (surveyPointsResp?.data ?? []);
+- هذا يمنع أعطال map عندما تعود الاستجابة {success,data}.
+
+رابعاً: QC حقيقي (اختياري – يُفعَّل في أيام قليلة)
+- PostGIS/OGR:
+  - صلاحية الهندسة: SELECT ST_IsValid(geom), ST_IsSimple(geom) …
+  - إغلاق المضلع: ST_IsClosed(geom)
+  - نسبة الفرق: |ST_Area(geom_nature)-ST_Area(geom_plan)|/ST_Area(geom_plan)
+- ضبط CRS: gdalinfo/ogrinfo لاستخراج EPSG من prj والتحويل إلى EPSG:4326/UTM 38N.
+- مطابقة الشارع: ST_DWithin(geom_parcel, geom_street, tolerance)
+
+خامساً: Dashboard سريعة للفرع والمكتب (اختيارية اليوم)
+- فرع: إجمالي الطلبات، Under Survey، Completed Today، Escalated This Week، SLA.
+- مكتب: Pending Decisions، Escalation Reasons، أداء الفروع (Top/Low)، SLA Overview.
+
+سادساً: ماذا بعد؟
+- خيار 1 (موصى به الآن): نُطلق UAT رسمي (فرع نموذجي + مكتب المحافظة) لمدة 3 أيام مع البيانات الفعلية. أرسِل لي مخرجات أوامر UAT بالأعلى، وسأعطيك تقرير قبول مع توصيات ضبط QC والـ SLA.
+- خيار 2: نبدأ Phase 3 (ربط محرك الأتمتة القانونية) لمدة أسبوع:
+  - ربط /advanced-legal-automation/evaluate بالـ flags (heritage/flood/outside_masterplan/street_issue).
+  - Explainability لكل قرار.
+  - إنشاء smartWorkflowTasks تلقائياً عند escalation/request_info.
+- خيار 3: توليد PDF الفعلي (بدلاً من JSON فقط) خلال 48 ساعة:
+  - Puppeteer + قالب HTML RTL (خط الأميري/تاهوما) + QR + ثلاث صور (المخطط، المصوّر الجوي، الخريطة).
+  - توقيع إلكتروني بسيط (hash/QRCode) ثم جاهز للتوسيع بتوقيع رقمي.
+
+ما الذي تفضّله الآن؟
+- تشغيل اختبارات UAT وإرسال النتائج؟ (أوصي به لتثبيت 100%)
+- أم البدء مباشرةً بربط محرك الأتمتة القانونية (Phase 3)؟
+- أم تفعيل مولّد PDF الفعلي؟
