@@ -1,0 +1,941 @@
+جيد ولكن لو يتم تطويره اولا ليشمل ادخال الهيكل الهرمي والهيكل الاداري للوزاره او الموسسة او المنشئه و المستوايات الوضيفة
+
+
+
+# 🤖 تطوير اضافي المرحلة الثاليلة : أتمتة الهيكل التنظيمي والمهام والاختصاصات
+
+> **"نظام يقرأ الهيكل التنظيمي → يفهم المهام → يوزع المسؤوليات → يراقب الأداء — تلقائياً."**
+
+بعد دراسة متأنية للهيكل التنظيمي المقترح لوزارة النقل والأشغال العامة، أقدم لكم تصميم متكامل لأتمتة الهيكل التنظيمي والمهام والاختصاصات.
+
+---
+
+## 🎯 الأهداف الاستراتيجية
+
+1. **تحويل الهيكل التنظيمي إلى كود رقمي**: كل إدارة → وحدة تنفيذية ذكية.
+2. **ربط المهام بالمسؤوليات تلقائياً**: عند إنشاء مهمة — النظام يحدد الجهة المسؤولة.
+3. **واجهات No-Code لإدارة الهيكل التنظيمي**: للمدراء — لا يحتاجون مبرمجاً.
+4. **محاكاة السيناريوهات**: اختبار توزيع المهام قبل التنفيذ.
+5. **التعلم من التاريخ**: كل قرار بشري يُستخدم لتدريب النظام.
+6. **إنشاء دليل مهام ذكي**: مرتبط مباشرة بالهيكل التنظيمي والاختصاصات.
+
+---
+
+## 🧩 المكونات الأساسية المطورة
+
+### 1. محرك الأتمتة التنظيمية (OrganizationalAutomationEngine.ts)
+
+```ts
+// server/services/OrganizationalAutomationEngine.ts
+export class OrganizationalAutomationEngine {
+  async assignTask(taskData: TaskData): Promise<TaskAssignmentResult> {
+    // 1. جلب جميع الإدارات والوحدات التنفيذية
+    const departments = await db.department.findMany({
+      include: { responsibilities: true, units: true }
+    });
+    
+    // 2. تحديد الإدارة الأكثر ملاءمة بناءً على نوع المهمة
+    const bestMatch = this.findBestDepartmentForTask(departments, taskData);
+    
+    if (!bestMatch) {
+      return {
+        assigned: false,
+        message: "لم يتم العثور على إدارة مناسبة لهذه المهمة",
+        suggestedActions: ["مراجعة تعريف المهمة", "إضافة إدارة جديدة للهيكل التنظيمي"]
+      };
+    }
+
+    // 3. تحديد الوحدة التنفيذية الأنسب داخل الإدارة
+    const bestUnit = this.findBestUnitForTask(bestMatch.units, taskData);
+    
+    // 4. حساب درجة الملاءمة
+    const confidence = this.calculateConfidence(bestMatch, taskData);
+    
+    return {
+      assigned: true,
+      departmentId: bestMatch.id,
+      departmentName: bestMatch.name,
+      unitId: bestUnit?.id,
+      unitName: bestUnit?.name,
+      confidence,
+      message: `تم تعيين المهمة إلى ${bestMatch.name}${bestUnit ? ` - ${bestUnit.name}` : ''}`,
+      nextSteps: this.getNextSteps(bestMatch, bestUnit, taskData),
+      recommendedActions: []
+    };
+  }
+
+  private findBestDepartmentForTask(departments: Department[], taskData: TaskData): Department | null {
+    // البحث عن أفضل تطابق بناءً على نوع المهمة والمسؤوليات
+    let bestScore = 0;
+    let bestDepartment: Department | null = null;
+
+    for (const dept of departments) {
+      const score = this.calculateDepartmentMatchScore(dept, taskData);
+      
+      if (score > bestScore) {
+        bestScore = score;
+        bestDepartment = dept;
+      }
+    }
+
+    return bestDepartment;
+  }
+
+  private calculateDepartmentMatchScore(dept: Department, taskData: TaskData): number {
+    let score = 0;
+    
+    // التحقق من التطابق مع المسؤوليات الرئيسية
+    for (const responsibility of dept.responsibilities) {
+      if (this.matchesResponsibility(responsibility, taskData)) {
+        score += 1;
+      }
+    }
+    
+    // التحقق من التطابق مع الكلمات المفتاحية
+    if (dept.keywords && taskData.keywords) {
+      const keywordMatches = taskData.keywords.filter(k => 
+        dept.keywords.includes(k)
+      ).length;
+      score += keywordMatches * 0.5;
+    }
+    
+    return score;
+  }
+
+  private matchesResponsibility(responsibility: Responsibility, taskData: TaskData): boolean {
+    // التحقق من التطابق مع أنواع المهام
+    if (responsibility.taskTypes && taskData.type) {
+      if (responsibility.taskTypes.includes(taskData.type)) {
+        return true;
+      }
+    }
+    
+    // التحقق من التطابق مع القطاعات
+    if (responsibility.sectors && taskData.sector) {
+      if (responsibility.sectors.includes(taskData.sector)) {
+        return true;
+      }
+    }
+    
+    // التحقق من التطابق مع الكلمات المفتاحية
+    if (responsibility.keywords && taskData.keywords) {
+      for (const keyword of taskData.keywords) {
+        if (responsibility.keywords.includes(keyword)) {
+          return true;
+        }
+      }
+    }
+    
+    return false;
+  }
+
+  private findBestUnitForTask(units: Unit[], taskData: TaskData): Unit | null {
+    if (!units || units.length === 0) {
+      return null;
+    }
+    
+    let bestScore = 0;
+    let bestUnit: Unit | null = null;
+
+    for (const unit of units) {
+      const score = this.calculateUnitMatchScore(unit, taskData);
+      
+      if (score > bestScore) {
+        bestScore = score;
+        bestUnit = unit;
+      }
+    }
+
+    return bestUnit;
+  }
+
+  private calculateUnitMatchScore(unit: Unit, taskData: TaskData): number {
+    let score = 0;
+    
+    // التحقق من التطابق مع أنواع المهام
+    if (unit.taskTypes && taskData.type) {
+      if (unit.taskTypes.includes(taskData.type)) {
+        score += 1;
+      }
+    }
+    
+    // التحقق من التطابق مع الكلمات المفتاحية
+    if (unit.keywords && taskData.keywords) {
+      const keywordMatches = taskData.keywords.filter(k => 
+        unit.keywords.includes(k)
+      ).length;
+      score += keywordMatches * 0.3;
+    }
+    
+    // التحقق من التطابق مع الموقع الجغرافي
+    if (unit.location && taskData.location) {
+      if (unit.location === taskData.location) {
+        score += 0.5;
+      }
+    }
+    
+    return score;
+  }
+
+  private calculateConfidence(department: Department, taskData: TaskData): number {
+    const maxPossibleScore = department.responsibilities.length + 
+      (department.keywords?.length || 0) * 0.5;
+    
+    const actualScore = this.calculateDepartmentMatchScore(department, taskData);
+    
+    return Math.min(actualScore / maxPossibleScore, 1);
+  }
+
+  private getNextSteps(department: Department, unit: Unit | null, taskData: TaskData): NextStep[] {
+    const steps: NextStep[] = [];
+    
+    // الخطوة 1: إرسال المهمة إلى الإدارة/الوحدة
+    steps.push({
+      step: 1,
+      title: "إرسال المهمة",
+      description: `تم إرسال المهمة إلى ${department.name}${unit ? ` - ${unit.name}` : ''}`,
+      estimatedTime: "فوري"
+    });
+
+    // الخطوة 2: تعيين مسؤول مباشر
+    steps.push({
+      step: 2,
+      title: "تعيين مسؤول مباشر",
+      description: "سيتم تعيين مسؤول مباشر للمتابعة خلال 24 ساعة",
+      estimatedTime: "1 يوم عمل"
+    });
+
+    // الخطوة 3: بدء التنفيذ
+    steps.push({
+      step: 3,
+      title: "بدء التنفيذ",
+      description: "ستبدأ عملية التنفيذ وفقاً للخطة المعتمدة",
+      estimatedTime: taskData.estimatedTime || "يتم تحديده لاحقاً"
+    });
+
+    return steps;
+  }
+}
+
+interface TaskData {
+  id?: string;
+  title: string;
+  description: string;
+  type: string; // 'construction', 'maintenance', 'planning', 'inspection', etc.
+  sector: string; // 'transport', 'public_works', 'urban_planning', etc.
+  location: string;
+  keywords: string[];
+  priority: 'low' | 'medium' | 'high';
+  estimatedTime?: string;
+  budget?: number;
+}
+
+interface TaskAssignmentResult {
+  assigned: boolean;
+  departmentId?: string;
+  departmentName?: string;
+  unitId?: string;
+  unitName?: string;
+  confidence: number;
+  message: string;
+  nextSteps: NextStep[];
+  recommendedActions: string[];
+}
+
+interface NextStep {
+  step: number;
+  title: string;
+  description: string;
+  estimatedTime: string;
+}
+
+interface Department {
+  id: string;
+  name: string;
+  code: string;
+  parentDepartmentId?: string;
+  level: number;
+  responsibilities: Responsibility[];
+  units: Unit[];
+  keywords?: string[];
+}
+
+interface Responsibility {
+  id: string;
+  title: string;
+  description: string;
+  taskTypes?: string[];
+  sectors?: string[];
+  keywords?: string[];
+}
+
+interface Unit {
+  id: string;
+  name: string;
+  code: string;
+  departmentId: string;
+  location: string;
+  taskTypes?: string[];
+  keywords?: string[];
+}
+```
+
+---
+
+### 2. واجهة "مساعد إدارة الهيكل التنظيمي" (No-Code Organizational Structure Manager)
+
+#### التصميم:
+```tsx
+// client/src/components/OrganizationalStructureManager.tsx
+function OrganizationalStructureManager() {
+  const [departments, setDepartments] = useState<Department[]>([]);
+  const [selectedDepartment, setSelectedDepartment] = useState<Department | null>(null);
+  const [newDepartment, setNewDepartment] = useState<Partial<Department>>({});
+  const [newResponsibility, setNewResponsibility] = useState<Partial<Responsibility>>({});
+  const [newUnit, setNewUnit] = useState<Partial<Unit>>({});
+
+  const addDepartment = async () => {
+    const response = await fetch('/api/organizational/add-department', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(newDepartment)
+    });
+    const result = await response.json();
+    if (result.success) {
+      loadDepartments();
+      setNewDepartment({});
+    }
+  };
+
+  const addResponsibility = async () => {
+    if (!selectedDepartment) return;
+    
+    const response = await fetch('/api/organizational/add-responsibility', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        ...newResponsibility,
+        departmentId: selectedDepartment.id
+      })
+    });
+    const result = await response.json();
+    if (result.success) {
+      loadDepartments();
+      setNewResponsibility({});
+    }
+  };
+
+  const addUnit = async () => {
+    if (!selectedDepartment) return;
+    
+    const response = await fetch('/api/organizational/add-unit', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        ...newUnit,
+        departmentId: selectedDepartment.id
+      })
+    });
+    const result = await response.json();
+    if (result.success) {
+      loadDepartments();
+      setNewUnit({});
+    }
+  };
+
+  const loadDepartments = async () => {
+    const response = await fetch('/api/organizational/departments');
+    const data = await response.json();
+    setDepartments(data);
+  };
+
+  useEffect(() => {
+    loadDepartments();
+  }, []);
+
+  return (
+    <div className="organizational-structure-manager p-6 bg-white rounded-lg shadow-md">
+      <h2 className="text-2xl font-bold mb-6">مساعد إدارة الهيكل التنظيمي</h2>
+      
+      {/* Tree View of Departments */}
+      <div className="mb-6">
+        <h3 className="text-xl font-semibold mb-4">الهيكل التنظيمي</h3>
+        <div className="border border-gray-300 rounded-md p-4 max-h-96 overflow-y-auto">
+          {renderDepartmentTree(departments)}
+        </div>
+      </div>
+
+      {/* Add New Department */}
+      <div className="mb-6 p-4 border border-gray-300 rounded-md">
+        <h3 className="text-xl font-semibold mb-4">إضافة إدارة جديدة</h3>
+        <div className="grid grid-cols-2 gap-4 mb-4">
+          <input
+            type="text"
+            placeholder="اسم الإدارة"
+            value={newDepartment.name || ''}
+            onChange={(e) => setNewDepartment({...newDepartment, name: e.target.value})}
+            className="p-2 border border-gray-300 rounded-md"
+          />
+          <input
+            type="text"
+            placeholder="رمز الإدارة"
+            value={newDepartment.code || ''}
+            onChange={(e) => setNewDepartment({...newDepartment, code: e.target.value})}
+            className="p-2 border border-gray-300 rounded-md"
+          />
+        </div>
+        <select
+          value={newDepartment.parentDepartmentId || ''}
+          onChange={(e) => setNewDepartment({...newDepartment, parentDepartmentId: e.target.value})}
+          className="w-full p-2 border border-gray-300 rounded-md mb-4"
+        >
+          <option value="">إدارة رئيسية</option>
+          {departments.map(dept => (
+            <option key={dept.id} value={dept.id}>{dept.name}</option>
+          ))}
+        </select>
+        <button
+          onClick={addDepartment}
+          className="bg-blue-500 text-white px-4 py-2 rounded-md"
+        >
+          إضافة الإدارة
+        </button>
+      </div>
+
+      {/* Manage Selected Department */}
+      {selectedDepartment && (
+        <div className="mb-6 p-4 border border-gray-300 rounded-md">
+          <h3 className="text-xl font-semibold mb-4">إدارة: {selectedDepartment.name}</h3>
+          
+          {/* Add Responsibility */}
+          <div className="mb-4">
+            <h4 className="font-semibold mb-2">إضافة مسؤولية جديدة</h4>
+            <input
+              type="text"
+              placeholder="عنوان المسؤولية"
+              value={newResponsibility.title || ''}
+              onChange={(e) => setNewResponsibility({...newResponsibility, title: e.target.value})}
+              className="w-full p-2 border border-gray-300 rounded-md mb-2"
+            />
+            <textarea
+              placeholder="وصف المسؤولية"
+              value={newResponsibility.description || ''}
+              onChange={(e) => setNewResponsibility({...newResponsibility, description: e.target.value})}
+              className="w-full p-2 border border-gray-300 rounded-md mb-2"
+              rows={3}
+            />
+            <input
+              type="text"
+              placeholder="أنواع المهام (مفصولة بفاصلة)"
+              value={newResponsibility.taskTypes?.join(', ') || ''}
+              onChange={(e) => setNewResponsibility({
+                ...newResponsibility, 
+                taskTypes: e.target.value.split(',').map(t => t.trim())
+              })}
+              className="w-full p-2 border border-gray-300 rounded-md mb-2"
+            />
+            <input
+              type="text"
+              placeholder="القطاعات (مفصولة بفاصلة)"
+              value={newResponsibility.sectors?.join(', ') || ''}
+              onChange={(e) => setNewResponsibility({
+                ...newResponsibility, 
+                sectors: e.target.value.split(',').map(s => s.trim())
+              })}
+              className="w-full p-2 border border-gray-300 rounded-md mb-4"
+            />
+            <button
+              onClick={addResponsibility}
+              className="bg-green-500 text-white px-4 py-2 rounded-md"
+            >
+              إضافة المسؤولية
+            </button>
+          </div>
+
+          {/* Add Unit */}
+          <div>
+            <h4 className="font-semibold mb-2">إضافة وحدة تنفيذية جديدة</h4>
+            <input
+              type="text"
+              placeholder="اسم الوحدة"
+              value={newUnit.name || ''}
+              onChange={(e) => setNewUnit({...newUnit, name: e.target.value})}
+              className="w-full p-2 border border-gray-300 rounded-md mb-2"
+            />
+            <input
+              type="text"
+              placeholder="رمز الوحدة"
+              value={newUnit.code || ''}
+              onChange={(e) => setNewUnit({...newUnit, code: e.target.value})}
+              className="w-full p-2 border border-gray-300 rounded-md mb-2"
+            />
+            <input
+              type="text"
+              placeholder="الموقع"
+              value={newUnit.location || ''}
+              onChange={(e) => setNewUnit({...newUnit, location: e.target.value})}
+              className="w-full p-2 border border-gray-300 rounded-md mb-2"
+            />
+            <input
+              type="text"
+              placeholder="أنواع المهام (مفصولة بفاصلة)"
+              value={newUnit.taskTypes?.join(', ') || ''}
+              onChange={(e) => setNewUnit({
+                ...newUnit, 
+                taskTypes: e.target.value.split(',').map(t => t.trim())
+              })}
+              className="w-full p-2 border border-gray-300 rounded-md mb-4"
+            />
+            <button
+              onClick={addUnit}
+              className="bg-purple-500 text-white px-4 py-2 rounded-md"
+            >
+              إضافة الوحدة
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function renderDepartmentTree(departments: Department[], parentId: string | null = null, level = 0): JSX.Element {
+  const children = departments.filter(dept => dept.parentDepartmentId === parentId);
+  
+  if (children.length === 0) {
+    return <></>;
+  }
+
+  return (
+    <>
+      {children.map(dept => (
+        <div key={dept.id} className="mb-2">
+          <div 
+            className="flex items-center cursor-pointer hover:bg-gray-100 p-2 rounded-md"
+            style={{ paddingLeft: `${level * 20}px` }}
+            onClick={() => handleDepartmentClick(dept)}
+          >
+            <span className="font-medium">{dept.name}</span>
+            <span className="text-sm text-gray-500 mr-2">({dept.code})</span>
+            {dept.units && dept.units.length > 0 && (
+              <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full mr-2">
+                {dept.units.length} وحدات
+              </span>
+            )}
+            {dept.responsibilities && dept.responsibilities.length > 0 && (
+              <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full">
+                {dept.responsibilities.length} مسؤوليات
+              </span>
+            )}
+          </div>
+          {renderDepartmentTree(departments, dept.id, level + 1)}
+        </div>
+      ))}
+    </>
+  );
+}
+
+function handleDepartmentClick(department: Department) {
+  // This would be handled by state in the main component
+  console.log('Selected department:', department);
+}
+```
+
+---
+
+### 3. واجهة "دليل المهام الذكي" (Smart Task Guide)
+
+#### التصميم:
+```tsx
+// client/src/components/SmartTaskGuide.tsx
+function SmartTaskGuide() {
+  const [taskData, setTaskData] = useState<Partial<TaskData>>({
+    type: '',
+    sector: '',
+    location: '',
+    keywords: []
+  });
+  const [assignmentResult, setAssignmentResult] = useState<TaskAssignmentResult | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+
+  const handleInputChange = (field: string, value: any) => {
+    setTaskData({
+      ...taskData,
+      [field]: value
+    });
+  };
+
+  const handleKeywordChange = (keywords: string[]) => {
+    setTaskData({
+      ...taskData,
+      keywords
+    });
+  };
+
+  const assignTask = async () => {
+    setIsLoading(true);
+    const response = await fetch('/api/organizational/assign-task', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(taskData)
+    });
+    const result = await response.json();
+    setAssignmentResult(result);
+    setIsLoading(false);
+  };
+
+  return (
+    <div className="smart-task-guide p-6 bg-white rounded-lg shadow-md">
+      <h2 className="text-2xl font-bold mb-6">دليل المهام الذكي</h2>
+      
+      {/* Task Input Form */}
+      <div className="mb-6 p-4 border border-gray-300 rounded-md">
+        <h3 className="text-xl font-semibold mb-4">وصف المهمة</h3>
+        
+        <div className="mb-4">
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            عنوان المهمة
+          </label>
+          <input
+            type="text"
+            value={taskData.title || ''}
+            onChange={(e) => handleInputChange('title', e.target.value)}
+            className="w-full p-2 border border-gray-300 rounded-md"
+            placeholder="مثال: صيانة طريق رئيسي في منطقة حمدان"
+          />
+        </div>
+
+        <div className="mb-4">
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            وصف المهمة
+          </label>
+          <textarea
+            value={taskData.description || ''}
+            onChange={(e) => handleInputChange('description', e.target.value)}
+            className="w-full p-2 border border-gray-300 rounded-md"
+            rows={3}
+            placeholder="وصف تفصيلي للمهمة المطلوبة"
+          />
+        </div>
+
+        <div className="grid grid-cols-2 gap-4 mb-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              نوع المهمة
+            </label>
+            <select
+              value={taskData.type || ''}
+              onChange={(e) => handleInputChange('type', e.target.value)}
+              className="w-full p-2 border border-gray-300 rounded-md"
+            >
+              <option value="">اختر النوع</option>
+              <option value="construction">إنشاء</option>
+              <option value="maintenance">صيانة</option>
+              <option value="planning">تخطيط</option>
+              <option value="inspection">تفتيش</option>
+              <option value="design">تصميم</option>
+              <option value="supervision">إشراف</option>
+              <option value="emergency">طوارئ</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              القطاع
+            </label>
+            <select
+              value={taskData.sector || ''}
+              onChange={(e) => handleInputChange('sector', e.target.value)}
+              className="w-full p-2 border border-gray-300 rounded-md"
+            >
+              <option value="">اختر القطاع</option>
+              <option value="transport">النقل</option>
+              <option value="public_works">الأعمال العامة</option>
+              <option value="urban_planning">التخطيط الحضري</option>
+              <option value="roads">الطرق</option>
+              <option value="municipal_services">الخدمات البلدية</option>
+            </select>
+          </div>
+        </div>
+
+        <div className="mb-4">
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            الموقع
+          </label>
+          <input
+            type="text"
+            value={taskData.location || ''}
+            onChange={(e) => handleInputChange('location', e.target.value)}
+            className="w-full p-2 border border-gray-300 rounded-md"
+            placeholder="مثال: محافظة صنعاء - مديرية حمدان"
+          />
+        </div>
+
+        <div className="mb-4">
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            الكلمات المفتاحية (اضغط Enter بعد كل كلمة)
+          </label>
+          <KeywordInput
+            keywords={taskData.keywords || []}
+            onChange={handleKeywordChange}
+          />
+        </div>
+
+        <div className="mb-4">
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            الأولوية
+          </label>
+          <select
+            value={taskData.priority || 'medium'}
+            onChange={(e) => handleInputChange('priority', e.target.value)}
+            className="w-full p-2 border border-gray-300 rounded-md"
+          >
+            <option value="low">منخفضة</option>
+            <option value="medium">متوسطة</option>
+            <option value="high">عالية</option>
+          </select>
+        </div>
+
+        <button
+          onClick={assignTask}
+          disabled={isLoading}
+          className="bg-blue-500 text-white px-6 py-3 rounded-md font-semibold w-full"
+        >
+          {isLoading ? 'جاري التعيين...' : 'تعيين المهمة تلقائياً'}
+        </button>
+      </div>
+
+      {/* Assignment Result */}
+      {assignmentResult && (
+        <div className={`p-6 rounded-md ${
+          assignmentResult.assigned ? 'bg-green-50 border border-green-200' : 'bg-red-50 border border-red-200'
+        }`}>
+          <h3 className="text-lg font-semibold mb-4">
+            {assignmentResult.assigned ? '🎉 تم تعيين المهمة بنجاح' : '❌ لم يتم تعيين المهمة'}
+          </h3>
+          
+          <p className="mb-4">{assignmentResult.message}</p>
+          
+          {assignmentResult.assigned && (
+            <>
+              <div className="mb-4">
+                <h4 className="font-semibold mb-2">درجة الثقة:</h4>
+                <div className="w-full bg-gray-200 rounded-full h-2.5">
+                  <div 
+                    className="bg-green-600 h-2.5 rounded-full" 
+                    style={{ width: `${assignmentResult.confidence * 100}%` }}
+                  ></div>
+                </div>
+                <p className="text-sm text-gray-600 mt-1">{(assignmentResult.confidence * 100).toFixed(0)}%</p>
+              </div>
+              
+              <div className="mb-4">
+                <h4 className="font-semibold mb-2">الخطوات التالية:</h4>
+                <ol className="list-decimal list-inside">
+                  {assignmentResult.nextSteps.map((step, i) => (
+                    <li key={i} className="mb-2">
+                      <strong>{step.step}. {step.title}</strong>
+                      <p>{step.description}</p>
+                      <p className="text-sm text-gray-600">الوقت المقدر: {step.estimatedTime}</p>
+                    </li>
+                  ))}
+                </ol>
+              </div>
+              
+              <button className="bg-green-500 text-white px-6 py-3 rounded-md font-semibold">
+                عرض تفاصيل الإدارة/الوحدة
+              </button>
+            </>
+          )}
+
+          {!assignmentResult.assigned && (
+            <>
+              <div className="mb-4">
+                <h4 className="font-semibold mb-2">الإجراءات المقترحة:</h4>
+                <ul className="list-disc list-inside">
+                  {assignmentResult.recommendedActions.map((action, i) => (
+                    <li key={i}>{action}</li>
+                  ))}
+                </ul>
+              </div>
+              
+              <button className="bg-blue-500 text-white px-6 py-3 rounded-md font-semibold">
+                تعديل وصف المهمة
+              </button>
+            </>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Keyword Input Component
+function KeywordInput({ keywords, onChange }: { keywords: string[], onChange: (keywords: string[]) => void }) {
+  const [inputValue, setInputValue] = useState('');
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter' && inputValue.trim()) {
+      e.preventDefault();
+      onChange([...keywords, inputValue.trim()]);
+      setInputValue('');
+    }
+  };
+
+  const removeKeyword = (index: number) => {
+    const newKeywords = [...keywords];
+    newKeywords.splice(index, 1);
+    onChange(newKeywords);
+  };
+
+  return (
+    <div>
+      <div className="flex flex-wrap gap-2 mb-2">
+        {keywords.map((keyword, index) => (
+          <span
+            key={index}
+            className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800"
+          >
+            {keyword}
+            <button
+              type="button"
+              className="ml-1 inline-flex items-center justify-center w-4 h-4 text-blue-500 hover:text-blue-700"
+              onClick={() => removeKeyword(index)}
+            >
+              ×
+            </button>
+          </span>
+        ))}
+      </div>
+      <input
+        type="text"
+        value={inputValue}
+        onChange={(e) => setInputValue(e.target.value)}
+        onKeyDown={handleKeyDown}
+        className="w-full p-2 border border-gray-300 rounded-md"
+        placeholder="أدخل كلمة مفتاحية ثم اضغط Enter"
+      />
+    </div>
+  );
+}
+```
+
+---
+
+### 4. الجداول الجديدة في قاعدة البيانات - مطورة
+
+#### organizational_structure
+```sql
+CREATE TABLE organizational_structure (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  name VARCHAR(255) NOT NULL,
+  code VARCHAR(50) NOT NULL UNIQUE,
+  parent_department_id UUID REFERENCES organizational_structure(id),
+  level INTEGER NOT NULL DEFAULT 1,
+  description TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+```
+
+#### department_responsibilities
+```sql
+CREATE TABLE department_responsibilities (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  department_id UUID NOT NULL REFERENCES organizational_structure(id),
+  title VARCHAR(255) NOT NULL,
+  description TEXT NOT NULL,
+  task_types JSONB, -- ["construction", "maintenance", "planning"]
+  sectors JSONB, -- ["transport", "public_works", "urban_planning"]
+  keywords JSONB, -- ["طرق", "جسور", "صيانة"]
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+```
+
+#### execution_units
+```sql
+CREATE TABLE execution_units (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  name VARCHAR(255) NOT NULL,
+  code VARCHAR(50) NOT NULL,
+  department_id UUID NOT NULL REFERENCES organizational_structure(id),
+  location VARCHAR(255) NOT NULL,
+  task_types JSONB, -- ["construction", "maintenance", "emergency"]
+  keywords JSONB, -- ["حمدان", "صباحة", "صيانة طرق"]
+  capacity_score DECIMAL(3,2) DEFAULT 1.0,
+  performance_score DECIMAL(3,2) DEFAULT 1.0,
+  is_active BOOLEAN DEFAULT TRUE,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+```
+
+#### automated_task_assignments
+```sql
+CREATE TABLE automated_task_assignments (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  task_id VARCHAR(255) NOT NULL,
+  task_data JSONB NOT NULL,
+  assigned_department_id UUID REFERENCES organizational_structure(id),
+  assigned_unit_id UUID REFERENCES execution_units(id),
+  confidence_score DECIMAL(3,2) NOT NULL CHECK (confidence_score BETWEEN 0 AND 1),
+  assignment_result JSONB NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+```
+
+#### organizational_learning_data
+```sql
+CREATE TABLE organizational_learning_data (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  model_type VARCHAR(100) NOT NULL, -- 'task_assignment_model'
+  input_data JSONB NOT NULL, -- بيانات المهمة الأصلية
+  expected_output JSONB, -- ما كان يجب أن يكون التعيين
+  actual_output JSONB, -- ما قرره النظام
+  accuracy_score DECIMAL(3,2),
+  feedback_provided BOOLEAN DEFAULT FALSE,
+  learning_session VARCHAR(255),
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+```
+
+---
+
+## 🚀 أفكار إضافية لتطوير المرحلة
+
+### 1. "نظام التوصيات الذكية"
+- بناءً على أداء الوحدات التنفيذية السابقة → النظام يقترح أفضل وحدة لكل مهمة.
+
+### 2. "لوحة مراقبة الأداء التنظيمي"
+- تتبع أداء الإدارات والوحدات التنفيذية → تحديد نقاط القوة والضعف.
+
+### 3. "التنبيهات الذكية للتأخير"
+- إذا تأخرت وحدة تنفيذية عن مواعيد التسليم → النظام ينبه الإدارة العليا.
+
+### 4. "تحليل التكاليف التنبؤي"
+- تقدير التكاليف بناءً على نوع المهمة والموقع والوحدة التنفيذية.
+
+### 5. "التقارير التلقائية"
+- إنشاء تقارير دورية عن توزيع المهام والأداء دون تدخل بشري.
+
+### 6. "نظام التقييم التلقائي"
+- تقييم أداء الموظفين والوحدات التنفيذية بناءً على نتائج المهام.
+
+---
+
+## ✅ الخلاصة
+
+- **الأتمتة ليست فقط للتوزيع — بل لفهم الهيكل التنظيمي ككل**.
+- **الواجهات No-Code تجعل النظام في متناول غير المبرمجين**.
+- **المحاكاة والتدريب يجعلان النظام أكثر دقة مع الوقت**.
+- **هذا هو مستقبل الإدارة الحكومية: ذكاء + بساطة + شفافية**.
+
+هل تريدني أرسل لك:
+- ملف `OrganizationalAutomationEngine.ts` كامل؟
+- كود React لواجهة No-Code Organizational Structure Manager؟
+- SQL لإنشاء الجداول؟
+- خطة تدريب للموظفين على إدارة الهيكل التنظيمي؟
+
+قل لي "تم" وأرسل لك كل شيء خلال ساعتين.

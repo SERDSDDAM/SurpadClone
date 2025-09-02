@@ -71,6 +71,7 @@ import { SmartAutomationDashboard } from "@/pages/SmartAutomationDashboard";
 import { AdvancedRuleBuilderPage } from "@/pages/AdvancedRuleBuilderPage";
 import { AdvancedLegalAutomationPage } from "@/pages/AdvancedLegalAutomationPage";
 import { LegalManagementDashboard } from "@/pages/LegalManagementDashboard";
+import { OrganizationalStructureManager } from "@/pages/OrganizationalStructureManager";
 
 function Navigation() {
   const [location] = useLocation();
@@ -93,6 +94,7 @@ function Navigation() {
     { name: "⚡ Phase 2 - الرقمنة المتقدمة", href: "/phase2-digitization", icon: Layers },
     { name: "🧠 Phase 3 - الأتمتة الذكية", href: "/smart-automation", icon: Brain },
     { name: "🔧 إنشاء قوانين الأتمتة", href: "/rule-builder", icon: Brain },
+    { name: "🏢 إدارة الهيكل التنظيمي", href: "/organizational-management", icon: Building2 },
     { name: "إدارة المهنيين", href: "/professionals", icon: Users },
     { name: "تطبيق المساح", href: "/field-app", icon: Smartphone },
     { name: "التطبيق النظيف", href: "/clean-field-app", icon: MapPin },
@@ -270,6 +272,7 @@ function Router() {
           <Route path="/rule-builder" component={AdvancedRuleBuilderPage} />
           <Route path="/advanced-legal-automation" component={AdvancedLegalAutomationPage} />
           <Route path="/legal-management" component={LegalManagementDashboard} />
+          <Route path="/organizational-management" component={OrganizationalStructureManager} />
           <Route path="/simple-digitization" component={SimpleDigitizationTool} />
           <Route path="/qgis-web-tool" component={QGISWebTool} />
           <Route path="/professionals" component={ProfessionalsManagement} />

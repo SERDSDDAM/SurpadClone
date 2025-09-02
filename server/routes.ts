@@ -25,6 +25,7 @@ import contextAwareRoutes from './routes/context-aware-routes';
 import predictiveRoutes from './routes/predictive-routes';
 import smartAutomationRoutes from './routes/smart-automation-routes';
 import advancedLegalAutomationRoutes from './routes/advanced-legal-automation';
+import organizationalAutomationRoutes from './routes/organizational-automation';
 import { requireAuth, requireRole } from './middleware/auth';
 import rateLimit from 'express-rate-limit';
 import cookieParser from 'cookie-parser';
@@ -191,6 +192,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // Advanced Legal Automation Routes (Phase 3 Enhanced)
   app.use('/api/advanced-automation', advancedLegalAutomationRoutes);
+  
+  // Organizational automation routes
+  app.use('/api/organizational-automation', organizationalAutomationRoutes);
   
   // app.use("/api/auth", authManagementRoutes); // Old system - disabled
   // OLD auth system disabled permanently - using new JWT system only
