@@ -1,0 +1,163 @@
+تمام — تم تطوير الخطة لتضمين آلية عمل مزدوجة المصدر في خدمة القرار المساحي: مسار Shapefile السريع للقطع ذات القرار/الإسقاط السابق، ومسار GNSS الإلزامي للإسقاطات الجديدة، مع الحفاظ على مبدأ “الفرع التنفيذي/المكتب الإشرافي”.
+
+أولاً: سياسة التشغيل (متى Shapefile؟ ومتى GNSS؟)
+- المسار A (Shapefile Fast‑Track):
+  - يُستخدم فقط إذا:
+    - وُجد قرار/إسقاط سابق مرتبط برقم المخطط/القطعة أو parcel_id في قواعد الوزارة.
+    - الرفع الحالي مجرد تحديث حدود بنفس المرجعية وليس إسقاطاً أولياً.
+  - الفرع يعتمد بعد فحص آلي لجودة الملف + مطابقة مع المخطط + حساسية الموقع.
+  - التصعيد للمكتب فقط إذا ظهرت إحدى حالات “الشارع/الحساسية/خارج المخطط”.
+- المسار B (GNSS Mandatory):
+  - يُفرض تلقائياً إذا لم يوجد قرار سابق، أو عند إسقاط أولي/إعادة إسقاط جذري.
+  - جمع البيانات عبر تطبيق المسّاح (GNSS) ثم معالجة GIS، ثم اعتماد الفرع.
+- اختيار المسار:
+  - آلي أولاً (Lookup + Point‑in‑Polygon + بحث عن قرارات سابقة).
+  - إن تعذّر الاكتشاف، تظهر للمستخدم بطاقتان: “إسقاط سابق (Shapefile)” و“إسقاط جديد (GNSS)” مع قيود واضحة. أي محاولة لاختيار Shapefile خلاف السياسة ترفع تحذيراً وتتطلب موافقة مشرف الفرع.
+
+ثانياً: المخطط العام لتدفق العمل
+- مسار Shapefile (لإسقاط سابق):
+  1) تقديم الطلب → تحديد الموقع → النظام يتحقق من وجود قرار سابق → يسمح بمسار Shapefile.
+  2) رفع ملف ZIP (shp, shx, dbf, prj) → معالجة آلية (تحويل CRS, استيراد PostGIS, فحوص طوبولوجيا).
+  3) توليد الأضلاع/الأطوال/الاتجاهات والمساحات + مطابقة مع المخطط ووضع الشوارع.
+  4) مراجعة الفرع → اعتماد → توليد PDF القرار المساحي.
+  5) تصعيد للمكتب فقط عند street_status/heritage/flood/outside_masterplan.
+- مسار GNSS (لإسقاط جديد):
+  1) تقديم الطلب → تعيين مسّاح → رفع نقاط/خطوط/مضلعات عبر التطبيق.
+  2) معالجة GIS آلياً (توليد هندسة القطعة + الأضلاع + المساحات + سياق إداري PnP).
+  3) مراجعة الفرع واعتماد → توليد PDF. تصعيد عند الحالات الحرجة كما أعلاه.
+
+ثالثاً: تعديلات قاعدة البيانات (ملخص SQL)
+- survey_requests (إضافات):
+  - workflow_mode enum('gnss','shapefile') not null
+  - legacy_reference_id varchar(100)
+  - geometry_source enum('gnss','uploaded_shp') default 'gnss'
+  - pnp_context jsonb, qc_status varchar(30), qc_report jsonb
+  - office_review_required boolean default false
+  - auto_escalated boolean default false
+  - escalation_reason varchar(100)
+  - office_decision jsonb
+- shapefile_uploads (جديد):
+  - id uuid pk, request_id fk, file_name, file_size, crc_hash, prj_epsg, features_count
+  - imported_layer_name, import_log jsonb, created_at
+- gnss_sessions (جديد):
+  - id uuid pk, request_id fk, points_count, start_at, end_at, avg_hdop, fix_quality
+- boundaries (اختياري):
+  - id, request_id, side ('N','S','E','W'), length_m, street_code, street_width_m, neighbor_type, notes
+- فهارس مكانية: GIST على هندسة القطعة/الشوارع.
+
+رابعاً: واجهات APIs (مختصر)
+- Shapefile:
+  - POST /api/survey/requests/:id/shp/upload (zip) → {success, qc}
+  - GET  /api/survey/requests/:id/shp/validation → نتائج الفحص الطوبولوجي/CRS/المساحة
+  - POST /api/survey/requests/:id/shp/commit → اعتماد إدراج الهندسة كـ geometry_source='uploaded_shp'
+- GNSS (قائم):
+  - POST /api/survey-requests/:id/points
+  - POST /api/survey-requests/:id/features (line/polygon)
+  - POST /api/survey-requests/:id/complete
+- موحّد:
+  - GET  /api/survey/requests/:id/pdf → قرار جاهز (يُظهر officeDecision والـ setbacks إن وُجدت)
+  - POST /api/survey/requests/:id/escalate {reason}
+  - POST /api/office/street-status-decisions
+
+خامساً: فحوص الجودة (QC) لمسار Shapefile
+- CRS: وجود prj/EPSG مع تحويل إلى 4326/UTM القياسي.
+- هندسة:
+  - Polygon مغلق، بدون self‑intersection، ring صحيح.
+  - داخل حدود المخطط الإداري PnP بنسبة ≥ 98%.
+  - الفرق بين المساحة (الطبيعة vs المخطط) ≤ 3% (قابل للتهيئة).
+- المطابقة مع الشارع:
+  - إنْ التقت حدود القطعة مع شارع مصنَّف، تُستخرج عرض الشارع وتُحسب الارتدادات.
+- الحقول الإلزامية في DBF (إن وُجدت): parcel_id, plan_no, owner(optional)؛ تُربط بقرار سابق إن متاح.
+- أي فشل في QC → مسار التصعيد أو طلب تعديل.
+
+سادساً: RBAC وسلّم الاعتمادات
+- الفرع:
+  - survey.create/update, survey.approve.branch, survey.escalate
+  - shp.upload/commit (للمهندس/المراجع الفني بالفرع)
+- المكتب:
+  - survey.street-status.decide, survey.supervise
+- منع استخدام Shapefile لمسارات “إسقاط أولي” (GNSS إلزامي) إلا بتفويض واضح من المكتب.
+
+سابعاً: SLA
+- Shapefile (إسقاط سابق): 2–3 أيام (فحص آلي + مراجعة فرع).
+- GNSS (إسقاط جديد): 3–6 أيام (تعيين/رفع/مراجعة).
+- قرار وضع شارع من المكتب: ≤ 5 أيام.
+- تصعيد تلقائي عند تجاوز المهلة.
+
+ثامناً: تحديث تصميم الشاشات للصفحات 1–5 (مع خيار Shapefile/GNSS)
+- الصفحة 1: تسجيل الدخول (كما هو)
+  - مكوّن “تذكّرني” + رابط “نسيت كلمة المرور” + تحقّق 2FA (اختياري).
+- الصفحة 2: دليل الخدمات + اختيار المسار
+  - بطاقة الخدمة “إصدار قرار مساحي”.
+  - بعد الضغط على “بدء الخدمة” يظهر معالج:
+    - خطوة 0 (جديدة): اختيار المسار
+      - بطاقة “إسقاط سابق (Shapefile)” مع الوصف:
+        - مخصص للقطع ذات قرار/إسقاط سابق.
+        - يلزم رفع ملف ZIP (shp, shx, dbf, prj).
+      - بطاقة “إسقاط جديد (GNSS)” مع الوصف:
+        - جمع البيانات عبر تطبيق المساح.
+      - بانر تنبيه: “النظام سيحاول التعرف تلقائياً على وجود قرار سابق. قد يُقيَّد اختيارك وفق السياسة.”
+- الصفحة 3: تحديد الموقع الجغرافي
+  - خريطة + قوائم (المحافظة/المديرية/العزلة/القطاع/وحدة الجوار/المخطط).
+  - عند تحديد النقطة:
+    - استدعاء PnP → عرض بطاقة:
+      - “تم العثور على قرار سابق لهذه القطعة” → تفعيل مسار Shapefile تلقائياً.
+      - أو “لا يوجد قرار سابق” → تفعيل مسار GNSS.
+- الصفحة 4: رفع المرفقات (يتكيّف حسب المسار)
+  - إن كان Shapefile:
+    - Dropzone لملف ZIP (الحد الأقصى، الأنواع المدعومة، عيّنات ملف).
+    - حالة الرفع + شريط تقدم + نتائج QC فورية:
+      - CRS/Topology/Area/Inside Plan/Street Match
+    - زر “اعتماد ملف الرفع” عند نجاح QC → ينقل للخطوة التالية.
+  - إن كان GNSS:
+    - مستندات الملكية + تفويض المكتب الهندسي (إن وُجد) + أي مستندات مساندة.
+    - مذكّرة: “سيتواصل الفرع لتحديد موعد الرفع الميداني”.
+- الصفحة 5: طباعة الفاتورة وسداد الرسوم
+  - كما في الدليل (بنود الرسوم تختلف: Shapefile أقل/موحّدة؛ GNSS يشمل نزول ميداني).
+  - حالة الدفع “غير مدفوع/مدفوع”، زر طباعة، سِجل سداد.
+
+تاسعاً: تغييرات واجهة المهندس (ملخص)
+- Shapefile Path:
+  - شاشة رفع ZIP مع معاينة سريعة للبوليجون على الخريطة + جدول الأضلاع (Auto).
+  - زر “تحديث بيانات الحدود” يملأ تلقائياً الجدول: اتجاه/طول/نوع الحد/عرض الشارع المقابل.
+- GNSS Path:
+  - كما هو: التقاط نقاط/خطوط/مضلعات، إظهار دقة GNSS، العمل أوفلاين، مزامنة، ثم مراجعة الفرع.
+
+عاشراً: أوامر تنفيذية سريعة (Sprint 5–7 أيام)
+- اليوم 1–2:
+  - تعديل Schema (survey_requests، shapefile_uploads، gnss_sessions).
+  - Endpoints رفع/فحص/اعتماد Shapefile + QC.
+  - خطوة “اختيار المسار” في المعالج + منطق الاكتشاف الآلي.
+- اليوم 3–4:
+  - توليد الأضلاع والاتجاهات والمساحة تلقائياً من SHP.
+  - حساب الارتدادات وفق عرض الشارع (من طبقة الشوارع أو قرار المكتب).
+  - تحديث /api/survey/requests/:id/pdf لإظهار geometry_source وofficeDecision.
+- اليوم 5:
+  - RBAC للأدوار (shp.upload/commit، street-status.decide).
+  - اختبارات Smoke لسيناريوهَي Shapefile/GNSS.
+- اليوم 6–7:
+  - UAT مع فرع نموذجي:
+    - إسقاط سابق (Shapefile) → اعتماد فرع → PDF.
+    - إسقاط جديد (GNSS) → اعتماد فرع → PDF.
+    - حالة street_status → تصعيد مكتب → قرار شارع → رجوع للفرع → PDF.
+
+حادي عشر: أمثلة API (سريعة)
+- رفع Shapefile:
+  curl -F "file=@parcel.zip" http://localhost:5000/api/survey/requests/SR-2025-001/shp/upload
+- التحقق من QC:
+  curl http://localhost:5000/api/survey/requests/SR-2025-001/shp/validation
+- اعتماد ملف الرفع:
+  curl -X POST http://localhost:5000/api/survey/requests/SR-2025-001/shp/commit
+- قرار شارع:
+  curl -X POST http://localhost:5000/api/office/street-status-decisions \
+  -H "Content-Type: application/json" \
+  -d '{"streetCode":"ST-001","widthM":12,"classification":"main","requestId":"SR-2025-001"}'
+
+ثاني عشر: ضبط المخاطر
+- سوء استخدام مسار Shapefile: RBAC + تدقيق + ربط بقرار سابق إلزامي + QC صارم.
+- ملفات SHP غير متوافقة: رسائل خطأ واضحة، أمثلة ملفات، وخيارات تصحيح/إعادة رفع.
+- تداخل السياسات: توثيق واضح داخل الشاشة + اكتشاف آلي + شرح سبب تفعيل المسار.
+
+هل تريد مني:
+- كتابة نصوص الواجهات (microcopy) بالعربية لكل عنصر في الصفحات 1–5 (العناوين/النصوص المساعدة/التنبيهات)؟
+- أو توليد مخططات DB (SQL) كاملة لـ shapefile_uploads/gnss_sessions + مثال QC Report JSON؟

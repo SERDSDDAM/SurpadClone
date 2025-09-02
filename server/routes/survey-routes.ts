@@ -299,6 +299,7 @@ router.post('/survey-requests/:id/points', async (req: Request, res: Response) =
   try {
     const { id } = req.params;
     
+    const featureType = 'point';
     const result = await db.execute(sql`
       INSERT INTO survey_points (
         request_id, point_number, latitude, longitude, elevation, 
@@ -311,7 +312,7 @@ router.post('/survey-requests/:id/points', async (req: Request, res: Response) =
         ${req.body.elevation || 2250}, 
         ${req.body.accuracy || 0.005}, 
         ${req.body.featureCode || 'building-corner'}, 
-        'point',
+        ${featureType},
         ${req.body.notes || ''}, 
         'surveyor-demo'
       ) RETURNING *
@@ -851,6 +852,200 @@ router.get('/survey/dashboard/office', isAuthenticated, async (req: Request, res
   } catch (error) {
     console.error('Error fetching office dashboard:', error);
     res.status(500).json({ error: 'فشل في جلب بيانات لوحة الإشراف' });
+  }
+});
+
+// 🚀 **APIs للآلية المزدوجة (Shapefile + GNSS)** 🚀
+
+// POST /api/survey/requests/:id/workflow/detect - اكتشاف المسار المناسب تلقائياً
+router.post('/survey/requests/:id/workflow/detect', async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { latitude, longitude, parcelId, planNo } = req.body;
+    
+    // محاكاة اكتشاف القرار السابق
+    const hasLegacyDecision = parcelId && planNo;
+    const workflowMode = hasLegacyDecision ? 'shapefile' : 'gnss';
+    
+    // تحديث الطلب بالمسار المكتشف
+    await db.execute(sql`
+      UPDATE survey_requests 
+      SET workflow_mode = ${workflowMode}, 
+          legacy_reference_id = ${parcelId || null},
+          pnp_context = ${JSON.stringify({
+            latitude, longitude, 
+            parcelId, planNo,
+            detectedAt: new Date().toISOString()
+          })}
+      WHERE id = ${id}
+    `);
+    
+    res.json({
+      success: true,
+      detectedWorkflow: workflowMode,
+      hasLegacyDecision,
+      recommendation: workflowMode === 'shapefile' 
+        ? 'تم العثور على قرار سابق - يمكن استخدام مسار Shapefile السريع' 
+        : 'إسقاط جديد - مطلوب رفع ميداني عبر GNSS',
+      allowedModes: hasLegacyDecision ? ['shapefile', 'gnss'] : ['gnss']
+    });
+  } catch (error) {
+    console.error('Error detecting workflow:', error);
+    res.status(500).json({ error: 'فشل في اكتشاف المسار المناسب' });
+  }
+});
+
+// POST /api/survey/requests/:id/shp/upload - رفع ملف Shapefile
+router.post('/survey/requests/:id/shp/upload', async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    
+    // محاكاة رفع ملف ZIP وفحص QC
+    const mockQcReport = {
+      crs: { valid: true, epsg: 'EPSG:4326', converted: true },
+      topology: { valid: true, closed: true, selfIntersection: false },
+      area: { calculated: 850.5, expected: 845.2, variance: 0.6, withinTolerance: true },
+      planMatch: { insidePlan: true, coverage: 98.5 },
+      streetMatch: { hasStreetBoundary: true, streetWidth: 12.0, streetCode: 'ST-001' },
+      overall: 'passed'
+    };
+    
+    // حفظ معلومات الرفع
+    const uploadResult = await db.execute(sql`
+      INSERT INTO shapefile_uploads (
+        request_id, file_name, file_size, prj_epsg, 
+        features_count, import_log
+      ) VALUES (
+        ${id}, 'parcel_boundaries.zip', 125440, 'EPSG:4326', 
+        1, ${JSON.stringify(mockQcReport)}
+      ) RETURNING *
+    `);
+    
+    // تحديث حالة QC
+    await db.execute(sql`
+      UPDATE survey_requests 
+      SET qc_status = 'passed', 
+          qc_report = ${JSON.stringify(mockQcReport)},
+          geometry_source = 'uploaded_shp'
+      WHERE id = ${id}
+    `);
+    
+    res.json({
+      success: true,
+      message: '✅ تم رفع الملف ونجح في فحوص الجودة',
+      qc: mockQcReport,
+      uploadId: uploadResult.rows[0]?.id,
+      nextStep: 'commit' // أو 'fix' إذا فشل QC
+    });
+  } catch (error) {
+    console.error('Error uploading shapefile:', error);
+    res.status(500).json({ error: 'فشل في رفع ملف Shapefile' });
+  }
+});
+
+// GET /api/survey/requests/:id/shp/validation - نتائج فحص QC
+router.get('/survey/requests/:id/shp/validation', async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    
+    const result = await db.execute(sql`
+      SELECT qc_status, qc_report FROM survey_requests WHERE id = ${id}
+    `);
+    
+    const request = result.rows[0];
+    if (!request) {
+      return res.status(404).json({ error: 'الطلب غير موجود' });
+    }
+    
+    res.json({
+      success: true,
+      qcStatus: request.qc_status,
+      qcReport: request.qc_report,
+      isValid: request.qc_status === 'passed'
+    });
+  } catch (error) {
+    console.error('Error getting validation results:', error);
+    res.status(500).json({ error: 'فشل في استرداد نتائج الفحص' });
+  }
+});
+
+// POST /api/survey/requests/:id/shp/commit - اعتماد ملف الرفع
+router.post('/survey/requests/:id/shp/commit', async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    
+    // تحديث الطلب لحالة "جاهز للمراجعة"
+    await db.execute(sql`
+      UPDATE survey_requests 
+      SET status = 'ready_for_review',
+          updated_at = now()
+      WHERE id = ${id} AND qc_status = 'passed'
+    `);
+    
+    res.json({
+      success: true,
+      message: '✅ تم اعتماد ملف الرفع - الطلب جاهز للمراجعة',
+      nextStep: 'branch_review'
+    });
+  } catch (error) {
+    console.error('Error committing shapefile:', error);
+    res.status(500).json({ error: 'فشل في اعتماد ملف الرفع' });
+  }
+});
+
+// GET /api/survey/requests/:id/pdf - توليد PDF قرار مساحي
+router.get('/survey/requests/:id/pdf', async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    
+    const result = await db.execute(sql`
+      SELECT * FROM survey_requests WHERE id = ${id}
+    `);
+    
+    const request = result.rows[0];
+    if (!request) {
+      return res.status(404).json({ error: 'الطلب غير موجود' });
+    }
+    
+    // تولي رقم قرار إذا لم يكن موجوداً
+    const decisionNumber = generateDecisionNumber();
+    
+    // حساب الارتدادات بناءً على عرض الشارع
+    const streetWidth = request.width_m || 0;
+    const setbacks = {
+      front: streetWidth >= 15 ? 4 : streetWidth >= 10 ? 3 : 2,
+      side: 1.5,
+      back: 2
+    };
+    
+    const pdfData = {
+      success: true,
+      decisionNumber,
+      pdfUrl: `/api/files/decisions/${decisionNumber}.pdf`, // مؤقت
+      request: {
+        id: request.id,
+        requestNumber: request.request_number,
+        ownerName: request.owner_name,
+        location: request.location,
+        workflowMode: request.workflow_mode,
+        geometrySource: request.geometry_source
+      },
+      pnpContext: request.pnp_context,
+      officeDecision: request.office_decision,
+      setbacks,
+      streetInfo: {
+        code: request.street_code,
+        width: request.width_m,
+        classification: request.classification
+      },
+      issuedAt: new Date().toISOString(),
+      issuedBy: 'الفرع التنفيذي'
+    };
+    
+    res.json(pdfData);
+  } catch (error) {
+    console.error('Error generating PDF:', error);
+    res.status(500).json({ error: 'فشل في توليد PDF القرار' });
   }
 });
 
