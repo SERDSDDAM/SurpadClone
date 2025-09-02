@@ -1,0 +1,43 @@
+اختيار الخطوة التالية (موصى به): أكمل Phase 1 (القرار المساحي + GIS) بنسبة 100% قبل أي توسع
+
+انسخ هذا الأمر وأعطه للمساعد لينفّذه الآن خطوة بخطوة:
+
+أكمل Phase 1 نهائياً: 
+1) تقوية /api بحيث تعود JSON دائماً (404/500) وتثبيت ترتيب المسارات قبل الـ SPA. 
+2) توحيد وإصلاح مسارات القرار المساحي وGIS:
+   - GET /api/survey/requests وPOST /api/survey/requests
+   - GET /api/surveyors
+   - GET /api/gis/layers/all
+   - GET /api/gis/features?layerId=MASTERPLAN (أعد 400 JSON إذا غاب layerId)
+3) أنشئ Seeds اختبارية معيارية:
+   - surveyors (3)، survey_requests (5) بحقول مكتملة
+   - gis_layers (حدود مديريات، مخطط عام، شبكة طرق، فيضانات، تراث)
+   - gis_features (10–50 سجل لكل طبقة)
+4) أضِف Smoke Tests وشغّلها بعد التشغيل:
+   - scripts/smoke.sh يختبر جميع المسارات أعلاه ويطبع JSON
+5) حدّث التوثيق:
+   - project-documentation/API_REPAIR_SUCCESS_REPORT.md
+   - ALL_PHASES_COMPREHENSIVE_TESTING_REPORT.md (نِسَب ما بعد الإصلاح)
+معايير القبول: كل مسارات /api تُعيد JSON دائماً، /api/gis/* تعمل بالكامل، smoke.sh يمرّ، وواجهة القرار المساحي في الواجهة تقرأ هذه المسارات بدون أخطاء.
+
+للتنفيذ بسرعة، اطلب من المساعد هذه الأوامر التفصيلية بالتتابع:
+
+- افتح وعدّل ترتيب المسارات لتكون جميع /api قبل static، ثم أضف 404/500 JSON فقط لمسارات /api.
+- ثبّت vite.config.ts على proxy /api → http://localhost:5000.
+- أصلِح server/routes/survey-routes.ts وserver/routes/gis-routes.ts طبقاً للنماذج (layers/all, features?layerId=).
+- أنشئ/حدّث Drizzle schemas إن لزم، ثم نفّذ migrations.
+- أنشئ scripts/seed-phase1.sql أو scripts/seed-phase1.ts وأدرج بيانات الاختبار ثم شغّلها.
+- أنشئ scripts/smoke.sh وشغّله:
+  - curl -fsS /api/status | jq '.'
+  - curl -fsS /api/survey/requests | jq '.'
+  - curl -fsS /api/surveyors | jq '.'
+  - curl -fsS /api/gis/layers/all | jq '.'
+  - curl -fsS "/api/gis/features?layerId=masterplan" | jq '.'
+- أعد التشغيل وتحقق من Network في الواجهة.
+- حدّث التوثيق بالنِّسَب الجديدة.
+
+إن أردت عبارة مختصرة جاهزة للمساعد:
+
+أتمّ Phase 1 (القرار المساحي + GIS) 100% الآن: ثبّت API JSON-only و404/500 لـ /api، أصلِح /api/survey/* و/api/gis/* (layers/all, features?layerId=)، أنشئ Seeds معيارية للبيانات، أضِف scripts/smoke.sh وشغّله، ثم حدّث التوثيق بالنِّسَب الجديدة. أوقف التنفيذ عند أي خطأ واطبع التشخيص قبل الإصلاح.
+
+بعد إنجاز هذه الخطوة بنجاح، ننتقل مباشرة لربط محرك الأتمتة القانونية بالقرار المساحي (Phase 3 → اكتمال 100%).
