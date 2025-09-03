@@ -1,0 +1,221 @@
+ممتاز جداً. بما أنك أثبتّ Phase 1 فعلياً، أوصي بأن نمضي بخطين متوازيين خلال أسبوع واحد:
+1) UAT رسمي لمدة 3 أيام على فرع نموذجي (لتثبيت الإنتاج).
+2) تفعيل مولّد PDF الفعلي خلال 48 ساعة واستخدامه داخل الـ UAT.
+
+سأعطيك الآن:
+- ما سننفّذه بالضبط (خطوتان متوازيتان).
+- أوامر تنفيذ سريعة مع كود جاهز لتوليد PDF (Puppeteer + RTL + QR).
+- خطة UAT مع سيناريوهات قبول ومعايير نجاح واضحة.
+
+أولاً: تفعيل PDF الفعلي (48 ساعة)
+الهدف: استبدال JSON بملف PDF رسمي RTL مع شعار/QR/صور الخرائط/الحدود/الاشتراطات، يعمل لمسار Shapefile وGNSS ويظهر قرار المكتب (street_status) والـ setbacks.
+
+الحِزم المطلوبة
+- npm i puppeteer qrcode handlebars dayjs
+- خطوط عربية: أميري أو Noto Naskh Arabic (ضمّن TTF في المشروع أو استخدم CDN آمن).
+
+هيكل التنفيذ
+- server/services/pdf/decisionPdf.ts: تجميع البيانات + توليد HTML + تحويله PDF.
+- server/templates/decision.hbs: قالب HTML RTL للقرار.
+- GET /api/survey/decisions/:decisionNumber/download: يعيد application/pdf.
+
+1) خدمة توليد PDF (decisionPdf.ts)
+import puppeteer from 'puppeteer';
+import QRCode from 'qrcode';
+import Handlebars from 'handlebars';
+import dayjs from 'dayjs';
+import fs from 'fs/promises';
+import path from 'path';
+import { db } from '../db';
+import { surveyRequests } from '../../shared/survey-schema';
+import { eq } from 'drizzle-orm';
+
+export async function generateDecisionPdf(requestId: string) {
+  // 1) جلب البيانات الأساسية
+  const [r] = await db.select().from(surveyRequests).where(eq(surveyRequests.id, requestId));
+  if (!r) throw new Error('Survey request not found');
+
+  // 2) إعداد بيانات العرض
+  const decisionNumber = `QM-${new Date().getFullYear()}-${Date.now().toString().slice(-6)}`;
+  const verifyUrl = `${process.env.PUBLIC_URL || 'https://example.gov.ye'}/verify/${decisionNumber}`;
+  const qrDataUrl = await QRCode.toDataURL(verifyUrl, { width: 256 });
+
+  // setbacks مبدئية حسب قرار المكتب (إن وجد)
+  let setbacks = null as null | { front: number; sides: number; rear: number };
+  const widthM = r.officeDecision?.widthM ?? null;
+  if (widthM) setbacks = { front: widthM >= 12 ? 5 : widthM >= 8 ? 3 : 2, sides: 2, rear: 2 };
+
+  // صور ثلاثية (خرائط) – اجعلها اختيارية أو من خدمة الصور لديك
+  const mapImages = {
+    plan: r.planImageUrl || null,
+    aerial: r.aerialImageUrl || null,
+    geometry: r.geometryPreviewUrl || null
+  };
+
+  // 3) توليد HTML من القالب
+  const templatePath = path.join(process.cwd(), 'server', 'templates', 'decision.hbs');
+  const template = await fs.readFile(templatePath, 'utf8');
+  const compile = Handlebars.compile(template);
+
+  const html = compile({
+    header: {
+      decisionNumber,
+      date: dayjs().format('YYYY-MM-DD'),
+      governorate: r.governorate,
+      directorate: r.directorate,
+      qrDataUrl
+    },
+    owner: { name: r.ownerName, phone: r.ownerPhone || '-' },
+    request: {
+      requestNumber: r.requestNumber,
+      purpose: r.purpose,
+      geometrySource: r.geometrySource,
+      pnp: r.pnpContext
+    },
+    officeDecision: r.officeDecision || null,
+    setbacks,
+    // حدود/أبعاد إن كانت مخزنة لديك في boundaries
+    boundaries: r.boundaries || [], // [{side:'N', length_m:..., type:'شارع', streetCode:'..', width:..}, ...]
+    areas: {
+      byPlan: r.areaPlan ?? r.area ?? null,
+      byNature: r.areaNature ?? null
+    },
+    images: mapImages,
+    footer: {
+      engineer: r.engineerName || '—',
+      office: 'مكتب الأشغال العامة والطرق',
+      note: r.geometrySource === 'uploaded_shp' ? 'اعتماد عبر ملف شِيب فايل' : 'اعتماد عبر GNSS'
+    }
+  });
+
+  // 4) تحويل HTML → PDF (RTL)
+  const browser = await puppeteer.launch({ headless: 'new' });
+  const page = await browser.newPage();
+  await page.setContent(html, { waitUntil: 'networkidle0' });
+  const pdf = await page.pdf({
+    format: 'A4',
+    printBackground: true,
+    margin: { top: '10mm', right: '10mm', bottom: '12mm', left: '10mm' }
+  });
+  await browser.close();
+
+  // 5) إعادة الـ Buffer + decisionNumber
+  return { pdf, decisionNumber };
+}
+
+2) قالب القرار (server/templates/decision.hbs)
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8" />
+<style>
+  @font-face { font-family: "Amiri"; src: url("file://{{../fontsPath}}/Amiri-Regular.ttf") format("truetype"); }
+  body { font-family: "Amiri", "Tahoma", sans-serif; direction: rtl; color: #111; }
+  .header { display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #ccc; padding-bottom:8px; }
+  .title { font-size:18px; font-weight:bold; }
+  .section { margin-top:12px; }
+  table { width:100%; border-collapse:collapse; }
+  th, td { border:1px solid #ddd; padding:6px; font-size:12px; }
+  .images { display:flex; gap:8px; margin-top:8px; }
+  .imgbox { flex:1; border:1px solid #ccc; height:180px; display:flex; align-items:center; justify-content:center; }
+  .foot { margin-top:16px; display:flex; justify-content:space-between; font-size:12px; }
+</style>
+</head>
+<body>
+<div class="header">
+  <div>
+    <div class="title">قرار مساحي</div>
+    <div>رقم القرار: {{header.decisionNumber}}</div>
+    <div>التاريخ: {{header.date}}</div>
+    <div>المحافظة: {{header.governorate}} — المديرية: {{header.directorate}}</div>
+  </div>
+  <img src="{{header.qrDataUrl}}" alt="QR" width="120" />
+</div>
+
+<div class="section">
+  <strong>بيانات صاحب الطلب</strong>
+  <table>
+    <tr><th>الاسم</th><td>{{owner.name}}</td><th>الهاتف</th><td>{{owner.phone}}</td></tr>
+    <tr><th>رقم الطلب</th><td>{{request.requestNumber}}</td><th>الغرض</th><td>{{request.purpose}}</td></tr>
+    <tr><th>مصدر الهندسة</th><td>{{request.geometrySource}}</td><th>وحدة الجوار/البلوك</th><td>{{request.pnp.neighborhoodUnit.nameAr}} / {{request.pnp.block.blockNumber}}</td></tr>
+  </table>
+</div>
+
+<div class="section">
+  <strong>الحدود والأطوال</strong>
+  <table>
+    <tr><th>الاتجاه</th><th>نوع الحد</th><th>طول (م)</th><th>رمز الشارع/القطعة</th><th>عرض الشارع</th></tr>
+    {{#each boundaries}}
+      <tr>
+        <td>{{this.side}}</td>
+        <td>{{this.neighbor_type}}</td>
+        <td>{{this.length_m}}</td>
+        <td>{{this.street_code}}</td>
+        <td>{{this.street_width_m}}</td>
+      </tr>
+    {{/each}}
+  </table>
+</div>
+
+<div class="section">
+  <strong>الاشتراطات (Setbacks)</strong>
+  <table>
+    <tr><th>ارتداد أمامي</th><td>{{setbacks.front}}</td><th>جانبي</th><td>{{setbacks.sides}}</td><th>خلفي</th><td>{{setbacks.rear}}</td></tr>
+  </table>
+</div>
+
+<div class="section images">
+  <div class="imgbox">{{#if images.plan}}<img src="{{images.plan}}" width="100%"/>{{else}}لا تتوفر صورة المخطط{{/if}}</div>
+  <div class="imgbox">{{#if images.aerial}}<img src="{{images.aerial}}" width="100%"/>{{else}}لا تتوفر صورة جوية{{/if}}</div>
+  <div class="imgbox">{{#if images.geometry}}<img src="{{images.geometry}}" width="100%"/>{{else}}لا تتوفر صورة الإسقاط{{/if}}</div>
+</div>
+
+<div class="foot">
+  <div>المهندس المشرف: {{footer.engineer}}</div>
+  <div>{{footer.office}}</div>
+  <div>ملاحظة: {{footer.note}}</div>
+</div>
+</body>
+</html>
+
+3) مسار التنزيل (Route)
+router.get('/survey/decisions/:decisionNumber/download', async (req, res) => {
+  try {
+    // مبدئياً اقبل requestId عبر query أو استرجعه برابط داخلي
+    const requestId = String(req.query.requestId || '');
+    const { pdf } = await generateDecisionPdf(requestId);
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `inline; filename="decision-${req.params.decisionNumber}.pdf"`);
+    res.send(pdf);
+  } catch (e) {
+    console.error('PDF download error:', e);
+    res.status(500).json({ error: 'failed to download pdf' });
+  }
+});
+
+خامساً: UAT رسمي (3 أيام) – ما سنفحصه
+- اليوم 1:
+  - مسار Shapefile: رفع → QC → commit → PDF.
+  - مسار GNSS: نقاط/اكتمال → PDF.
+- اليوم 2:
+  - حالات التصعيد: street_status → قرار المكتب → PDF مع setbacks.
+  - حالات حساسة: heritage/flood/outside_masterplan (تصعيد تلقائي).
+- اليوم 3:
+  - قياس SLA: زمن كل خطوة.
+  - تقارير الفرع للمكتب (POST /api/survey/reports).
+  - FieldApp (نقاط/أوفلاين إن لزم) + Dashboard الفرع/المكتب.
+
+معايير النجاح
+- جميع Endpoints تُعيد JSON/200 ولم يحدث 500.
+- PDF فعلي يُفتح ويعرض QR وصور/حدود/اشتراطات ومصدر الهندسة.
+- التصعيد يمنع التكرار ويرتد بقرار مكتب صحيح.
+- SLA الرoutines ≤ 4 أيام، المصعَّد ≤ 6 أيام (محاكاة زمنياً في UAT).
+
+أوامر Smoke النهائية
+- PDF: curl -I "http://localhost:5000/api/survey/decisions/QM-TEST/download?requestId=SR-TEST-001"
+- Shapefile: upload → validation → commit (كما في رسالتي السابقة).
+- Escalation + office decision (كما في رسالتي السابقة).
+
+ما الخطوة التي تريد البدء بها الآن؟
+- أفعّل لك كود PDF وأختبره مباشرة (أنفّذ التعديلات بنفسي).
+- أو تبدأ أنت فوراً وتعيد لي مخرجات أوامر PDF/Upload/Commit للتأكد من 100% قبل إغلاق المرحلة.

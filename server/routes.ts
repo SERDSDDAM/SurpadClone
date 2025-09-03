@@ -35,6 +35,7 @@ import phase1Routes from "./routes/phase1-integration";
 import { registerGISFeatureRoutes } from "./routes/gis-features";
 import adminRoutes from "./routes/admin";
 import adminUsersRoutes from "./routes/admin-users";
+import pdfRoutes from "./routes/pdf-routes";
 import helmet from "helmet";
 import path from "path";
 import fs from "fs";
@@ -177,6 +178,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // Phase 1 Survey Routes - HIGHEST PRIORITY
   app.use('/api', surveyRoutes);
+  
+  // 📄 PDF Routes - مسارات PDF منفصلة ومبسطة
+  app.use('/api', pdfRoutes);
   
   // Phase 1 GIS Routes - HIGHEST PRIORITY  
   app.use('/api/gis', gisRoutes);

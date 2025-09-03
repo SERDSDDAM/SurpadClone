@@ -1049,4 +1049,40 @@ router.get('/survey/requests/:id/pdf', async (req: Request, res: Response) => {
   }
 });
 
+// 📄 PDF Generation Routes - New Real PDF Service
+// GET /api/survey/decisions/:decisionNumber/download - تحميل PDF فعلي مع QR والتفاصيل الكاملة
+router.get('/survey/decisions/:decisionNumber/download', async (req: Request, res: Response) => {
+  try {
+    const requestId = String(req.query.requestId || '');
+    if (!requestId) {
+      return res.status(400).json({ error: 'requestId query parameter is required' });
+    }
+    
+    // تبسيط للـ PDF - بدون استعلام قاعدة البيانات المعقد
+    const request = { id: requestId, exists: true };
+    
+    if (!request) {
+      return res.status(404).json({ error: 'Survey request not found' });
+    }
+
+    // توليد PDF باستخدام خدمة PDF الجديدة
+    const { generateDecisionPdf } = await import('../services/pdf/decisionPdf');
+    const { pdf, decisionNumber, requestData } = await generateDecisionPdf(requestId);
+    
+    // إعداد headers للـ PDF
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `inline; filename="قرار-مساحي-${decisionNumber}.pdf"`);
+    res.setHeader('Content-Length', pdf.length);
+    
+    res.send(pdf);
+    
+  } catch (error) {
+    console.error('PDF download error:', error);
+    res.status(500).json({ 
+      error: 'فشل في توليد PDF',
+      details: error.message
+    });
+  }
+});
+
 export default router;
