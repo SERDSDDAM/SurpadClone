@@ -155,8 +155,8 @@ export function InteractiveCanvas({
       if (line.points.length < 2) return;
       
       ctx.save();
-      ctx.strokeStyle = line.color;
-      ctx.lineWidth = 3;
+      ctx.strokeStyle = line.color || '#22c55e';
+      ctx.lineWidth = 4;
       ctx.lineCap = 'round';
       ctx.lineJoin = 'round';
       
@@ -172,6 +172,11 @@ export function InteractiveCanvas({
       ctx.stroke();
       ctx.restore();
     });
+    
+    // Log lines being drawn
+    if (lines.length > 0) {
+      console.log(`Drawing ${lines.length} lines`);
+    }
   }, [lines, geoToCanvas]);
 
   // Draw polygons
@@ -180,9 +185,9 @@ export function InteractiveCanvas({
       if (polygon.points.length < 3) return;
       
       ctx.save();
-      ctx.fillStyle = polygon.color + '40'; // Semi-transparent
-      ctx.strokeStyle = polygon.color;
-      ctx.lineWidth = 2;
+      ctx.fillStyle = (polygon.color || '#8b5cf6') + '40'; // Semi-transparent
+      ctx.strokeStyle = polygon.color || '#8b5cf6';
+      ctx.lineWidth = 3;
       
       ctx.beginPath();
       const startPos = geoToCanvas(polygon.points[0].lat, polygon.points[0].lng);
@@ -198,6 +203,11 @@ export function InteractiveCanvas({
       ctx.stroke();
       ctx.restore();
     });
+    
+    // Log polygons being drawn
+    if (polygons.length > 0) {
+      console.log(`Drawing ${polygons.length} polygons`);
+    }
   }, [polygons, geoToCanvas]);
 
   // Draw current GPS position

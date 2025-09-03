@@ -242,11 +242,64 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
     mockStorageData.points.get(requestId)!.push(mockPoint);
     
+    // Auto-create lines and polygons from sequential points
+    const allPoints = mockStorageData.points.get(requestId)!;
+    
+    // Create lines from consecutive points (groups of 2+)
+    if (req.body.notes?.includes('line') && allPoints.length >= 2) {
+      const linePoints = allPoints.slice(-2); // Last 2 points for the line
+      const line = {
+        id: `line-${Date.now()}`,
+        requestId: requestId,
+        featureCode: 'survey-line',
+        points: linePoints,
+        createdAt: new Date().toISOString()
+      };
+      
+      if (!mockStorageData.lines.has(requestId)) {
+        mockStorageData.lines.set(requestId, []);
+      }
+      mockStorageData.lines.get(requestId)!.push(line);
+      console.log(`[DEBUG] Auto-created line for ${requestId}:`, line);
+    }
+    
+    // Create polygons from groups of 3+ points
+    if (req.body.notes?.includes('polygon') && allPoints.length >= 3) {
+      const polygonPoints = allPoints.slice(-3); // Last 3+ points for the polygon
+      const polygon = {
+        id: `polygon-${Date.now()}`,
+        requestId: requestId,
+        featureCode: 'survey-polygon',
+        points: polygonPoints,
+        area: calculatePolygonArea(polygonPoints), // Simple area calculation
+        createdAt: new Date().toISOString()
+      };
+      
+      if (!mockStorageData.polygons.has(requestId)) {
+        mockStorageData.polygons.set(requestId, []);
+      }
+      mockStorageData.polygons.get(requestId)!.push(polygon);
+      console.log(`[DEBUG] Auto-created polygon for ${requestId}:`, polygon);
+    }
+    
     console.log(`[DEBUG] Saved point for ${requestId}:`, mockPoint);
     console.log(`[DEBUG] Total points for ${requestId}:`, mockStorageData.points.get(requestId)!.length);
     
     res.json({ success: true, point: mockPoint });
   });
+
+  // Simple polygon area calculation (Shoelace formula)
+  function calculatePolygonArea(points: any[]): number {
+    if (points.length < 3) return 0;
+    
+    let area = 0;
+    for (let i = 0; i < points.length; i++) {
+      const j = (i + 1) % points.length;
+      area += points[i].latitude * points[j].longitude;
+      area -= points[j].latitude * points[i].longitude;
+    }
+    return Math.abs(area) / 2;
+  }
 
   app.post('/api/survey-requests/:id/complete', (req, res) => {
     res.json({ 

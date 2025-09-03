@@ -287,7 +287,15 @@ export default function FieldApp() {
 
   const canvasLines: CanvasLine[] = surveyLines.map((line: any) => ({
     id: line.id,
-    points: [], // Would be populated from line points
+    points: (line.points || []).map((pt: any) => ({
+      id: pt.id,
+      x: 0,
+      y: 0,
+      lat: parseFloat(pt.latitude),
+      lng: parseFloat(pt.longitude),
+      featureCode: pt.featureCode || '',
+      color: '#22c55e'
+    })),
     featureCode: line.featureCode || '',
     color: '#22c55e',
     length: 0
@@ -295,7 +303,15 @@ export default function FieldApp() {
 
   const canvasPolygons: CanvasPolygon[] = surveyPolygons.map((polygon: any) => ({
     id: polygon.id,
-    points: [], // Would be populated from polygon points  
+    points: (polygon.points || []).map((pt: any) => ({
+      id: pt.id,
+      x: 0,
+      y: 0,
+      lat: parseFloat(pt.latitude),
+      lng: parseFloat(pt.longitude),
+      featureCode: pt.featureCode || '',
+      color: '#8b5cf6'
+    })),
     featureCode: polygon.featureCode || '',
     color: '#8b5cf6',
     area: polygon.area ?? undefined
