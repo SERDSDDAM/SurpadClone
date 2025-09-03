@@ -29,6 +29,12 @@ import {
   type InsertPaymentTransaction,
   type InspectionReport,
   type InsertInspectionReport,
+  type User,
+  type InsertUser,
+  type UserSession,
+  type InsertUserSession,
+  type AuditLog,
+  type InsertAuditLog,
 } from "@shared/schema";
 import { randomUUID } from "crypto";
 

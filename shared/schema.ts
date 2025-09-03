@@ -593,16 +593,6 @@ export const insertInspectionReportSchema = createInsertSchema(inspectionReports
 export type InsertInspectionReport = z.infer<typeof insertInspectionReportSchema>;
 export type InspectionReport = typeof inspectionReports.$inferSelect;
 
-// إضافة schema للمستخدمين المحدث
-export const insertUserSchema = createInsertSchema(users).omit({
-  id: true,
-  createdAt: true,
-  updatedAt: true,
-  lastLoginAt: true,
-  loginAttempts: true,
-  lockedUntil: true,
-});
-
 // User types are defined at the end of file to avoid duplicates
 
 // Phase 4: Enhanced Authentication and Security System (Use auth-schema.ts instead)
@@ -645,6 +635,16 @@ export const apiKeys = pgTable("api_keys", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// User Schema for forms
+export const insertUserSchema = createInsertSchema(users).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  lastLoginAt: true,
+  loginAttempts: true,
+  lockedUntil: true,
+});
+
 // Insert Schemas for Legacy Authentication (Deprecated - Use auth-schema instead)
 
 export const insertAuditLogSchema = createInsertSchema(auditLogs).omit({
@@ -669,9 +669,11 @@ export const insertApiKeySchema = createInsertSchema(apiKeys).omit({
   lastUsedAt: true,
 });
 
-// Types for Authentication System
+// Types for Authentication System  
 export type User = typeof users.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;
+export type UserSession = typeof userSessions.$inferSelect;
+export type InsertUserSession = typeof userSessions.$inferInsert;
 
 // Legal Requirements and Service Integration
 export const serviceRequirements = pgTable("service_requirements", {
