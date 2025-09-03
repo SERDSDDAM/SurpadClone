@@ -14,7 +14,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { Wifi, WifiOff, Save, Upload, Download, Activity, Bluetooth, Settings, ArrowLeft } from "lucide-react";
+import { Wifi, WifiOff, Save, Upload, Download, Activity, Bluetooth, Settings, ArrowLeft, CheckCircle } from "lucide-react";
+import OfflineQueue from "@/components/field/OfflineQueue";
+import QualityGate from "@/components/field/QualityGate";
+import FieldEscalation from "@/components/field/FieldEscalation";
+import GNSSStatusPanel from "@/components/field/GNSSStatusPanel";
 
 // Get request ID from URL parameters
 function getRequestIdFromUrl(): string {
@@ -95,15 +99,18 @@ export default function FieldApp() {
     enabled: !!requestId,
   });
 
-  // Extract arrays from API responses
-  const surveyPoints = Array.isArray(pointsResponse?.data) ? pointsResponse.data : [];
-  const surveyLines = Array.isArray(linesResponse) ? linesResponse : [];
-  const surveyPolygons = Array.isArray(polygonsResponse) ? polygonsResponse : [];
+  // Extract arrays from API responses safely
+  const surveyPoints = Array.isArray(pointsResponse?.data) ? pointsResponse.data : (Array.isArray(pointsResponse) ? pointsResponse : []);
+  const surveyLines = Array.isArray(linesResponse?.data) ? linesResponse.data : (Array.isArray(linesResponse) ? linesResponse : []);
+  const surveyPolygons = Array.isArray(polygonsResponse?.data) ? polygonsResponse.data : (Array.isArray(polygonsResponse) ? polygonsResponse : []);
 
   // Mutations for creating survey data
   const createPointMutation = useMutation({
     mutationFn: async (pointData: any) => {
-      return apiRequest("POST", `/api/survey-requests/${requestId}/points`, pointData);
+      return apiRequest(`/api/survey-requests/${requestId}/points`, {
+        method: "POST",
+        body: pointData
+      });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/survey-requests", requestId, "points"] });
@@ -285,6 +292,36 @@ export default function FieldApp() {
     area: polygon.area ?? undefined
   }));
 
+  // معالجة إكمال المسح مع بوابة الجودة
+  const completeSurveyMutation = useMutation({
+    mutationFn: async () => {
+      return apiRequest(`/api/survey-requests/${requestId}/complete`, {
+        method: 'POST',
+        body: {
+          completedBy: 'المساح الميداني',
+          completionNotes: 'تم إكمال المسح الميداني بنجاح',
+          finalLocation: advancedGPS,
+          sessionStats: surveyStats
+        }
+      });
+    },
+    onSuccess: () => {
+      toast({
+        title: "تم إكمال المسح",
+        description: "تم إرسال المسح للاعتماد بنجاح",
+        variant: "default",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/survey-requests", requestId] });
+    },
+    onError: () => {
+      toast({
+        title: "خطأ في الإكمال",
+        description: "فشل في إرسال المسح",
+        variant: "destructive",
+      });
+    }
+  });
+
   const handleSyncData = () => {
     toast({
       title: "المزامنة",
@@ -298,6 +335,10 @@ export default function FieldApp() {
         description: "تم رفع جميع البيانات المحفوظة محلياً",
       });
     }, 2000);
+  };
+
+  const handleCompleteSurvey = () => {
+    completeSurveyMutation.mutate();
   };
 
   const handleExportSession = () => {
@@ -526,6 +567,45 @@ export default function FieldApp() {
             </Button>
           </CardContent>
         </Card>
+      </div>
+
+      {/* Advanced Field Components */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
+        {/* Offline Queue Management */}
+        <OfflineQueue 
+          requestId={requestId}
+          isOnline={!isOffline}
+          onSyncComplete={() => {
+            queryClient.invalidateQueries({ queryKey: ["/api/survey-requests", requestId] });
+            setPendingSync(0);
+          }}
+        />
+
+        {/* GNSS Status Panel */}
+        <GNSSStatusPanel 
+          currentFix={advancedGPS}
+          onFixUpdate={setAdvancedGPS}
+        />
+      </div>
+
+      {/* Quality Gate & Escalation */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
+        {/* Quality Gate */}
+        <QualityGate 
+          surveyPoints={surveyPoints}
+          surveyPolygons={surveyPolygons}
+          onComplete={handleCompleteSurvey}
+          isSubmitting={completeSurveyMutation.isPending}
+        />
+
+        {/* Field Escalation */}
+        <FieldEscalation 
+          requestId={requestId}
+          currentLocation={{
+            latitude: advancedGPS.latitude,
+            longitude: advancedGPS.longitude
+          }}
+        />
       </div>
 
       {/* Offline Mode Banner */}

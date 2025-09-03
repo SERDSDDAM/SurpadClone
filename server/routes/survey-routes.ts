@@ -202,7 +202,26 @@ router.get('/survey-requests/:id', isAuthenticated, async (req: Request, res: Re
     const { id } = req.params;
     
     const [request] = await db
-      .select()
+      .select({
+        id: surveyRequests.id,
+        requestNumber: surveyRequests.requestNumber,
+        status: surveyRequests.status,
+        requestType: surveyRequests.requestType,
+        applicantName: surveyRequests.applicantName,
+        propertyType: surveyRequests.propertyType,
+        latitude: surveyRequests.latitude,
+        longitude: surveyRequests.longitude,
+        governorate: surveyRequests.governorate,
+        directorate: surveyRequests.directorate,
+        neighborhood: surveyRequests.neighborhood,
+        street: surveyRequests.street,
+        plotNumber: surveyRequests.plotNumber,
+        planNumber: surveyRequests.planNumber,
+        blockNumber: surveyRequests.blockNumber,
+        notes: surveyRequests.notes,
+        createdAt: surveyRequests.createdAt,
+        updatedAt: surveyRequests.updatedAt
+      })
       .from(surveyRequests)
       .where(eq(surveyRequests.id, id));
     
