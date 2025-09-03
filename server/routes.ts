@@ -284,7 +284,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const allPoints = mockStorageData.points.get(requestId)!;
     
     // Create lines from consecutive points (groups of 2+)
-    if ((req.body.notes?.includes('line') || req.body.notes?.includes('خط')) && allPoints.length >= 2) {
+    if ((req.body.notes?.includes('line') || req.body.notes?.includes('خط') || req.body.notes?.includes('خط')) && allPoints.length >= 2) {
       const linePoints = allPoints.slice(-2); // Last 2 points for the line
       const line = {
         id: `line-${Date.now()}`,
@@ -302,7 +302,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
     
     // Create polygons from groups of 3+ points  
-    if ((req.body.notes?.includes('polygon') || req.body.notes?.includes('مضلع')) && allPoints.length >= 3) {
+    if ((req.body.notes?.includes('polygon') || req.body.notes?.includes('مضلع') || req.body.notes?.includes('باستخدام polygon')) && allPoints.length >= 3) {
       const polygonPoints = allPoints.slice(-3); // Last 3+ points for the polygon
       const polygon = {
         id: `polygon-${Date.now()}`,
