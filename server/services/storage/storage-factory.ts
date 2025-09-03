@@ -8,6 +8,7 @@ import { SurveyStorageService } from "./survey-storage";
 import { CitizenStorageService } from "./citizen-storage";
 import { BuildingStorageService } from "./building-storage";
 import { PaymentAuditStorageService } from "./payment-audit-storage";
+import { StreetSurveyStorage } from "./street-survey-storage";
 
 import {
   type SurveyRequest, type InsertSurveyRequest,
@@ -39,12 +40,14 @@ export class UnifiedStorageService implements IStorageService {
   private citizenStorage: CitizenStorageService;
   private buildingStorage: BuildingStorageService;
   private paymentAuditStorage: PaymentAuditStorageService;
+  private streetSurveyStorage: StreetSurveyStorage;
 
   constructor() {
     this.surveyStorage = new SurveyStorageService();
     this.citizenStorage = new CitizenStorageService();
     this.buildingStorage = new BuildingStorageService();
     this.paymentAuditStorage = new PaymentAuditStorageService();
+    this.streetSurveyStorage = new StreetSurveyStorage();
   }
 
   // ================================
@@ -381,6 +384,93 @@ export class UnifiedStorageService implements IStorageService {
     const payments = await this.paymentAuditStorage.getPaymentTransactions();
 
     return this.paymentAuditStorage.getStats(surveyRequests, citizens, buildingPermits, payments);
+  }
+
+  // ================================
+  // Street Survey Service Domain - تفويض للـ StreetSurveyStorage
+  // ================================
+  
+  // Street Status Decisions
+  async getStreetStatusDecisions(): Promise<any[]> {
+    return this.streetSurveyStorage.getStreetStatusDecisions();
+  }
+
+  async getStreetStatusDecision(id: string): Promise<any | undefined> {
+    return this.streetSurveyStorage.getStreetStatusDecision(id);
+  }
+
+  async createStreetStatusDecision(decision: any): Promise<any> {
+    return this.streetSurveyStorage.createStreetStatusDecision(decision);
+  }
+
+  async updateStreetStatusDecision(id: string, decision: Partial<any>): Promise<any | undefined> {
+    return this.streetSurveyStorage.updateStreetStatusDecision(id, decision);
+  }
+
+  async getStreetStatusDecisionsByBranch(branchOffice: string): Promise<any[]> {
+    return this.streetSurveyStorage.getStreetStatusDecisionsByBranch(branchOffice);
+  }
+
+  async getStreetStatusDecisionsByStatus(status: string): Promise<any[]> {
+    return this.streetSurveyStorage.getStreetStatusDecisionsByStatus(status);
+  }
+
+  async escalateStreetStatusDecision(id: string, escalationReason: string): Promise<any | undefined> {
+    return this.streetSurveyStorage.escalateStreetStatusDecision(id, escalationReason);
+  }
+
+  async submitStreetDecisionAppeal(id: string, appealNotes: string): Promise<any | undefined> {
+    return this.streetSurveyStorage.submitStreetDecisionAppeal(id, appealNotes);
+  }
+
+  // Branch Periodic Reports
+  async getBranchPeriodicReports(): Promise<any[]> {
+    return this.streetSurveyStorage.getBranchPeriodicReports();
+  }
+
+  async getBranchPeriodicReport(id: string): Promise<any | undefined> {
+    return this.streetSurveyStorage.getBranchPeriodicReport(id);
+  }
+
+  async createBranchPeriodicReport(report: any): Promise<any> {
+    return this.streetSurveyStorage.createBranchPeriodicReport(report);
+  }
+
+  async updateBranchPeriodicReport(id: string, report: Partial<any>): Promise<any | undefined> {
+    return this.streetSurveyStorage.updateBranchPeriodicReport(id, report);
+  }
+
+  async getBranchReportsByOffice(branchOffice: string): Promise<any[]> {
+    return this.streetSurveyStorage.getBranchReportsByOffice(branchOffice);
+  }
+
+  async getBranchReportsByPeriod(reportType: string, reportPeriod: string): Promise<any[]> {
+    return this.streetSurveyStorage.getBranchReportsByPeriod(reportType, reportPeriod);
+  }
+
+  async submitBranchReportToSupervisory(id: string): Promise<any | undefined> {
+    return this.streetSurveyStorage.submitBranchReportToSupervisory(id);
+  }
+
+  async approveBranchReport(id: string, supervisoryFeedback?: string): Promise<any | undefined> {
+    return this.streetSurveyStorage.approveBranchReport(id, supervisoryFeedback);
+  }
+
+  // Analytics and Dashboard
+  async getStreetDecisionStats(): Promise<any> {
+    return this.streetSurveyStorage.getStreetDecisionStats();
+  }
+
+  async getBranchPerformanceAnalytics(branchOffice: string): Promise<any> {
+    return this.streetSurveyStorage.getBranchPerformanceAnalytics(branchOffice);
+  }
+
+  async getEscalationTrends(): Promise<any> {
+    return this.streetSurveyStorage.getEscalationTrends();
+  }
+
+  async getProcessingTimeAnalytics(): Promise<any> {
+    return this.streetSurveyStorage.getProcessingTimeAnalytics();
   }
 }
 

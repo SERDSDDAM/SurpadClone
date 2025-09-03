@@ -698,6 +698,141 @@ export const requirements = pgTable("requirements", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+// Street Status Decisions - خدمة الإسقاط المساحي
+export const streetStatusDecisions = pgTable("street_status_decisions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  decisionNumber: varchar("decision_number").notNull().unique(),
+  streetName: varchar("street_name").notNull(),
+  streetCode: varchar("street_code"),
+  governorate: varchar("governorate").notNull(),
+  directorate: varchar("directorate").notNull(),
+  neighborhood: varchar("neighborhood").notNull(),
+  coordinates: jsonb("coordinates"), // GeoJSON of street boundaries
+  status: varchar("status").notNull().default("under_review"), // under_review, approved, rejected, requires_field_visit
+  statusReason: text("status_reason"),
+  decisionType: varchar("decision_type").notNull(), // new_construction, modification, demolition, maintenance
+  branchOffice: varchar("branch_office").notNull(), // الفرع التنفيذي المسؤول
+  supervisoryOffice: varchar("supervisory_office").notNull(), // المكتب الإشرافي
+  assignedOfficer: varchar("assigned_officer"),
+  assignedOfficerId: varchar("assigned_officer_id"),
+  requestedBy: varchar("requested_by").notNull(),
+  requestedById: varchar("requested_by_id"),
+  applicantDetails: jsonb("applicant_details"),
+  technicalRequirements: jsonb("technical_requirements"),
+  legalRequirements: jsonb("legal_requirements"),
+  attachedDocuments: jsonb("attached_documents").default('[]'),
+  fieldSurveyRequired: boolean("field_survey_required").default(false),
+  fieldSurveyRequestId: varchar("field_survey_request_id"),
+  estimatedProcessingDays: integer("estimated_processing_days").default(15),
+  actualProcessingDays: integer("actual_processing_days"),
+  priority: varchar("priority").notNull().default("normal"), // low, normal, high, urgent
+  escalationLevel: integer("escalation_level").default(0), // 0-6 levels
+  escalationReason: text("escalation_reason"),
+  lastEscalatedAt: timestamp("last_escalated_at"),
+  reviewNotes: text("review_notes"),
+  approvalConditions: jsonb("approval_conditions"),
+  rejectionReasons: jsonb("rejection_reasons"),
+  appealStatus: varchar("appeal_status").default("none"), // none, submitted, under_review, approved, rejected
+  appealNotes: text("appeal_notes"),
+  followUpRequired: boolean("follow_up_required").default(false),
+  followUpDate: timestamp("follow_up_date"),
+  completionCertificateIssued: boolean("completion_certificate_issued").default(false),
+  certificateNumber: varchar("certificate_number"),
+  legalReferenceNumber: varchar("legal_reference_number"),
+  ministerialDecisionNumber: varchar("ministerial_decision_number"),
+  environmentalImpactAssessment: boolean("environmental_impact_assessment").default(false),
+  publicConsultationRequired: boolean("public_consultation_required").default(false),
+  publicConsultationCompleted: boolean("public_consultation_completed").default(false),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+  submittedAt: timestamp("submitted_at").defaultNow(),
+  reviewStartedAt: timestamp("review_started_at"),
+  decisionMadeAt: timestamp("decision_made_at"),
+  implementationDeadline: timestamp("implementation_deadline"),
+});
+
+// Branch Periodic Reports - التقارير الدورية للفروع
+export const branchPeriodicReports = pgTable("branch_periodic_reports", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  reportNumber: varchar("report_number").notNull().unique(),
+  reportType: varchar("report_type").notNull(), // daily, weekly, monthly, quarterly, annual
+  reportPeriod: varchar("report_period").notNull(), // "2025-01", "2025-Q1", "2025-W01"
+  branchOffice: varchar("branch_office").notNull(),
+  supervisoryOffice: varchar("supervisory_office").notNull(),
+  reportingOfficer: varchar("reporting_officer").notNull(),
+  reportingOfficerId: varchar("reporting_officer_id").notNull(),
+  // Key Performance Indicators
+  totalRequestsReceived: integer("total_requests_received").default(0),
+  totalRequestsProcessed: integer("total_requests_processed").default(0),
+  totalRequestsApproved: integer("total_requests_approved").default(0),
+  totalRequestsRejected: integer("total_requests_rejected").default(0),
+  totalRequestsPending: integer("total_requests_pending").default(0),
+  averageProcessingTime: real("average_processing_time").default(0), // in days
+  requestsRequiringFieldSurvey: integer("requests_requiring_field_survey").default(0),
+  fieldSurveysCompleted: integer("field_surveys_completed").default(0),
+  escalatedRequests: integer("escalated_requests").default(0),
+  appealSubmitted: integer("appeal_submitted").default(0),
+  appealApproved: integer("appeal_approved").default(0),
+  // Staff Performance
+  totalStaffMembers: integer("total_staff_members").default(0),
+  staffOnLeave: integer("staff_on_leave").default(0),
+  staffAvailabilityPercentage: real("staff_availability_percentage").default(100),
+  staffProductivityScore: real("staff_productivity_score").default(0),
+  // Service Quality Metrics
+  citizenSatisfactionScore: real("citizen_satisfaction_score").default(0),
+  complaintReceived: integer("complaint_received").default(0),
+  complaintResolved: integer("complaint_resolved").default(0),
+  averageResponseTime: real("average_response_time").default(0), // in hours
+  serviceQualityScore: real("service_quality_score").default(0),
+  // Technical Infrastructure
+  systemDowntimeHours: real("system_downtime_hours").default(0),
+  systemPerformanceScore: real("system_performance_score").default(100),
+  dataAccuracyPercentage: real("data_accuracy_percentage").default(100),
+  backupCompletionStatus: boolean("backup_completion_status").default(true),
+  // Geographic Coverage
+  coverageAreaSquareKm: real("coverage_area_square_km").default(0),
+  requestsPerSquareKm: real("requests_per_square_km").default(0),
+  remoteAreasServed: integer("remote_areas_served").default(0),
+  transportationChallenges: text("transportation_challenges"),
+  // Legal and Compliance
+  legalComplianceScore: real("legal_compliance_score").default(100),
+  auditFindingsCount: integer("audit_findings_count").default(0),
+  correctiveActionsImplemented: integer("corrective_actions_implemented").default(0),
+  trainingSessionsConducted: integer("training_sessions_conducted").default(0),
+  // Financial Metrics
+  budgetUtilizationPercentage: real("budget_utilization_percentage").default(0),
+  costPerRequest: real("cost_per_request").default(0),
+  revenueGenerated: real("revenue_generated").default(0),
+  operationalCosts: real("operational_costs").default(0),
+  // Strategic Initiatives
+  digitalizationProgress: real("digitalization_progress").default(0),
+  automationImplemented: integer("automation_implemented").default(0),
+  processImprovements: integer("process_improvements").default(0),
+  innovationInitiatives: integer("innovation_initiatives").default(0),
+  // Challenges and Recommendations
+  majorChallenges: jsonb("major_challenges").default('[]'),
+  recommendedSolutions: jsonb("recommended_solutions").default('[]'),
+  resourceRequests: jsonb("resource_requests").default('[]'),
+  priorityProjects: jsonb("priority_projects").default('[]'),
+  // Report Metadata
+  reportStatus: varchar("report_status").notNull().default("draft"), // draft, submitted, reviewed, approved
+  submittedToSupervisory: boolean("submitted_to_supervisory").default(false),
+  approvedBySupervisory: boolean("approved_by_supervisory").default(false),
+  supervisoryFeedback: text("supervisory_feedback"),
+  actionItemsFromFeedback: jsonb("action_items_from_feedback").default('[]'),
+  nextReportDue: timestamp("next_report_due"),
+  attachedFiles: jsonb("attached_files").default('[]'),
+  reportSummary: text("report_summary"),
+  executiveSummary: text("executive_summary"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+  reportPeriodStart: timestamp("report_period_start"),
+  reportPeriodEnd: timestamp("report_period_end"),
+  submittedAt: timestamp("submitted_at"),
+  reviewedAt: timestamp("reviewed_at"),
+  approvedAt: timestamp("approved_at"),
+});
+
 // Re-export survey schema types and tables
 export * from "./survey-schema";
 export * from "./smart-automation-schema";
@@ -718,3 +853,13 @@ export type InsertTwoFactorToken = z.infer<typeof insertTwoFactorTokenSchema>;
 
 export type ApiKey = typeof apiKeys.$inferSelect;
 export type InsertApiKey = z.infer<typeof insertApiKeySchema>;
+
+// Street Status Decisions and Branch Reports - خدمة الإسقاط المساحي
+export type StreetStatusDecision = typeof streetStatusDecisions.$inferSelect;
+export type InsertStreetStatusDecision = typeof streetStatusDecisions.$inferInsert;
+export type BranchPeriodicReport = typeof branchPeriodicReports.$inferSelect;
+export type InsertBranchPeriodicReport = typeof branchPeriodicReports.$inferInsert;
+
+// Insert schemas for validation
+export const insertStreetStatusDecisionSchema = createInsertSchema(streetStatusDecisions);
+export const insertBranchPeriodicReportSchema = createInsertSchema(branchPeriodicReports);

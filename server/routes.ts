@@ -36,6 +36,7 @@ import { registerGISFeatureRoutes } from "./routes/gis-features";
 import adminRoutes from "./routes/admin";
 import adminUsersRoutes from "./routes/admin-users";
 import pdfRoutes from "./routes/pdf-routes";
+import streetSurveyServiceRoutes from "./routes/street-survey-service";
 import helmet from "helmet";
 import path from "path";
 import fs from "fs";
@@ -421,6 +422,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // RBAC Routes
   app.use('/api/rbac', rbacRoutes);
+  
+  // Street Survey Service Routes - خدمة الإسقاط المساحي
+  app.use('/api/street-survey', streetSurveyServiceRoutes);
   
   // Advanced RBAC Routes
   app.use('/api/advanced-rbac', advancedRbacRoutes);

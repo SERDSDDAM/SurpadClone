@@ -160,4 +160,34 @@ export interface IStorageService {
     pendingPermits: number;
     totalRevenue: number;
   }>;
+
+  // ================================
+  // Street Survey Service Domain - خدمة الإسقاط المساحي
+  // ================================
+  
+  // Street Status Decisions
+  getStreetStatusDecisions(): Promise<any[]>;
+  getStreetStatusDecision(id: string): Promise<any | undefined>;
+  createStreetStatusDecision(decision: any): Promise<any>;
+  updateStreetStatusDecision(id: string, decision: Partial<any>): Promise<any | undefined>;
+  getStreetStatusDecisionsByBranch(branchOffice: string): Promise<any[]>;
+  getStreetStatusDecisionsByStatus(status: string): Promise<any[]>;
+  escalateStreetStatusDecision(id: string, escalationReason: string): Promise<any | undefined>;
+  submitStreetDecisionAppeal(id: string, appealNotes: string): Promise<any | undefined>;
+
+  // Branch Periodic Reports
+  getBranchPeriodicReports(): Promise<any[]>;
+  getBranchPeriodicReport(id: string): Promise<any | undefined>;
+  createBranchPeriodicReport(report: any): Promise<any>;
+  updateBranchPeriodicReport(id: string, report: Partial<any>): Promise<any | undefined>;
+  getBranchReportsByOffice(branchOffice: string): Promise<any[]>;
+  getBranchReportsByPeriod(reportType: string, reportPeriod: string): Promise<any[]>;
+  submitBranchReportToSupervisory(id: string): Promise<any | undefined>;
+  approveBranchReport(id: string, supervisoryFeedback?: string): Promise<any | undefined>;
+
+  // Analytics and Dashboard
+  getStreetDecisionStats(): Promise<any>;
+  getBranchPerformanceAnalytics(branchOffice: string): Promise<any>;
+  getEscalationTrends(): Promise<any>;
+  getProcessingTimeAnalytics(): Promise<any>;
 }
