@@ -1,3 +1,11 @@
+/**
+ * Legacy Storage Interface - maintained for backward compatibility
+ * Now using the new modular architecture internally
+ */
+import { 
+  createStorageService,
+  type IStorageService 
+} from "./services/storage/storage-factory";
 import {
   type SurveyRequest,
   type InsertSurveyRequest,
@@ -36,7 +44,6 @@ import {
   type AuditLog,
   type InsertAuditLog,
 } from "@shared/schema";
-import { randomUUID } from "crypto";
 
 export interface IStorage {
   // Surveyors
@@ -158,7 +165,9 @@ export interface IStorage {
   getAuditLogs(userId?: string): Promise<AuditLog[]>;
 }
 
-export class MemStorage implements IStorage {
+// Legacy MemStorage class - kept for reference but replaced by modular system
+// This is now handled by the UnifiedStorageService from storage-factory.ts
+class LegacyMemStorage implements IStorage {
   private surveyors: Surveyor[] = [];
   private surveyRequests: SurveyRequest[] = [];
   private surveyPoints: SurveyPoint[] = [];
@@ -1394,4 +1403,5 @@ export class MemStorage implements IStorage {
   }
 }
 
-export const storage = new MemStorage();
+// Legacy compatibility - now using modular architecture
+export const storage = createStorageService();
