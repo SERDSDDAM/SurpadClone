@@ -265,17 +265,23 @@ export default function FieldApp() {
   const completionPercentage = Math.min(100, (surveyStats.pointsCount + surveyStats.linesCount + surveyStats.polygonsCount) * 5);
 
   // Convert survey data to canvas format
-  const canvasPoints: CanvasPoint[] = surveyPoints.map((point: any) => ({
-    id: point.id,
-    x: 0, // Will be calculated by canvas
-    y: 0,
-    lat: point.latitude,
-    lng: point.longitude,
-    featureCode: point.featureCode || '',
-    color: (point.featureCode || '').includes('building') ? '#ef4444' : 
-           (point.featureCode || '').includes('tree') ? '#22c55e' : 
-           '#3b82f6'
-  }));
+  console.log('Raw survey points from API:', surveyPoints);
+  const canvasPoints: CanvasPoint[] = surveyPoints.map((point: any, index: number) => {
+    const canvasPoint = {
+      id: point.id || `point-${index}`,
+      x: 0, // Will be calculated by canvas
+      y: 0,
+      lat: parseFloat(point.latitude) || 15.3694,
+      lng: parseFloat(point.longitude) || 44.1910,
+      featureCode: point.featureCode || point.pointNumber || 'GPS',
+      color: (point.featureCode || '').includes('building') ? '#ef4444' : 
+             (point.featureCode || '').includes('tree') ? '#22c55e' : 
+             '#3b82f6'
+    };
+    console.log(`Converting point ${index}:`, point, '->', canvasPoint);
+    return canvasPoint;
+  });
+  console.log('Final canvas points:', canvasPoints);
 
   const canvasLines: CanvasLine[] = surveyLines.map((line: any) => ({
     id: line.id,

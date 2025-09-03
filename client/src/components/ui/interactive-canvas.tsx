@@ -121,24 +121,26 @@ export function InteractiveCanvas({
 
   // Draw points
   const drawPoints = useCallback((ctx: CanvasRenderingContext2D) => {
-    points.forEach(point => {
+    console.log('Drawing points in canvas:', points.length, points);
+    points.forEach((point, index) => {
       const canvasPos = geoToCanvas(point.lat, point.lng);
+      console.log(`Point ${index}:`, point, 'Canvas position:', canvasPos);
       
       ctx.save();
-      ctx.fillStyle = point.color;
+      ctx.fillStyle = point.color || '#3b82f6';
       ctx.strokeStyle = '#ffffff';
-      ctx.lineWidth = 2;
+      ctx.lineWidth = 3;
       
       ctx.beginPath();
-      ctx.arc(canvasPos.x, canvasPos.y, 6, 0, 2 * Math.PI);
+      ctx.arc(canvasPos.x, canvasPos.y, 10, 0, 2 * Math.PI);
       ctx.fill();
       ctx.stroke();
       
       // Label
-      ctx.fillStyle = '#374151';
-      ctx.font = '10px Arial';
+      ctx.fillStyle = '#000000';
+      ctx.font = 'bold 14px Arial';
       ctx.textAlign = 'center';
-      ctx.fillText(point.featureCode, canvasPos.x, canvasPos.y - 10);
+      ctx.fillText(`نقطة ${index + 1}`, canvasPos.x, canvasPos.y - 15);
       
       ctx.restore();
     });
