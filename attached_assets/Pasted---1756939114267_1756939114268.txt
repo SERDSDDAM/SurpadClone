@@ -1,0 +1,74 @@
+لا تُعدّل أي كود حالياً. ابدأ بالتوثيق والتحليل فقط، ثم أعطني تقريراً نهائياً وخطة إصلاح مفصلة. أنشئ مجلد جديدproject-documentation/ وأضف الملفات التالية بمحتوى فعلي مستخرج من الكود:
+
+01-architecture-overview.md
+خريطة المعمارية: client (React) / server (Express+TS+Drizzle) / DB (Postgres) / GIS / PDF / RBAC.
+تدفق خدمة القرار المساحي: (دليل الخدمات → المَعالج → اختيار المسار Shapefile/GNSS → GIS/QC → التصعيد → PDF).
+النقاط الحرجة: storage.ts، pdf-routes.ts، survey-routes.ts، FieldApp.
+02-api-matrix.md
+جدول Endpoints: الطريقة، المسار، المدخلات/المخرجات، الأكواد، من يستدعيها (واجهة/تطبيق ميداني).
+وحّد شكل الاستجابة المتوقع ApiResponse<T> = { success, data, count?, message?, error? } (توثيق فقط).
+03-data-model.md
+جداول أساسية وعلاقتها: survey_requests, survey_points, shapefile_uploads, gnss_sessions, street_status_decisions, branch_periodic_reports.
+خرائط الحقول: geometry_source, workflow_mode, qc_status, pnp_context, office_decision, owner_phone (اذكر المصدر).
+05-field-app.md
+ما يستهلكه/يعيده FieldApp: GET/POST نقاط/Features، التوقعات حول شكل JSON (data[] دائماً).
+مواضع أخطاء map المحتملة وكيف تُتقى (toArray adapter على الواجهة).
+06-error-inventory-storage.md
+جرد كامل لأخطاء server/storage.ts:
+رقم السطر، نوع الخطأ (Property missing/Type mismatch/Duplicate function/JSON array…)، وصف السبب، الملف/النوع المرجعي المطلوب.
+صنّفها كما يلي: خصائص غير موجودة، undefined vs null، دوال مكررة، خصائص مكررة، JSON/Array.
+07-fix-plan-storage.md
+خطة إصلاح متسلسلة (بدون تطبيق الآن):
+تفكيك storage.ts إلى drivers/local.ts وdrivers/s3.ts وindex.ts.
+تعريف واجهة Storage موحدة.
+إزالة/دمج التكرارات (خاصة دوال Occupancy).
+حراسة الأنواع: optional chaining + nullish.
+توحيد الاستجابة ApiResponse في النقاط الحرجة (طبقة Adapter لاحقاً).
+أنشئ تذاكر مصغرة برقم مرجعي لكل خطأ (STO-001 …).
+08-test-plan.md
+كيف سنختبر بعد الإصلاح: tsc --noEmit، eslint، smoke APIs (survey/shp/escalate/pdf)، لقطات UAT.
+09-uat-runbook.md
+السيناريوهات العشرة (Shapefile/GNSS/تصعيد/قرار شارع/PDF)، مع أوامر curl ونتائج متوقعة.
+ثم استخرج تقارير baseline بدون تعديل:
+
+npx tsc --noEmit > project-documentation/reports/tsc-baseline.txt
+npx eslint "server/**/*.ts" -f unix > project-documentation/reports/eslint-baseline.txt
+npx ts-prune > project-documentation/reports/ts-prune.txt
+psql -c "\d+ survey_requests" > project-documentation/reports/db-survey-requests.txt (إن كانت الصلاحيات متاحة)
+سلّم في النهاية:
+
+قائمة الأخطاء مرتبة حسب الأولوية مع تقدير الوقت لكل إصلاح.
+“لا تغييرات أُجريت” تأكيداً لسياسة التجميد.
+مقترح خطة بديلة (اختيارية) – إصلاح آمن على مرحلتين
+
+المرحلة A (يوم واحد – بدون لمس storage.ts):
+إضافة response adapter على الخادم ليوحّد الاستجابة {success,data,count}.
+إضافة toArray adapter في FieldApp لمنع map errors نهائياً.
+إزالة أي duplicate routes لمسارات pdf/escalate (توثّق قبل وبعد).
+المرحلة B (يومان – refactor آمن لـ storage.ts):
+إنشاء Storage interface + drivers/local & s3 + factory makeStorage().
+نقل وظائف التخزين تدريجياً دون تغيير سلوك المسارات.
+إبقاء storage.ts القديم “مغلف” حتى اكتمال النقل، ثم شطب التكرارات فقط.
+شروط قبول أي إصلاح لاحقاً
+
+tsc/eslint = 0 أخطاء في storage/*.
+جميع smoke APIs: 200 JSON/200 PDF.
+FieldApp لا يرمي map errors مع أي استجابة (data دائماً مصفوفة).
+لا تراجع في UAT (Shapefile/GNSS/تصعيد/قرار شارع/PDF تعمل).
+ملاحظات خاصة ببيئة Replit
+
+لا تُشغّل Puppeteer إلا في المسارات الجديدة (/api/pdf/decisions/*). وثّق اعتماد الخطوط العربية فقط (لا تثبّت شيء على النظام).
+ثبّت Node والنسخ في package.json (engines) لتفادي “انزلاق الإصدارات”.
+استخدم Checkpoints قبل أي إصلاح (Rollback جاهز).
+هل لديك مقترح آخر للخطة؟
+
+نعم: خطة “Adapter أولاً” ثم “Refactor لاحقاً”
+اليوم 1: Response Adapter + FieldApp toArray + إزالة duplicate routes (أثر فوري بدون مخاطرة).
+اليوم 2–3: تفكيك storage.ts إلى drivers مع واجهة موحدة، ونقل تدريجي.
+اليوم 4: تشغيل suite كاملة وإصدار تقرير “قبل/بعد”، ثم Go/No-Go.
+اختر أحد المسارين:
+
+توثيق فقط (Freeze) ثم نراجع الخطة.
+أو “Adapter أولاً” (تغييرات طفيفة قليلة المخاطر) ثم refactor مُدار.
+إذا رغبت، أكتب لك أمر ثانٍ للمساعد يطبّق “Adapter أولاً” بخطوات مجدولة مع حارسات واختبارات smoke، أو نكتفي بالتوثيق الآن حتى تستعرض النتائج.
+
