@@ -285,6 +285,14 @@ export default function FieldApp() {
     console.log('Canvas points ready:', canvasPoints.length, canvasPoints);
   }
 
+  // Debug lines and polygons data
+  if (surveyLines.length > 0) {
+    console.log('Survey lines received:', surveyLines.length, surveyLines);
+  }
+  if (surveyPolygons.length > 0) {
+    console.log('Survey polygons received:', surveyPolygons.length, surveyPolygons);
+  }
+
   const canvasLines: CanvasLine[] = surveyLines.map((line: any) => ({
     id: line.id,
     points: (line.points || []).map((pt: any) => ({
@@ -316,6 +324,9 @@ export default function FieldApp() {
     color: '#8b5cf6',
     area: polygon.area ?? undefined
   }));
+
+  // Debug final canvas data
+  console.log('Final canvas data - Lines:', canvasLines.length, 'Polygons:', canvasPolygons.length);
 
   // معالجة إكمال المسح مع بوابة الجودة
   const completeSurveyMutation = useMutation({

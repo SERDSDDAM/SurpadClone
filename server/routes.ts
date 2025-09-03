@@ -211,13 +211,51 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get('/api/survey-requests/:id/lines', (req, res) => {
     const requestId = req.params.id;
-    const lines = mockStorageData.lines.get(requestId) || [];
+    let lines = mockStorageData.lines.get(requestId) || [];
+    
+    // Add test data if empty
+    if (lines.length === 0 && requestId === 'sample-request-001') {
+      const testLine = {
+        id: 'test-line-1',
+        requestId: requestId,
+        featureCode: 'survey-line',
+        points: [
+          { id: 'l1', latitude: 15.37, longitude: 44.18, featureCode: 'test' },
+          { id: 'l2', latitude: 15.38, longitude: 44.19, featureCode: 'test' }
+        ],
+        createdAt: new Date().toISOString()
+      };
+      lines = [testLine];
+      mockStorageData.lines.set(requestId, lines);
+      console.log('[DEBUG] Added test line data');
+    }
+    
     res.json({ success: true, data: lines, count: lines.length });
   });
 
   app.get('/api/survey-requests/:id/polygons', (req, res) => {
     const requestId = req.params.id;
-    const polygons = mockStorageData.polygons.get(requestId) || [];
+    let polygons = mockStorageData.polygons.get(requestId) || [];
+    
+    // Add test data if empty
+    if (polygons.length === 0 && requestId === 'sample-request-001') {
+      const testPolygon = {
+        id: 'test-polygon-1',
+        requestId: requestId,
+        featureCode: 'survey-polygon',
+        points: [
+          { id: 'p1', latitude: 15.36, longitude: 44.17, featureCode: 'test' },
+          { id: 'p2', latitude: 15.37, longitude: 44.18, featureCode: 'test' },
+          { id: 'p3', latitude: 15.38, longitude: 44.17, featureCode: 'test' }
+        ],
+        area: 100,
+        createdAt: new Date().toISOString()
+      };
+      polygons = [testPolygon];
+      mockStorageData.polygons.set(requestId, polygons);
+      console.log('[DEBUG] Added test polygon data');
+    }
+    
     res.json({ success: true, data: polygons, count: polygons.length });
   });
 
@@ -246,7 +284,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const allPoints = mockStorageData.points.get(requestId)!;
     
     // Create lines from consecutive points (groups of 2+)
-    if (req.body.notes?.includes('line') && allPoints.length >= 2) {
+    if ((req.body.notes?.includes('line') || req.body.notes?.includes('خط')) && allPoints.length >= 2) {
       const linePoints = allPoints.slice(-2); // Last 2 points for the line
       const line = {
         id: `line-${Date.now()}`,
@@ -263,8 +301,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log(`[DEBUG] Auto-created line for ${requestId}:`, line);
     }
     
-    // Create polygons from groups of 3+ points
-    if (req.body.notes?.includes('polygon') && allPoints.length >= 3) {
+    // Create polygons from groups of 3+ points  
+    if ((req.body.notes?.includes('polygon') || req.body.notes?.includes('مضلع')) && allPoints.length >= 3) {
       const polygonPoints = allPoints.slice(-3); // Last 3+ points for the polygon
       const polygon = {
         id: `polygon-${Date.now()}`,
@@ -281,6 +319,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       mockStorageData.polygons.get(requestId)!.push(polygon);
       console.log(`[DEBUG] Auto-created polygon for ${requestId}:`, polygon);
     }
+    
+    console.log(`[DEBUG] Notes check: "${req.body.notes}", contains line: ${req.body.notes?.includes('line')}, contains polygon: ${req.body.notes?.includes('polygon')}`);
+    console.log(`[DEBUG] Current lines count: ${mockStorageData.lines.get(requestId)?.length || 0}, polygons count: ${mockStorageData.polygons.get(requestId)?.length || 0}`);
     
     console.log(`[DEBUG] Saved point for ${requestId}:`, mockPoint);
     console.log(`[DEBUG] Total points for ${requestId}:`, mockStorageData.points.get(requestId)!.length);
@@ -300,6 +341,66 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
     return Math.abs(area) / 2;
   }
+
+  // Create shapes from existing points
+  app.post('/api/survey-requests/:id/process-shapes', (req, res) => {
+    const requestId = req.params.id;
+    const allPoints = mockStorageData.points.get(requestId) || [];
+    
+    // Process existing points and create shapes
+    let linesCreated = 0;
+    let polygonsCreated = 0;
+    
+    // Group points by type
+    const linePoints = allPoints.filter(p => p.notes?.includes('line'));
+    const polygonPoints = allPoints.filter(p => p.notes?.includes('polygon'));
+    
+    // Create lines from line points
+    if (linePoints.length >= 2) {
+      for (let i = 0; i < linePoints.length - 1; i++) {
+        const line = {
+          id: `line-${Date.now()}-${i}`,
+          requestId: requestId,
+          featureCode: 'survey-line',
+          points: [linePoints[i], linePoints[i + 1]],
+          createdAt: new Date().toISOString()
+        };
+        
+        if (!mockStorageData.lines.has(requestId)) {
+          mockStorageData.lines.set(requestId, []);
+        }
+        mockStorageData.lines.get(requestId)!.push(line);
+        linesCreated++;
+      }
+    }
+    
+    // Create polygon from polygon points
+    if (polygonPoints.length >= 3) {
+      const polygon = {
+        id: `polygon-${Date.now()}`,
+        requestId: requestId,
+        featureCode: 'survey-polygon',
+        points: polygonPoints,
+        area: calculatePolygonArea(polygonPoints),
+        createdAt: new Date().toISOString()
+      };
+      
+      if (!mockStorageData.polygons.has(requestId)) {
+        mockStorageData.polygons.set(requestId, []);
+      }
+      mockStorageData.polygons.get(requestId)!.push(polygon);
+      polygonsCreated++;
+    }
+    
+    console.log(`[DEBUG] Processed shapes: ${linesCreated} lines, ${polygonsCreated} polygons`);
+    
+    res.json({ 
+      success: true, 
+      linesCreated: linesCreated,
+      polygonsCreated: polygonsCreated,
+      message: `تم إنشاء ${linesCreated} خط و ${polygonsCreated} مضلع`
+    });
+  });
 
   app.post('/api/survey-requests/:id/complete', (req, res) => {
     res.json({ 

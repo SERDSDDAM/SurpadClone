@@ -1,0 +1,99 @@
+Console.js:61 Drawing points in canvas: 10
+Console.js:61 Canvas points ready: 10 (10) [{…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}]
+Console.js:61 Drawing points in canvas: 10
+Console.js:61 Canvas points ready: 10 (10) [{…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}]
+Console.js:61 Drawing points in canvas: 10
+Console.js:61 Canvas points ready: 10 (10) [{…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}]
+Console.js:61 Drawing points in canvas: 10
+Console.js:61 Canvas points ready: 10 (10) [{…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}]
+Console.js:61 Drawing points in canvas: 10
+Console.js:61 Canvas points ready: 10 (10) [{…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}]
+Console.js:61 Drawing points in canvas: 10
+Console.js:61 Canvas points ready: 10 (10) [{…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}]
+Console.js:61 Drawing points in canvas: 10
+Console.js:61 Canvas points ready: 10 (10) [{…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}]
+Console.js:61 Drawing points in canvas: 10
+Console.js:61 Canvas points ready: 10 (10) [{…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}]
+Console.js:61 Drawing points in canvas: 10
+Console.js:61 Canvas points ready: 10 (10) [{…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}]
+Console.js:61 Drawing points in canvas: 10
+Console.js:61 Canvas points ready: 10 (10) [{…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}]
+Console.js:61 Drawing points in canvas: 10
+Console.js:61 Canvas points ready: 10 (10) [{…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}]
+Console.js:61 Drawing points in canvas: 10
+Console.js:61 Canvas points ready: 10 (10) [{…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}]
+Console.js:61 Drawing points in canvas: 10
+Console.js:61 Canvas points ready: 10 (10) [{…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}]
+Console.js:61 Drawing points in canvas: 10
+Console.js:61 Canvas points ready: 10 (10) [{…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}]
+Console.js:61 Drawing points in canvas: 10
+Console.js:61 Canvas points ready: 10 (10) [{…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}]
+Console.js:61 Drawing points in canvas: 10
+Console.js:61 Canvas points ready: 10 (10) [{…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}]
+Console.js:61 Drawing points in canvas: 10
+Console.js:61 Canvas points ready: 10 (10) [{…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}]
+Console.js:61 Drawing points in canvas: 10
+Console.js:61 Canvas points ready: 10 (10) [{…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}]
+Console.js:61 Drawing points in canvas: 10
+Console.js:61 Canvas points ready: 10 (10) [{…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}]
+Console.js:61 Drawing points in canvas: 10
+Console.js:61 Canvas points ready: 10 (10) [{…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}]0: {id: '1756926846557', x: 0, y: 0, lat: 15.380841441441442, lng: 44.19025254823079, …}1: {id: '1756926848366', x: 0, y: 0, lat: 15.3784990990991, lng: 44.17932106610604, …}2: {id: '1756926850452', x: 0, y: 0, lat: 15.372282882882883, lng: 44.18240430465405, …}3: {id: '1756926870852', x: 0, y: 0, lat: 15.353904504504506, lng: 44.17838675139453, …}4: {id: '1756926872501', x: 0, y: 0, lat: 15.352823423423423, lng: 44.16399830483717, …}5: {id: '1756926873996', x: 0, y: 0, lat: 15.360481081081081, lng: 44.16586693426021, …}6: {id: '1756926894340', x: 0, y: 0, lat: 15.3594, lng: 44.21258266983604, …}7: {id: '1756926895888', x: 0, y: 0, lat: 15.358499099099099, lng: 44.19585843649989, …}8: {id: '1756926899099', x: 0, y: 0, lat: 15.350300900900901, lng: 44.19772706592292, …}9: {id: '1756926900637', x: 0, y: 0, lat: 15.351021621621623, lng: 44.216319928682104, …}length: 10[[Prototype]]: Array(0)
+Console.js:61 Drawing points in canvas: 10
+Console.js:61 Canvas points ready: 10 (10) [{…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}]
+Console.js:61 Drawing points in canvas: 10
+Console.js:61 Canvas points ready: 10 (10) [{…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}]
+Console.js:61 Drawing points in canvas: 10
+Console.js:61 Canvas points ready: 10 (10) [{…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}]
+Console.js:61 Drawing points in canvas: 10
+Console.js:61 Canvas points ready: 10 (10) [{…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}]
+Console.js:61 Drawing points in canvas: 10
+Console.js:61 Canvas points ready: 10 (10) [{…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}]
+Console.js:61 Drawing points in canvas: 10
+Console.js:61 Canvas points ready: 10 (10) [{…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}]
+Console.js:61 Drawing points in canvas: 10
+Console.js:61 Canvas points ready: 10 (10) [{…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}]
+Console.js:61 Drawing points in canvas: 10
+Console.js:61 Canvas points ready: 10 (10) [{…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}]
+Console.js:61 Drawing points in canvas: 10
+Console.js:61 Canvas points ready: 10 (10) [{…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}]
+Console.js:61 Drawing points in canvas: 10
+Console.js:61 Canvas points ready: 10 (10) [{…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}]
+Console.js:61 Drawing points in canvas: 10
+Console.js:61 Canvas points ready: 10 (10) [{…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}]
+Console.js:61 Drawing points in canvas: 10
+Console.js:61 Canvas points ready: 10 (10) [{…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}]
+Console.js:61 Drawing points in canvas: 10
+Console.js:61 Canvas points ready: 10 (10) [{…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}]
+Console.js:61 Drawing points in canvas: 10
+Console.js:61 Canvas points ready: 10 (10) [{…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}]
+Console.js:61 Drawing points in canvas: 10
+Console.js:61 Canvas points ready: 10 (10) [{…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}]
+Console.js:61 Drawing points in canvas: 10
+Console.js:61 Canvas points ready: 10 (10) [{…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}]
+Console.js:61 Drawing points in canvas: 10
+Console.js:61 Canvas points ready: 10 (10) [{…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}]
+Console.js:61 Drawing points in canvas: 10
+Console.js:61 Canvas points ready: 10 (10) [{…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}]
+Console.js:61 Drawing points in canvas: 10
+Console.js:61 Canvas points ready: 10 (10) [{…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}]
+Console.js:61 Drawing points in canvas: 10
+Console.js:61 Canvas points ready: 10 (10) [{…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}]
+Console.js:61 Drawing points in canvas: 10
+Console.js:61 Canvas points ready: 10 (10) [{…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}]
+Console.js:61 Drawing points in canvas: 10
+Console.js:61 Canvas points ready: 10 (10) [{…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}]
+Console.js:61 Drawing points in canvas: 10
+Console.js:61 Canvas points ready: 10 (10) [{…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}]
+Console.js:61 Drawing points in canvas: 10
+Console.js:61 Canvas points ready: 10 (10) [{…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}]
+Console.js:61 Drawing points in canvas: 10
+Console.js:61 Canvas points ready: 10 (10) [{…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}]
+Console.js:61 Drawing points in canvas: 10
+Console.js:61 Canvas points ready: 10 (10) [{…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}]
+Console.js:61 Drawing points in canvas: 10
+Console.js:61 Canvas points ready: 10 (10) [{…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}]
+Console.js:61 Drawing points in canvas: 10
+Console.js:61 Canvas points ready: 10 (10) [{…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}]
+Console.js:61 Drawing points in canvas: 10
+Console.js:61 Canvas points ready: 10 (10) [{…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}]
+Console.js:61 Drawing points in canvas: 10
