@@ -649,7 +649,7 @@ export const insertUserSchema = createInsertSchema(users).omit({
 
 export const insertAuditLogSchema = createInsertSchema(auditLogs).omit({
   id: true,
-  createdAt: true,
+  timestamp: true,
 });
 
 export const insertPasswordResetTokenSchema = createInsertSchema(passwordResetTokens).omit({

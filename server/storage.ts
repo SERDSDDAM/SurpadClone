@@ -592,7 +592,7 @@ export class MemStorage implements IStorage {
         status: "approved",
         priority: "normal",
         attachments: [],
-        assignedDate: "2025-01-20",
+        reviewDate: "2025-01-20",
         completedDate: "2025-01-22",
         reviewedDate: "2025-01-24",
         reviewedBy: "م. عبدالله الصالح",
@@ -992,19 +992,24 @@ export class MemStorage implements IStorage {
     return baseFee + administrativeFee + inspectionFee;
   }
 
-  async getBuildingPermit(id: string): Promise<BuildingPermit | undefined> {
-    return this.buildingPermits.find(permit => permit.id === id);
-  }
-
   async getBuildingPermitsByApplicant(applicantId: string): Promise<BuildingPermit[]> {
     return this.buildingPermits.filter(permit => permit.applicantId === applicantId);
   }
 
-  async createBuildingPermit(permitData: InsertBuildingPermit): Promise<BuildingPermit> {
-    const permit: BuildingPermit = {
+  // Occupancy Certificates methods
+  async getOccupancyCertificates(): Promise<OccupancyCertificate[]> {
+    return this.occupancyCertificates;
+  }
+
+  async getOccupancyCertificate(id: string): Promise<OccupancyCertificate | undefined> {
+    return this.occupancyCertificates.find(cert => cert.id === id);
+  }
+
+  async createOccupancyCertificate(certData: InsertOccupancyCertificate): Promise<OccupancyCertificate> {
+    const certificate: OccupancyCertificate = {
       id: randomUUID(),
-      permitNumber: `BP-2025-${String(this.buildingPermits.length + 1).padStart(4, '0')}`,
-      status: "submitted",
+      certificateNumber: `OC-2025-${String(this.occupancyCertificates.length + 1).padStart(4, '0')}`,
+      status: "draft",
       priority: "normal",
       engineeringOfficeId: null,
       contractorId: null,
@@ -1020,35 +1025,25 @@ export class MemStorage implements IStorage {
       fees: null,
       paidAmount: 0,
       paymentStatus: "pending",
-      ...permitData,
-      submitDate: new Date(),
+      ...certData,
       createdAt: new Date(),
       updatedAt: new Date(),
     };
-    this.buildingPermits.push(permit);
-    return permit;
+    this.occupancyCertificates.push(certificate);
+    return certificate;
   }
 
-  async updateBuildingPermit(id: string, permitData: Partial<BuildingPermit>): Promise<BuildingPermit | undefined> {
-    const index = this.buildingPermits.findIndex(permit => permit.id === id);
+  async updateOccupancyCertificate(id: string, certData: Partial<OccupancyCertificate>): Promise<OccupancyCertificate | undefined> {
+    const index = this.occupancyCertificates.findIndex(cert => cert.id === id);
     if (index === -1) return undefined;
     
-    this.buildingPermits[index] = {
-      ...this.buildingPermits[index],
-      ...permitData,
+    this.occupancyCertificates[index] = {
+      ...this.occupancyCertificates[index],
+      ...certData,
       updatedAt: new Date(),
     };
     
-    return this.buildingPermits[index];
-  }
-
-  // Occupancy Certificates methods
-  async getOccupancyCertificates(): Promise<OccupancyCertificate[]> {
-    return this.occupancyCertificates;
-  }
-
-  async getOccupancyCertificate(id: string): Promise<OccupancyCertificate | undefined> {
-    return this.occupancyCertificates.find(cert => cert.id === id);
+    return this.occupancyCertificates[index];
   }
 
   async createOccupancyCertificate(certData: InsertOccupancyCertificate): Promise<OccupancyCertificate> {
