@@ -1046,48 +1046,7 @@ export class MemStorage implements IStorage {
     return this.occupancyCertificates[index];
   }
 
-  async createOccupancyCertificate(certData: InsertOccupancyCertificate): Promise<OccupancyCertificate> {
-    const certificate: OccupancyCertificate = {
-      id: randomUUID(),
-      certificateNumber: `OC-2025-${String(this.occupancyCertificates.length + 1).padStart(4, '0')}`,
-      status: "submitted",
-      buildingPermitId: null,
-      coordinates: null,
-      inspectionDate: null,
-      inspectorName: null,
-      safetyCompliance: false,
-      structuralCompliance: false,
-      fireCompliante: false,
-      electricalCompliance: false,
-      plumbingCompliance: false,
-      issueDate: null,
-      expiryDate: null,
-      issuedBy: null,
-      inspectionNotes: null,
-      documents: [],
-      fees: null,
-      paidAmount: 0,
-      paymentStatus: "pending",
-      ...certData,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    };
-    this.occupancyCertificates.push(certificate);
-    return certificate;
-  }
-
-  async updateOccupancyCertificate(id: string, certData: Partial<OccupancyCertificate>): Promise<OccupancyCertificate | undefined> {
-    const index = this.occupancyCertificates.findIndex(cert => cert.id === id);
-    if (index === -1) return undefined;
-    
-    this.occupancyCertificates[index] = {
-      ...this.occupancyCertificates[index],
-      ...certData,
-      updatedAt: new Date(),
-    };
-    
-    return this.occupancyCertificates[index];
-  }
+  // Duplicate functions removed - kept original implementation above
 
   // Violation Reports methods
   async getViolationReports(): Promise<ViolationReport[]> {

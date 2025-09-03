@@ -10,6 +10,7 @@ import { generatePointNumber, generateLineNumber, generatePolygonNumber, feature
 import { useWebSocket } from "@/hooks/use-websocket";
 import { apiRequest } from "@/lib/queryClient";
 import { SurveyPoint, SurveyLine, SurveyPolygon, SurveyRequest } from "@shared/schema";
+import { toSafeArray, logSafely } from "@/lib/safe-adapters";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -100,10 +101,17 @@ export default function FieldApp() {
     enabled: !!requestId,
   });
 
-  // Extract arrays from API responses safely - simplified approach
-  const surveyPoints = pointsResponse?.data || [];
-  const surveyLines = linesResponse?.data || [];
-  const surveyPolygons = polygonsResponse?.data || [];
+  // Extract arrays from API responses safely - using toSafeArray adapter
+  const surveyPoints = toSafeArray<SurveyPoint>(pointsResponse);
+  const surveyLines = toSafeArray<SurveyLine>(linesResponse);
+  const surveyPolygons = toSafeArray<SurveyPolygon>(polygonsResponse);
+
+  // Log data safely for debugging (from console logs we see this works)
+  useEffect(() => {
+    logSafely("Survey lines received", `${surveyLines.length} lines: ${JSON.stringify(surveyLines)}`);
+    logSafely("Survey polygons received", `${surveyPolygons.length} polygons: ${JSON.stringify(surveyPolygons)}`);
+    logSafely("Final canvas data", `Lines: ${surveyLines.length}, Polygons: ${surveyPolygons.length}`);
+  }, [surveyLines, surveyPolygons]);
 
   // Mutations for creating survey data
   const createPointMutation = useMutation({
