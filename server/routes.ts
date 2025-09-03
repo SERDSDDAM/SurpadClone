@@ -176,6 +176,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
     });
   });
   
+  // Mock data storage for field app testing
+  const mockStorageData = {
+    points: new Map<string, any[]>(),
+    lines: new Map<string, any[]>(),
+    polygons: new Map<string, any[]>()
+  };
+
   // Mock endpoints for field app testing (BEFORE main survey routes)
   app.get('/api/survey-requests/:id', (req, res) => {
     const mockRequest = {
@@ -196,18 +203,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   app.get('/api/survey-requests/:id/points', (req, res) => {
-    res.json({ success: true, data: [], count: 0 });
+    const requestId = req.params.id;
+    const points = mockStorageData.points.get(requestId) || [];
+    console.log(`[DEBUG] Getting points for ${requestId}:`, points);
+    res.json({ success: true, data: points, count: points.length });
   });
 
   app.get('/api/survey-requests/:id/lines', (req, res) => {
-    res.json({ success: true, data: [], count: 0 });
+    const requestId = req.params.id;
+    const lines = mockStorageData.lines.get(requestId) || [];
+    res.json({ success: true, data: lines, count: lines.length });
   });
 
   app.get('/api/survey-requests/:id/polygons', (req, res) => {
-    res.json({ success: true, data: [], count: 0 });
+    const requestId = req.params.id;
+    const polygons = mockStorageData.polygons.get(requestId) || [];
+    res.json({ success: true, data: polygons, count: polygons.length });
   });
 
   app.post('/api/survey-requests/:id/points', (req, res) => {
+    const requestId = req.params.id;
     const mockPoint = {
       id: Date.now().toString(),
       pointNumber: req.body.pointNumber,
@@ -220,6 +235,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       notes: req.body.notes,
       createdAt: new Date().toISOString()
     };
+    
+    // Store the point
+    if (!mockStorageData.points.has(requestId)) {
+      mockStorageData.points.set(requestId, []);
+    }
+    mockStorageData.points.get(requestId)!.push(mockPoint);
+    
+    console.log(`[DEBUG] Saved point for ${requestId}:`, mockPoint);
+    console.log(`[DEBUG] Total points for ${requestId}:`, mockStorageData.points.get(requestId)!.length);
+    
     res.json({ success: true, point: mockPoint });
   });
 

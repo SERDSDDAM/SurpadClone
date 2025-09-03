@@ -121,10 +121,13 @@ export function InteractiveCanvas({
 
   // Draw points
   const drawPoints = useCallback((ctx: CanvasRenderingContext2D) => {
-    console.log('Drawing points in canvas:', points.length, points);
+    // Only log when we have points to reduce console spam
+    if (points.length > 0) {
+      console.log('Drawing points in canvas:', points.length);
+    }
+    
     points.forEach((point, index) => {
       const canvasPos = geoToCanvas(point.lat, point.lng);
-      console.log(`Point ${index}:`, point, 'Canvas position:', canvasPos);
       
       ctx.save();
       ctx.fillStyle = point.color || '#3b82f6';

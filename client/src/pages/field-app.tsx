@@ -264,8 +264,7 @@ export default function FieldApp() {
   // Calculate completion percentage (placeholder logic)
   const completionPercentage = Math.min(100, (surveyStats.pointsCount + surveyStats.linesCount + surveyStats.polygonsCount) * 5);
 
-  // Convert survey data to canvas format
-  console.log('Raw survey points from API:', surveyPoints);
+  // Convert survey data to canvas format - reduced logging
   const canvasPoints: CanvasPoint[] = surveyPoints.map((point: any, index: number) => {
     const canvasPoint = {
       id: point.id || `point-${index}`,
@@ -278,10 +277,13 @@ export default function FieldApp() {
              (point.featureCode || '').includes('tree') ? '#22c55e' : 
              '#3b82f6'
     };
-    console.log(`Converting point ${index}:`, point, '->', canvasPoint);
     return canvasPoint;
   });
-  console.log('Final canvas points:', canvasPoints);
+  
+  // Only log when we have points to avoid spam
+  if (canvasPoints.length > 0) {
+    console.log('Canvas points ready:', canvasPoints.length, canvasPoints);
+  }
 
   const canvasLines: CanvasLine[] = surveyLines.map((line: any) => ({
     id: line.id,
