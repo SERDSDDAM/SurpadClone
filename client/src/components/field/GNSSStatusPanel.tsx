@@ -56,6 +56,14 @@ export default function GNSSStatusPanel({ currentFix, onFixUpdate }: GNSSStatusP
       signalStrength: 92
     },
     {
+      id: 'leica-gs18t',
+      name: 'Leica GS18T',
+      type: 'RTK',
+      connected: false,
+      batteryLevel: 72,
+      signalStrength: 88
+    },
+    {
       id: 'internal-gps',
       name: 'GPS داخلي',
       type: 'Standard',
