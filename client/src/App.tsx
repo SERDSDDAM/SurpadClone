@@ -278,8 +278,8 @@ function Router() {
           <Route path="/simple-digitization" component={SimpleDigitizationTool} />
           <Route path="/qgis-web-tool" component={QGISWebTool} />
           <Route path="/professionals" component={ProfessionalsManagement} />
-          <Route path="/field-app" component={MinimalTest} />
-          <Route path="/field-app-test" component={SimpleFieldTest} />
+          <Route path="/field-app" component={FieldApp} />
+          <Route path="/field-app-simple" component={SimpleFieldTest} />
           <Route path="/field-app-full" component={FieldApp} />
           <Route path="/clean-field-app" component={CleanFieldApp} />
           <Route path="/advanced-field-app" component={AdvancedFieldApp} />
