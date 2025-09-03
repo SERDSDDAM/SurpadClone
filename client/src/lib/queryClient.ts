@@ -14,13 +14,20 @@ export async function apiRequest(
   // إضافة التوكن تلقائياً للطلبات المحمية
   const token = localStorage.getItem('auth_token');
   
+  // تحويل البيانات إلى JSON إذا كانت object
+  let body = options?.body;
+  if (body && typeof body === 'object' && !(body instanceof FormData) && !(body instanceof URLSearchParams)) {
+    body = JSON.stringify(body);
+  }
+  
   const res = await fetch(url, {
     headers: { 
       "Content-Type": "application/json",
       ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
     },
     credentials: "include",
-    ...options
+    ...options,
+    body
   });
 
   await throwIfResNotOk(res);

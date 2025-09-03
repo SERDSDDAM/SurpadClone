@@ -48,10 +48,18 @@ interface GNSSStatusPanelProps {
 export default function GNSSStatusPanel({ currentFix, onFixUpdate }: GNSSStatusPanelProps) {
   const [devices, setDevices] = useState<GNSSDevice[]>([
     {
+      id: 'stonex-s900a',
+      name: 'STONEX GNSS S900A',
+      type: 'RTK',
+      connected: true,
+      batteryLevel: 90,
+      signalStrength: 95
+    },
+    {
       id: 'trimble-r12',
       name: 'Trimble R12',
       type: 'RTK',
-      connected: true,
+      connected: false,
       batteryLevel: 85,
       signalStrength: 92
     },
@@ -72,7 +80,7 @@ export default function GNSSStatusPanel({ currentFix, onFixUpdate }: GNSSStatusP
     }
   ]);
 
-  const [selectedDevice, setSelectedDevice] = useState<string>('trimble-r12');
+  const [selectedDevice, setSelectedDevice] = useState<string>('stonex-s900a');
   const [isSimulation, setIsSimulation] = useState(true);
   const [rtkAge, setRtkAge] = useState<number>(2.3); // Age of RTK correction in seconds
 
