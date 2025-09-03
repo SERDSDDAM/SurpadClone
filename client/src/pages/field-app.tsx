@@ -70,39 +70,40 @@ export default function FieldApp() {
     enabled: !!requestId,
   });
 
-  // WebSocket for real-time updates
-  const { isConnected: wsConnected } = useWebSocket({
-    onMessage: (data) => {
-      if (data.type === "POINT_ADDED") {
-        queryClient.invalidateQueries({ queryKey: ["/api/survey-requests", requestId, "points"] });
-      } else if (data.type === "LINE_ADDED") {
-        queryClient.invalidateQueries({ queryKey: ["/api/survey-requests", requestId, "lines"] });
-      } else if (data.type === "POLYGON_ADDED") {
-        queryClient.invalidateQueries({ queryKey: ["/api/survey-requests", requestId, "polygons"] });
-      }
-    },
-  });
+  // WebSocket for real-time updates (temporarily disabled for testing)
+  const wsConnected = false; // Disabled WebSocket for debugging
+  // const { isConnected: wsConnected } = useWebSocket({
+  //   onMessage: (data) => {
+  //     if (data.type === "POINT_ADDED") {
+  //       queryClient.invalidateQueries({ queryKey: ["/api/survey-requests", requestId, "points"] });
+  //     } else if (data.type === "LINE_ADDED") {
+  //       queryClient.invalidateQueries({ queryKey: ["/api/survey-requests", requestId, "lines"] });
+  //     } else if (data.type === "POLYGON_ADDED") {
+  //       queryClient.invalidateQueries({ queryKey: ["/api/survey-requests", requestId, "polygons"] });
+  //     }
+  //   },
+  // });
 
-  // Query survey data for this specific request
-  const { data: pointsResponse } = useQuery({
+  // Query survey data for this specific request with proper typing
+  const { data: pointsResponse } = useQuery<{success: boolean, data: any[], count: number}>({
     queryKey: ["/api/survey-requests", requestId, "points"],
     enabled: !!requestId,
   });
 
-  const { data: linesResponse } = useQuery({
+  const { data: linesResponse } = useQuery<{success: boolean, data: any[], count: number}>({
     queryKey: ["/api/survey-requests", requestId, "lines"],
     enabled: !!requestId,
   });
 
-  const { data: polygonsResponse } = useQuery({
+  const { data: polygonsResponse } = useQuery<{success: boolean, data: any[], count: number}>({
     queryKey: ["/api/survey-requests", requestId, "polygons"],
     enabled: !!requestId,
   });
 
-  // Extract arrays from API responses safely
-  const surveyPoints = Array.isArray(pointsResponse?.data) ? pointsResponse.data : (Array.isArray(pointsResponse) ? pointsResponse : []);
-  const surveyLines = Array.isArray(linesResponse?.data) ? linesResponse.data : (Array.isArray(linesResponse) ? linesResponse : []);
-  const surveyPolygons = Array.isArray(polygonsResponse?.data) ? polygonsResponse.data : (Array.isArray(polygonsResponse) ? polygonsResponse : []);
+  // Extract arrays from API responses safely - simplified approach
+  const surveyPoints = pointsResponse?.data || [];
+  const surveyLines = linesResponse?.data || [];
+  const surveyPolygons = polygonsResponse?.data || [];
 
   // Mutations for creating survey data
   const createPointMutation = useMutation({
@@ -264,30 +265,30 @@ export default function FieldApp() {
   const completionPercentage = Math.min(100, (surveyStats.pointsCount + surveyStats.linesCount + surveyStats.polygonsCount) * 5);
 
   // Convert survey data to canvas format
-  const canvasPoints: CanvasPoint[] = surveyPoints.map(point => ({
+  const canvasPoints: CanvasPoint[] = surveyPoints.map((point: any) => ({
     id: point.id,
     x: 0, // Will be calculated by canvas
     y: 0,
     lat: point.latitude,
     lng: point.longitude,
-    featureCode: point.featureCode,
-    color: point.featureCode.includes('building') ? '#ef4444' : 
-           point.featureCode.includes('tree') ? '#22c55e' : 
+    featureCode: point.featureCode || '',
+    color: (point.featureCode || '').includes('building') ? '#ef4444' : 
+           (point.featureCode || '').includes('tree') ? '#22c55e' : 
            '#3b82f6'
   }));
 
-  const canvasLines: CanvasLine[] = surveyLines.map(line => ({
+  const canvasLines: CanvasLine[] = surveyLines.map((line: any) => ({
     id: line.id,
     points: [], // Would be populated from line points
-    featureCode: line.featureCode,
+    featureCode: line.featureCode || '',
     color: '#22c55e',
     length: 0
   }));
 
-  const canvasPolygons: CanvasPolygon[] = surveyPolygons.map(polygon => ({
+  const canvasPolygons: CanvasPolygon[] = surveyPolygons.map((polygon: any) => ({
     id: polygon.id,
     points: [], // Would be populated from polygon points  
-    featureCode: polygon.featureCode,
+    featureCode: polygon.featureCode || '',
     color: '#8b5cf6',
     area: polygon.area ?? undefined
   }));
@@ -295,14 +296,16 @@ export default function FieldApp() {
   // معالجة إكمال المسح مع بوابة الجودة
   const completeSurveyMutation = useMutation({
     mutationFn: async () => {
+      const requestBody = {
+        completedBy: 'المساح الميداني',
+        completionNotes: 'تم إكمال المسح الميداني بنجاح',
+        finalLocation: advancedGPS,
+        sessionStats: surveyStats
+      };
       return apiRequest(`/api/survey-requests/${requestId}/complete`, {
         method: 'POST',
-        body: {
-          completedBy: 'المساح الميداني',
-          completionNotes: 'تم إكمال المسح الميداني بنجاح',
-          finalLocation: advancedGPS,
-          sessionStats: surveyStats
-        }
+        body: JSON.stringify(requestBody),
+        headers: { 'Content-Type': 'application/json' }
       });
     },
     onSuccess: () => {
@@ -583,8 +586,31 @@ export default function FieldApp() {
 
         {/* GNSS Status Panel */}
         <GNSSStatusPanel 
-          currentFix={advancedGPS}
-          onFixUpdate={setAdvancedGPS}
+          currentFix={{
+            type: advancedGPS.fixType,
+            latitude: advancedGPS.latitude,
+            longitude: advancedGPS.longitude,
+            altitude: advancedGPS.altitude,
+            accuracy: advancedGPS.accuracy,
+            hdop: advancedGPS.hdop,
+            vdop: advancedGPS.vdop,
+            pdop: advancedGPS.pdop,
+            satelliteCount: advancedGPS.satelliteCount,
+            timestamp: advancedGPS.timestamp
+          }}
+          onFixUpdate={(fix) => setAdvancedGPS(prev => ({
+            ...prev,
+            fixType: fix.type,
+            latitude: fix.latitude,
+            longitude: fix.longitude,
+            altitude: fix.altitude,
+            accuracy: fix.accuracy,
+            hdop: fix.hdop,
+            vdop: fix.vdop,
+            pdop: fix.pdop,
+            satelliteCount: fix.satelliteCount,
+            timestamp: fix.timestamp
+          }))}
         />
       </div>
 

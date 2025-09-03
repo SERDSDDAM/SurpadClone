@@ -42,6 +42,8 @@ import CleanFieldApp from "@/pages/clean-field-app";
 import SurveyorDashboard from "@/pages/surveyor-dashboard";
 import Review from "@/pages/review";
 import AdvancedFieldApp from "@/pages/field-app-advanced";
+import SimpleFieldTest from "@/pages/simple-field-test";
+import MinimalTest from "@/pages/minimal-test";
 import SurveyRequestForm from "@/pages/survey/survey-request-form";
 import SurveyDashboard from "@/pages/survey/survey-dashboard";
 import CitizenPortal from "@/pages/citizen-portal";
@@ -276,7 +278,9 @@ function Router() {
           <Route path="/simple-digitization" component={SimpleDigitizationTool} />
           <Route path="/qgis-web-tool" component={QGISWebTool} />
           <Route path="/professionals" component={ProfessionalsManagement} />
-          <Route path="/field-app" component={FieldApp} />
+          <Route path="/field-app" component={MinimalTest} />
+          <Route path="/field-app-test" component={SimpleFieldTest} />
+          <Route path="/field-app-full" component={FieldApp} />
           <Route path="/clean-field-app" component={CleanFieldApp} />
           <Route path="/advanced-field-app" component={AdvancedFieldApp} />
           <Route path="/survey-request-form" component={SurveyRequestForm} />

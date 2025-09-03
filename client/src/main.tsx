@@ -54,9 +54,29 @@ function ErrorFallback({ error }: { error: Error }) {
   );
 }
 
+// Direct test without App component
+function DirectTest() {
+  return (
+    <div style={{
+      minHeight: '100vh',
+      backgroundColor: 'blue',
+      color: 'white',
+      padding: '20px',
+      fontSize: '30px',
+      textAlign: 'center'
+    }}>
+      <h1>✅ اختبار React مباشر</h1>
+      <div>إذا كنت ترى هذا، فإن React يعمل!</div>
+      <div>الوقت: {new Date().toLocaleString('ar-YE')}</div>
+    </div>
+  );
+}
+
 try {
-  root.render(<App />);
+  console.log('Attempting to render DirectTest...');
+  root.render(<DirectTest />);
+  console.log('DirectTest rendered successfully');
 } catch (error) {
-  console.error('Error rendering app:', error);
+  console.error('Error rendering DirectTest:', error);
   root.render(<ErrorFallback error={error as Error} />);
 }

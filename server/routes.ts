@@ -176,7 +176,62 @@ export async function registerRoutes(app: Express): Promise<Server> {
     });
   });
   
-  // Phase 1 Survey Routes - HIGHEST PRIORITY
+  // Mock endpoints for field app testing (BEFORE main survey routes)
+  app.get('/api/survey-requests/:id', (req, res) => {
+    const mockRequest = {
+      id: req.params.id,
+      requestNumber: "SR-2025-001",
+      title: "مسح ميداني تجريبي",
+      location: "صنعاء - معين",
+      status: "field_survey_in_progress",
+      applicantName: "أحمد محمد علي",
+      propertyType: "residential",
+      governorate: "صنعاء",
+      directorate: "معين",
+      neighborhood: "السبعين",
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+    res.json(mockRequest);
+  });
+
+  app.get('/api/survey-requests/:id/points', (req, res) => {
+    res.json({ success: true, data: [], count: 0 });
+  });
+
+  app.get('/api/survey-requests/:id/lines', (req, res) => {
+    res.json({ success: true, data: [], count: 0 });
+  });
+
+  app.get('/api/survey-requests/:id/polygons', (req, res) => {
+    res.json({ success: true, data: [], count: 0 });
+  });
+
+  app.post('/api/survey-requests/:id/points', (req, res) => {
+    const mockPoint = {
+      id: Date.now().toString(),
+      pointNumber: req.body.pointNumber,
+      latitude: req.body.latitude,
+      longitude: req.body.longitude,
+      elevation: req.body.elevation,
+      accuracy: req.body.accuracy,
+      featureCode: req.body.featureCode,
+      capturedBy: req.body.capturedBy,
+      notes: req.body.notes,
+      createdAt: new Date().toISOString()
+    };
+    res.json({ success: true, point: mockPoint });
+  });
+
+  app.post('/api/survey-requests/:id/complete', (req, res) => {
+    res.json({ 
+      success: true, 
+      message: "تم إكمال المسح بنجاح",
+      request: { status: "completed" }
+    });
+  });
+
+  // Phase 1 Survey Routes - AFTER mock routes
   app.use('/api', surveyRoutes);
   
   // 📄 PDF Routes - مسارات PDF منفصلة ومبسطة
