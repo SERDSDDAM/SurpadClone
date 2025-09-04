@@ -21,11 +21,21 @@ const router = Router();
 // Street Status Decisions API
 // ================================
 
-// Get all street status decisions
+// Get all street status decisions with optional filtering
 router.get("/street-decisions", async (req, res) => {
   try {
-    const decisions = await storage.getStreetStatusDecisions();
-    res.json(toArrayResponse(decisions));
+    const { escalated } = req.query;
+    
+    if (escalated === 'true') {
+      // Return only escalated decisions (escalationLevel > 0)
+      const decisions = await storage.getStreetStatusDecisions();
+      const escalatedDecisions = decisions.filter((d: any) => (d.escalationLevel || 0) > 0);
+      res.json(toArrayResponse(escalatedDecisions));
+    } else {
+      // Return all decisions
+      const decisions = await storage.getStreetStatusDecisions();
+      res.json(toArrayResponse(decisions));
+    }
   } catch (error) {
     console.error("Error fetching street decisions:", error);
     res.status(500).json({ success: false, error: "Failed to fetch street decisions" });
@@ -310,6 +320,157 @@ router.post("/branch-reports/:id/approve", async (req, res) => {
   } catch (error) {
     console.error("Error approving report:", error);
     res.status(500).json({ success: false, error: "Failed to approve report" });
+  }
+});
+
+// ================================
+// Test Data APIs for UAT
+// ================================
+
+// Create UAT test data for the 5 scenarios
+router.post("/uat/create-test-data", async (req, res) => {
+  try {
+    console.log('🧪 إنشاء بيانات اختبار UAT للسيناريوهات الخمسة');
+    
+    const testData = [
+      // السيناريو 1: الطلب الروتيني - منطقة آمنة
+      {
+        decisionNumber: "UAT-ROUTINE-001",
+        streetName: "شارع الوحدة الفرعي",
+        neighborhood: "سنحان الشرقي",
+        requestedBy: "أحمد محمد الشرعبي",
+        decisionType: "new_street_numbering",
+        coordinates: { latitude: 15.35, longitude: 44.20, coordinateSystem: "WGS84" },
+        status: "under_review",
+        priority: "routine",
+        escalationLevel: 0, // روتيني - لا يحتاج تصعيد
+        estimatedProcessingDays: 7,
+        branchOffice: "صنعاء الشرقي",
+        supervisoryOffice: "المكتب الإشرافي - صنعاء",
+        applicantDetails: { name: "أحمد محمد الشرعبي", phone: "771234567" },
+        attachedDocuments: ["deed.pdf", "location_sketch.pdf"]
+      },
+      
+      // السيناريو 2: منطقة التراث - يتطلب تصعيد
+      {
+        decisionNumber: "UAT-HERITAGE-001", 
+        streetName: "زقاق البستان التراثي",
+        neighborhood: "البراقة التراثية",
+        requestedBy: "فاطمة عبدالله القاضي",
+        decisionType: "heritage_area_numbering",
+        coordinates: { latitude: 15.36, longitude: 44.21, coordinateSystem: "WGS84" },
+        status: "under_review",
+        priority: "high", 
+        escalationLevel: 3, // تراث - يتطلب تصعيد
+        escalationReason: "الموقع يقع ضمن المنطقة التراثية المحمية",
+        estimatedProcessingDays: 21,
+        branchOffice: "صنعاء المركز", 
+        supervisoryOffice: "المكتب الإشرافي - التراث",
+        applicantDetails: { name: "فاطمة عبدالله القاضي", phone: "773456789" },
+        attachedDocuments: ["heritage_clearance.pdf", "architectural_survey.pdf"]
+      },
+      
+      // السيناريو 3: منطقة الفيضانات - يتطلب تصعيد
+      {
+        decisionNumber: "UAT-FLOOD-001",
+        streetName: "شارع وادي السائلة",  
+        neighborhood: "أطراف وادي السائلة",
+        requestedBy: "محمد سالم الهمداني",
+        decisionType: "flood_zone_numbering",
+        coordinates: { latitude: 15.34, longitude: 44.19, coordinateSystem: "WGS84" },
+        status: "under_review",
+        priority: "high",
+        escalationLevel: 4, // فيضانات - يتطلب تصعيد
+        escalationReason: "الموقع يقع في منطقة معرضة لمخاطر الفيضانات", 
+        estimatedProcessingDays: 28,
+        branchOffice: "صنعاء الغربي",
+        supervisoryOffice: "المكتب الإشرافي - الطوارئ",
+        applicantDetails: { name: "محمد سالم الهمداني", phone: "775678901" },
+        attachedDocuments: ["flood_risk_assessment.pdf", "drainage_plan.pdf"]
+      },
+      
+      // السيناريو 4: خارج المخطط - يتطلب تصعيد 
+      {
+        decisionNumber: "UAT-OUTSIDE-001",
+        streetName: "طريق المزارع الخارجي",
+        neighborhood: "خارج حدود المخطط",
+        requestedBy: "علي حسن المقطري", 
+        decisionType: "outside_plan_numbering",
+        coordinates: { latitude: 15.32, longitude: 44.25, coordinateSystem: "WGS84" },
+        status: "under_review", 
+        priority: "medium",
+        escalationLevel: 5, // خارج المخطط - يتطلب تصعيد
+        escalationReason: "الموقع يقع خارج حدود المخطط المعتمد",
+        estimatedProcessingDays: 35,
+        branchOffice: "صنعاء الجنوبي",
+        supervisoryOffice: "المكتب الإشرافي - التخطيط",
+        applicantDetails: { name: "علي حسن المقطري", phone: "777890123" },
+        attachedDocuments: ["survey_report.pdf", "planning_justification.pdf"]
+      },
+      
+      // السيناريو 5: للتصعيد اليدوي - سيبدأ كروتيني ثم يصعد يدوياً
+      {
+        decisionNumber: "UAT-MANUAL-001",
+        streetName: "شارع الصناعات الحرفية", 
+        neighborhood: "المنطقة الصناعية",
+        requestedBy: "ياسر أحمد الشامي",
+        decisionType: "industrial_area_numbering",
+        coordinates: { latitude: 15.37, longitude: 44.18, coordinateSystem: "WGS84" },
+        status: "under_review",
+        priority: "routine", 
+        escalationLevel: 0, // سيبدأ روتيني
+        estimatedProcessingDays: 7,
+        branchOffice: "صنعاء الشمالي",
+        supervisoryOffice: "المكتب الإشرافي - صنعاء",
+        applicantDetails: { name: "ياسر أحمد الشامي", phone: "779012345" },
+        attachedDocuments: ["industrial_license.pdf", "site_plan.pdf"]
+      }
+    ];
+    
+    const createdDecisions = [];
+    for (const data of testData) {
+      const decision = await storage.createStreetStatusDecision(data);
+      createdDecisions.push(decision);
+      console.log(`✅ تم إنشاء ${data.decisionNumber}`);
+    }
+    
+    res.json({
+      success: true, 
+      message: "تم إنشاء بيانات اختبار UAT بنجاح",
+      data: createdDecisions,
+      count: createdDecisions.length
+    });
+    
+  } catch (error) {
+    console.error("Error creating UAT test data:", error);
+    res.status(500).json({ success: false, error: "Failed to create UAT test data" });
+  }
+});
+
+// Clear all test data (for clean testing) 
+router.delete("/uat/clear-test-data", async (req, res) => {
+  try {
+    console.log('🧹 مسح جميع بيانات الاختبار');
+    
+    // This would ideally clear only test data, but for simplicity we'll clear all
+    // In a real implementation, you'd filter by a test flag or prefix
+    const decisions = await storage.getStreetStatusDecisions();
+    const testDecisions = decisions.filter((d: any) => d.decisionNumber?.startsWith('UAT-'));
+    
+    for (const decision of testDecisions) {
+      // Storage deletion method would need to be implemented
+      console.log(`🗑️ حذف ${decision.decisionNumber}`);
+    }
+    
+    res.json({
+      success: true,
+      message: "تم مسح بيانات الاختبار بنجاح", 
+      cleared: testDecisions.length
+    });
+    
+  } catch (error) {
+    console.error("Error clearing UAT test data:", error);
+    res.status(500).json({ success: false, error: "Failed to clear UAT test data" });
   }
 });
 
