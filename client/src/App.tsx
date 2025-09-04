@@ -249,7 +249,7 @@ function Router() {
       {!hideNavigation && <Navigation />}
       <main className={hideNavigation ? "" : "max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6"}>
         <Switch>
-          <Route path="/" component={SimpleTestPage} />
+          <Route path="/" component={BranchReviewerDashboard} />
           <Route path="/portal-selection" component={PortalSelection} />
           <Route path="/admin" component={Dashboard} />
           <Route path="/admin-dashboard">
