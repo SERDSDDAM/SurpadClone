@@ -271,7 +271,20 @@ export default function BranchReviewerDashboard() {
   const { data: decisions = [], isLoading } = useQuery<StreetStatusDecision[]>({
     queryKey: ['/api/street-survey/street-decisions'],
     queryFn: async (): Promise<StreetStatusDecision[]> => {
-      // بيانات وهمية لـ UAT - السيناريوهات الخمسة
+      console.log("🔥 جاري جلب بيانات القرارات...");
+      try {
+        const response = await fetch('/api/street-survey/street-decisions');
+        if (!response.ok) {
+          console.log("⚠️ API خطأ، استخدام البيانات التجريبية...");
+          throw new Error('API failed, using mock data');
+        }
+        const result = await response.json();
+        console.log("✅ تم جلب البيانات من الخادم:", result);
+        return result.data || [];
+      } catch (error) {
+        console.log("🔄 استخدام البيانات التجريبية:", error);
+        }
+      // إرجاع البيانات التجريبية في حالة فشل الـ API
       return [
         {
           id: "test-001",
@@ -296,23 +309,13 @@ export default function BranchReviewerDashboard() {
 
 
 
-          isUrgent: false,
-          urgencyReason: null,
-          legalReference: null,
-          technicalSpecifications: null,
-          environmentalImpact: "none",
-          environmentalNotes: null,
-          publicConsultationRequired: false,
-          publicConsultationStatus: null,
-          publicConsultationResults: null,
           fieldSurveyRequired: false,
-          fieldSurveyCompleted: false,
-          fieldSurveyResults: null,
+          fieldSurveyRequestId: null,
           createdAt: new Date(),
           updatedAt: new Date(),
           submittedAt: new Date(),
           reviewStartedAt: null,
-          reviewCompletedAt: null,
+          decisionMadeAt: null,
           implementationDeadline: null
         },
         {
@@ -338,23 +341,13 @@ export default function BranchReviewerDashboard() {
 
 
 
-          isUrgent: false,
-          urgencyReason: null,
-          legalReference: null,
-          technicalSpecifications: null,
-          environmentalImpact: "none",
-          environmentalNotes: null,
-          publicConsultationRequired: false,
-          publicConsultationStatus: null,
-          publicConsultationResults: null,
           fieldSurveyRequired: false,
-          fieldSurveyCompleted: false,
-          fieldSurveyResults: null,
+          fieldSurveyRequestId: null,
           createdAt: new Date(),
           updatedAt: new Date(),
           submittedAt: new Date(),
           reviewStartedAt: null,
-          reviewCompletedAt: null,
+          decisionMadeAt: null,
           implementationDeadline: null
         },
         {
@@ -380,23 +373,13 @@ export default function BranchReviewerDashboard() {
 
 
 
-          isUrgent: false,
-          urgencyReason: null,
-          legalReference: null,
-          technicalSpecifications: null,
-          environmentalImpact: "none",
-          environmentalNotes: null,
-          publicConsultationRequired: false,
-          publicConsultationStatus: null,
-          publicConsultationResults: null,
           fieldSurveyRequired: false,
-          fieldSurveyCompleted: false,
-          fieldSurveyResults: null,
+          fieldSurveyRequestId: null,
           createdAt: new Date(),
           updatedAt: new Date(),
           submittedAt: new Date(),
           reviewStartedAt: null,
-          reviewCompletedAt: null,
+          decisionMadeAt: null,
           implementationDeadline: null
         }
       ];
