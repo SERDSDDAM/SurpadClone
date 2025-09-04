@@ -293,10 +293,9 @@ export default function BranchReviewerDashboard() {
           actualProcessingDays: null,
           branchOffice: "فرع صنعاء الشرقي",
           supervisoryOffice: "",
-          assignedReviewer: null,
-          assignedSurveyor: null,
-          reviewerComments: null,
-          attachments: [],
+
+
+
           isUrgent: false,
           urgencyReason: null,
           legalReference: null,
@@ -336,10 +335,9 @@ export default function BranchReviewerDashboard() {
           actualProcessingDays: null,
           branchOffice: "فرع صنعاء المركزي",
           supervisoryOffice: "",
-          assignedReviewer: null,
-          assignedSurveyor: null,
-          reviewerComments: null,
-          attachments: [],
+
+
+
           isUrgent: false,
           urgencyReason: null,
           legalReference: null,
@@ -379,10 +377,9 @@ export default function BranchReviewerDashboard() {
           actualProcessingDays: null,
           branchOffice: "فرع صنعاء الشمالي",
           supervisoryOffice: "",
-          assignedReviewer: null,
-          assignedSurveyor: null,
-          reviewerComments: null,
-          attachments: [],
+
+
+
           isUrgent: false,
           urgencyReason: null,
           legalReference: null,
