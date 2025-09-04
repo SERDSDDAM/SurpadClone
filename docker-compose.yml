@@ -1,0 +1,163 @@
+# ===============================================
+# Docker Compose للنشر المحلي - بنّاء اليمن
+# ===============================================
+version: '3.8'
+
+services:
+  # PostgreSQL مع PostGIS للبيانات المكانية
+  postgres:
+    image: postgis/postgis:15-3.3
+    container_name: binaa-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-binaa_yemen}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres123}
+      POSTGRES_HOST_AUTH_METHOD: trust
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init-sql:/docker-entrypoint-initdb.d:ro
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-binaa_yemen}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+      - binaa-network
+
+  # Redis للذاكرة التخزينية والجلسات
+  redis:
+    image: redis:7-alpine
+    container_name: binaa-redis
+    restart: unless-stopped
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-}
+    healthcheck:
+      test: ["CMD", "redis-cli", "--no-auth-warning", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+    networks:
+      - binaa-network
+
+  # MinIO لتخزين الملفات والوثائق
+  minio:
+    image: minio/minio:latest
+    container_name: binaa-minio
+    restart: unless-stopped
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin123}
+    volumes:
+      - minio_data:/data
+    ports:
+      - "${MINIO_PORT:-9000}:9000"
+      - "${MINIO_CONSOLE_PORT:-9001}:9001"
+    command: server /data --console-address ":9001"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 20s
+      retries: 3
+      start_period: 40s
+    networks:
+      - binaa-network
+
+  # التطبيق الرئيسي Node.js
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        - NODE_ENV=${NODE_ENV:-development}
+    container_name: binaa-app
+    restart: unless-stopped
+    environment:
+      NODE_ENV: ${NODE_ENV:-development}
+      PORT: ${PORT:-5000}
+      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres123}@postgres:5432/${POSTGRES_DB:-binaa_yemen}
+      REDIS_URL: redis://:${REDIS_PASSWORD:-}@redis:6379
+      MINIO_ENDPOINT: minio:9000
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin123}
+      JWT_SECRET: ${JWT_SECRET:-your-super-secret-jwt-key-here}
+      SESSION_SECRET: ${SESSION_SECRET:-your-session-secret-key-here}
+      TRUST_PROXY: ${TRUST_PROXY:-true}
+      ENABLE_CORS: ${ENABLE_CORS:-true}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      # إعدادات Puppeteer
+      PUPPETEER_EXECUTABLE_PATH: /usr/bin/chromium-browser
+      PUPPETEER_ARGS: --no-sandbox,--disable-setuid-sandbox,--disable-dev-shm-usage
+    ports:
+      - "${APP_PORT:-5000}:5000"
+    volumes:
+      # للتطوير - ربط المصدر مباشرة
+      - .:/app:delegated
+      - /app/node_modules
+      - temp_uploads:/app/temp-uploads
+      - attached_assets:/app/attached_assets
+      - app_logs:/app/logs
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    networks:
+      - binaa-network
+
+  # Nginx للعكس البروكسي (اختياري للإنتاج)
+  nginx:
+    image: nginx:1.25-alpine
+    container_name: binaa-nginx
+    restart: unless-stopped
+    ports:
+      - "${NGINX_PORT:-80}:80"
+      - "${NGINX_SSL_PORT:-443}:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+      - ./nginx/ssl:/etc/nginx/ssl:ro
+    depends_on:
+      - app
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - binaa-network
+    profiles:
+      - production
+
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+  minio_data:
+    driver: local
+  temp_uploads:
+    driver: local
+  attached_assets:
+    driver: local
+  app_logs:
+    driver: local
+
+networks:
+  binaa-network:
+    driver: bridge
+    name: binaa-network
