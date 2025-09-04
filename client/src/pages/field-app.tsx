@@ -20,6 +20,7 @@ import OfflineQueue from "@/components/field/OfflineQueue";
 import QualityGate from "@/components/field/QualityGate";
 import FieldEscalation from "@/components/field/FieldEscalation";
 import GNSSStatusPanel from "@/components/field/GNSSStatusPanel";
+import DynamicContextLayers from "@/components/field/DynamicContextLayers";
 
 // Get request ID from URL parameters
 function getRequestIdFromUrl(): string {
@@ -616,7 +617,16 @@ export default function FieldApp() {
       </div>
 
       {/* Advanced Field Components */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-6">
+        {/* Dynamic Context Layers - الخريطة المرجعية الذكية */}
+        <DynamicContextLayers 
+          currentLocation={advancedGPS ? { latitude: advancedGPS.latitude, longitude: advancedGPS.longitude } : undefined}
+          requestCoordinates={currentRequest?.coordinates ? 
+            { latitude: currentRequest.coordinates.latitude, longitude: currentRequest.coordinates.longitude } :
+            undefined
+          }
+        />
+        
         {/* Offline Queue Management */}
         <OfflineQueue 
           requestId={requestId}
