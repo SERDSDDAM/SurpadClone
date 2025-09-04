@@ -263,6 +263,7 @@ function SmartDecisionCard({ decision, onApprove, onEscalate, isProcessing }: Sm
 }
 
 export default function BranchReviewerDashboard() {
+  console.log("🔥 BranchReviewerDashboard component is loading...");
   const { toast } = useToast();
   const queryClient = useQueryClient();
   
