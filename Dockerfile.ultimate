@@ -1,0 +1,60 @@
+# ===============================================
+# Dockerfile النهائي - حل جذري لجميع المشاكل
+# ===============================================
+
+# استخدام Node.js 18 (مستقر مع WebSocket)
+FROM node:18-alpine
+
+# إعداد متغيرات البيئة
+ENV NODE_ENV=development
+ENV PORT=3000
+ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
+ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser
+
+# تثبيت أدوات النظام المطلوبة
+RUN apk add --no-cache \
+    chromium \
+    nss \
+    freetype \
+    harfbuzz \
+    ca-certificates \
+    curl \
+    postgresql-client \
+    && rm -rf /var/cache/apk/*
+
+# إعداد مجلد العمل
+WORKDIR /app
+
+# نسخ package files أولاً للاستفادة من Docker cache
+COPY package*.json ./
+
+# تثبيت التبعيات مع تجاهل الأخطاء البسيطة
+RUN npm ci --only=production --ignore-scripts || npm install --only=production
+
+# تثبيت أدوات التطوير العالمية
+RUN npm install -g drizzle-kit tsx
+
+# نسخ كامل المصدر
+COPY . .
+
+# إنشاء المجلدات المطلوبة
+RUN mkdir -p temp-uploads attached_assets logs && \
+    chmod -R 755 temp-uploads attached_assets logs
+
+# إنشاء مستخدم آمن
+RUN addgroup -g 1001 -S nodejs && \
+    adduser -S appuser -u 1001 -G nodejs && \
+    chown -R appuser:nodejs /app
+
+# التبديل للمستخدم الآمن
+USER appuser
+
+# كشف المنفذ
+EXPOSE 3000
+
+# فحص صحة التطبيق
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+    CMD curl -f http://localhost:3000/api/health || exit 1
+
+# أمر التشغيل
+CMD ["npm", "run", "dev"]

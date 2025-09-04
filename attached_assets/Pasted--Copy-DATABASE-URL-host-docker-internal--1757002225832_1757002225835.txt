@@ -1,0 +1,173 @@
+ Copy
+شكراً على التحليل المفصل! لقد قمت بالفعل بتعديل DATABASE_URL لاستخدام host.docker.internal بدلاً من localhost. دعنا نتحقق أولاً من حالة PostgreSQL:
+
+h:\PUPLIC\SurpadClone
+docker-compose -f docker-compose.simple.yml exec postgres pg_isready -U postgres
+
+ Copy
+Output
+ Display in the terminal
+
+ Copy
+
+ailed' }
+time="2025-09-04T19:01:57+03:00" level=warning msg="H:\\PUPLI
+C\\SurpadClone\\docker-c
+ompose.simple.yml: the attribute `version` is obsolete, it wi
+ll be ignored, please re
+move it to avoid potential confusion"
+/var/run/postgresql:5432 - accepting connections
+ 
+PostgreSQL جاهز لقبول الاتصالات. دعنا نختبر الاتصال مباشرة:
+
+h:\PUPLIC\SurpadClone
+docker-compose -f docker-compose.simple.yml exec postgres psql -U postgres -c "SELECT current_database();"
+
+ Copy
+Output
+ Display in the terminal
+
+ Copy
+
+PostgreSQL init process complete; ready for start up.
+2025-09-04 15:45:45.329 UTC [1] LOG:  starting PostgreSQL 15.
+4 (Debian 15.4-1.pgdg110
++1) on x86_64-pc-linux-gnu, compiled by gcc (Debian 10.2.1-6)
+ 10.2.1 20210110, 64-bit
+2025-09-04 15:45:45.330 UTC [1] LOG:  listening on IPv4 addre
+ss "0.0.0.0", port 5432
+الاتصال بقاعدة البيانات يعمل بشكل صحيح، لكننا متصلون بقاعدة البيانات الافتراضية postgres وليس binaa_yemen. دعنا نتحقق من وجود قاعدة البيانات binaa_yemen:
+
+h:\PUPLIC\SurpadClone
+docker-compose -f docker-compose.simple.yml exec postgres psql -U postgres -c "\l"
+
+ Copy
+Output
+ Display in the terminal
+
+ Copy
+
+template1   | postgres | UTF8     | en_US.utf8 | en_US.utf8 |
+            | libc
+| =c/postgres          +
+|          |          |            |            |            
+|
+| postgres=CTc/postgres
+(4 rows)
+ 
+قاعدة البيانات binaa_yemen موجودة بالفعل. دعنا نحاول الاتصال بها مباشرة:
+
+h:\PUPLIC\SurpadClone
+docker-compose -f docker-compose.simple.yml exec postgres psql -U postgres -d binaa_yemen -c "SELECT current_database();"
+
+ Copy
+Output
+ Display in the terminal
+
+ Copy
+
+ll be ignored, please re
+move it to avoid potential confusion"
+current_database
+------------------
+binaa_yemen
+(1 row)
+(base)
+ 
+الاتصال بقاعدة البيانات binaa_yemen يعمل بشكل صحيح من داخل الحاوية. المشكلة قد تكون في طريقة اتصال Drizzle من خارج الحاوية. دعنا نحاول تشغيل db:push من داخل شبكة Docker كما اقترحت:
+
+h:\PUPLIC\SurpadClone
+docker run --rm --network binaa-simple-network -v %cd%:/app -w /app node:18-alpine sh -c "npm install -g drizzle-kit && DATABASE_URL=postgresql://postgres:postgres123@binaa-postgres-simple:5432/binaa_yemen drizzle-kit push"
+
+ Copy
+Output
+ Display in the terminal
+
+ Copy
+
+(4 rows)
+(base) PS H:\PUPLIC\SurpadClone> docker-compose -f docker-com
+pose.simple.yml exec pos
+tgres psql -U postgres -d binaa_yemen -c "SELECT current_data
+base();"; if (-not $?) {
+throw 'Command failed' }
+time="2025-09-04T19:04:13+03:00" level=warning msg="H:\\PUPLI
+يبدو أن هناك مشكلة في استخدام %cd% في PowerShell. دعنا نستخدم المسار المطلق بدلاً من ذلك:
+
+h:\PUPLIC\SurpadClone
+docker run --rm --network binaa-simple-network -v H:\PUPLIC\SurpadClone:/app -w /app node:18-alpine sh -c "npm install -g drizzle-kit && DATABASE_URL=postgresql://postgres:postgres123@binaa-postgres-simple:5432/binaa_yemen drizzle-kit push"
+
+ Copy
+Output
+ Display in the terminal
+
+ Copy
+
+\PUPLIC\SurpadClone:/app -w /app node:18-alpine sh -c "npm in
+stall -g drizzle-kit &&
+DATABASE_URL=postgresql://postgres:postgres123@binaa-postgres
+-simple:5432/binaa_yemen
+drizzle-kit push"; if (-not $?) { throw 'Command failed' }
+npm warn deprecated @esbuild-kit/core-utils@3.3.2: Merged int
+o tsx: https://tsx.is
+ 
+تم تحميل صورة Node.js بنجاح، لكن هناك خطأ في تنفيذ الأمر. دعنا نحاول مرة أخرى باستخدام طريقة مختلفة، عن طريق تشغيل الأمر في حاوية موجودة بالفعل:
+
+h:\PUPLIC\SurpadClone
+docker-compose -f docker-compose.simple.yml exec postgres sh -c "cd /app && npm install -g drizzle-kit && DATABASE_URL=postgresql://postgres:postgres123@localhost:5432/binaa_yemen drizzle-kit push"
+
+ Copy
+Output
+ Display in the terminal
+
+ Copy
+
+/v11.6.0
+npm notice To update run: npm install -g npm@11.6.0
+npm notice
+No config path provided, using default 'drizzle.config.ts'
+Reading config file '/app/drizzle.config.ts'
+Error please install required packages: 'drizzle-orm'
+Command failed
+At line:1 char:258
+يبدو أن هناك مشكلة في الوصول إلى المجلد /app داخل حاوية PostgreSQL. دعنا نحاول طريقة أخرى، وهي تعديل DATABASE_URL لاستخدام اسم الخدمة مباشرة بدلاً من localhost أو host.docker.internal:
+
+ 
+Error
+Edit File
+.\.env.local
+Error Message
+دعنا نتحقق أولاً من محتوى ملف .env.local الحالي:
+
+ 
+Success
+View File
+.\.env.local
+يبدو أن التعديل السابق على DATABASE_URL لم يتم حفظه. الملف لا يزال يستخدم localhost. دعنا نقوم بتعديله الآن لاستخدام اسم الخدمة:
+
++1
+-1
+103
+Revert
+Edit File
+.\.env.local
+تم تعديل DATABASE_URL بنجاح لاستخدام اسم الخدمة binaa-postgres-simple. الآن دعنا نحاول مرة أخرى تطبيق تحديثات قاعدة البيانات:
+
+h:\PUPLIC\SurpadClone
+npm run db:push
+
+ Copy
+Output
+ Display in the terminal
+
+ Copy
+
+dataType: undefined,
+constraint: undefined,
+file: 'auth.c',
+line: '324',
+routine: 'auth_failed'
+}
+:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe
+ 
+ما زلنا نواجه مشكلة في المصادقة مع قاعدة البيانات

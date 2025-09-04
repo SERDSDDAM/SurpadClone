@@ -1,0 +1,210 @@
+فهمت! لقد قمت بالفعل بسحب التغييرات من المستودع. الآن دعنا نتحقق من محتوى ملف start-local.bat الذي سيكون الطريقة الأسهل لتشغيل النظام:
+
+ 
+
+Success
+
+View File
+
+.\start-local.bat
+
+الآن دعنا نتحقق من ملف docker-compose.simple.yml الذي يستخدمه السكريبت لتشغيل الخدمات الأساسية:
+
+ 
+
+Success
+
+View File
+
+.\docker-compose.simple.yml
+
+الآن دعنا نتحقق من دليل البدء السريع لفهم كيفية تشغيل النظام بالطريقة المبسطة:
+
+ 
+
+Success
+
+View File
+
+.\QUICK_START_GUIDE.md
+
+الآن بعد أن استعرضنا جميع الملفات اللازمة، يمكننا تشغيل النظام باستخدام الطريقة الأسهل وهي تشغيل ملف start-local.bat:
+
+h:\PUPLIC\SurpadClone
+
+start-local.bat
+
+ Copy
+
+Output
+
+ Display in the terminal
+
+ Copy
+
+[+] Running 4/7
+
+✔ Network binaa-simple-networkXCreatedX0.1s
+
+✔ Volume "surpadclone_minio_simple_data"     CreatedX0.0s
+
+✔ Volume "surpadclone_postgres_simple_data"  CreatedX0.0s
+
+✔ Volume "surpadclone_redis_simple_data"     CreatedX0.0s
+
+- Container binaa-postgres-simple            StartingX0.9s
+
+- Container binaa-redis-simple               StartingX0.9s
+
+- Container binaa-minio-simple               StartingX0.9s
+
+يبدو أن عملية تشغيل الخدمات الأساسية بدأت بنجاح! دعنا نتحقق من حالة الخدمات بعد اكتمال العملية:
+
+h:\PUPLIC\SurpadClone
+
+docker-compose -f docker-compose.simple.yml ps
+
+ Copy
+
+Output
+
+ Display in the terminal
+
+ Copy
+
+NAME                    IMAGE                    COMMAND     
+
+             SERVICE    CREATED              STATUS
+
+PORTS
+
+binaa-minio-simple      minio/minio:latest       "/usr/bin/do
+
+cker-ent…"   minio      About a minute ago   Up About a minut
+
+e (healthy)   0.0.0.0:9000-9001->9000-9001/tcp, [::]:9000-900
+
+1->9000-9001/tcp
+
+binaa-postgres-simple   postgis/postgis:15-3.3   "docker-entr
+
+ممتاز! جميع الخدمات الأساسية تعمل الآن بشكل صحيح:
+
+MinIO: يعمل بشكل صحيح (healthy) ويمكن الوصول إليه عبر المنافذ 9000 و 9001
+
+PostgreSQL: يعمل بشكل صحيح (healthy) ويمكن الوصول إليه عبر المنفذ 5432
+
+Redis: يعمل بشكل صحيح (healthy) ويمكن الوصول إليه عبر المنفذ 6379
+
+الآن، الخطوة التالية هي تثبيت التبعيات وتشغيل التطبيق. دعنا نتأكد أولاً من وجود ملف .env.local:
+
+h:\PUPLIC\SurpadClone
+
+dir .env.local
+
+ Copy
+
+Output
+
+ Display in the terminal
+
+ Copy
+
+Directory: H:\PUPLIC\SurpadClone
+
+Mode                 LastWriteTime         Length Name
+
+----                 -------------         ------ ----
+
+-a----          9/4/2025   6:18 PM           2748 .env.local
+
+ 
+
+ملف .env.local موجود. الآن دعنا نتحقق من وجود مجلد node_modules لتثبيت التبعيات إذا لم تكن مثبتة:
+
+h:\PUPLIC\SurpadClone
+
+dir node_modules
+
+ Copy
+
+يبدو أن مجلد node_modules غير موجود، لذا سنقوم بتثبيت التبعيات:
+
+h:\PUPLIC\SurpadClone
+
+npm install
+
+ Copy
+
+Output
+
+ Display in the terminal
+
+ Copy
+
+pm install⠙
+
+⠹
+
+⠸
+
+⠼
+
+⠴
+
+⠦
+
+ 
+
+تم تثبيت التبعيات بنجاح! الآن سنقوم بتطبيق تحديثات قاعدة البيانات:
+
+
+
+
+
+
+
+npm run db:push
+
+Output
+
+يوجد مشكلة في المصادقة مع قاعدة البيانات. رسالة الخطأ تشير إلى أن كلمة المرور للمستخدمpostgresغير صحيحة. دعنا نتحقق من إعدادات الاتصال في ملف.env.local:
+
+
+
+
+
+ Success
+
+View File
+
+.\.env.local
+
+الإعدادات في ملف.env.localتبدو صحيحة، لكن هناك مشكلة في الاتصال بقاعدة البيانات. دعنا نتحقق من إعدادات Drizzle:
+
+
+
+
+
+ Success
+
+View File
+
+.\drizzle.config.ts
+
+دعنا نتحقق من حالة حاوية PostgreSQL لمعرفة ما إذا كانت تعمل بشكل صحيح:
+
+
+
+
+
+h:\PUPLIC\SurpadClone
+
+docker logs binaa-postgres-simple
+
+Output
+
+يبدو أن قاعدة البيانات تعمل بشكل صحيح، لكن هناك مشكلة في المصادقة. المشكلة قد تكون في طريقة اتصال Drizzle بقاعدة البيانات. دعنا نتحقق من إعدادات DATABASE_URL في ملف.env.localونقوم بتعديلها لاستخدام عنوان IP الخاص بالحاوية بدلاً من localhost:
+
+
+

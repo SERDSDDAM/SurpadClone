@@ -1,0 +1,144 @@
+# ===============================================
+# Docker Compose النهائي - حل جميع المشاكل
+# ===============================================
+version: '3.8'
+
+services:
+  # PostgreSQL مع إعدادات محسنة ومضمونة
+  postgres:
+    image: postgis/postgis:15-3.3
+    container_name: binaa-postgres-ultimate
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: binaa_yemen
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres123
+      # إعدادات للثقة الكاملة - حل جذري لمشاكل المصادقة
+      POSTGRES_HOST_AUTH_METHOD: trust
+      POSTGRES_INITDB_ARGS: "--auth-host=trust --auth-local=trust --encoding=UTF8"
+      PGDATA: /var/lib/postgresql/data/pgdata
+    volumes:
+      - postgres_ultimate_data:/var/lib/postgresql/data
+      - ./init-sql:/docker-entrypoint-initdb.d:ro
+    ports:
+      - "5432:5432"
+    command: >
+      postgres 
+      -c shared_preload_libraries=postgis-3
+      -c listen_addresses='*'
+      -c port=5432
+      -c max_connections=200
+      -c shared_buffers=256MB
+      -c effective_cache_size=1GB
+      -c log_statement=all
+      -c log_connections=on
+      -c log_disconnections=on
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d binaa_yemen || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    networks:
+      - binaa-ultimate-network
+
+  # Redis مبسط
+  redis:
+    image: redis:7-alpine
+    container_name: binaa-redis-ultimate
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_ultimate_data:/data
+    command: redis-server --appendonly yes --save 60 1000
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    networks:
+      - binaa-ultimate-network
+
+  # MinIO لتخزين الملفات
+  minio:
+    image: minio/minio:latest
+    container_name: binaa-minio-ultimate
+    restart: unless-stopped
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin123
+    volumes:
+      - minio_ultimate_data:/data
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    command: server /data --console-address ":9001"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 20s
+      retries: 3
+      start_period: 40s
+    networks:
+      - binaa-ultimate-network
+
+  # التطبيق الرئيسي - الحل النهائي
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile.ultimate
+    container_name: binaa-app-ultimate
+    restart: unless-stopped
+    environment:
+      NODE_ENV: development
+      PORT: 3000
+      # اتصال داخلي مضمون 100%
+      DATABASE_URL: postgresql://postgres:postgres123@binaa-postgres-ultimate:5432/binaa_yemen
+      REDIS_URL: redis://binaa-redis-ultimate:6379
+      MINIO_ENDPOINT: binaa-minio-ultimate:9000
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin123
+      # مفاتيح الأمان
+      JWT_SECRET: ultimate-jwt-secret-key-2025-binaa-yemen
+      SESSION_SECRET: ultimate-session-secret-2025-binaa-yemen
+      TRUST_PROXY: "true"
+      ENABLE_CORS: "true"
+      LOG_LEVEL: info
+      # إعدادات Puppeteer
+      PUPPETEER_EXECUTABLE_PATH: /usr/bin/chromium-browser
+      PUPPETEER_ARGS: --no-sandbox,--disable-setuid-sandbox,--disable-dev-shm-usage,--disable-gpu
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./temp-uploads:/app/temp-uploads
+      - ./attached_assets:/app/attached_assets
+      - ./logs:/app/logs
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 15s
+      retries: 5
+      start_period: 120s
+    networks:
+      - binaa-ultimate-network
+
+volumes:
+  postgres_ultimate_data:
+    driver: local
+  redis_ultimate_data:
+    driver: local  
+  minio_ultimate_data:
+    driver: local
+
+networks:
+  binaa-ultimate-network:
+    driver: bridge
+    name: binaa-ultimate-network
