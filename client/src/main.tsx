@@ -1,6 +1,6 @@
 import React from "react";
 import { createRoot } from "react-dom/client";
-import SimpleApp from "./SimpleApp";
+import App from "./App";
 import "./index.css";
 
 const container = document.getElementById("root");
@@ -55,7 +55,7 @@ function ErrorFallback({ error }: { error: Error }) {
 }
 
 try {
-  root.render(<SimpleApp />);
+  root.render(<App />);
 } catch (error) {
   console.error('Error rendering app:', error);
   root.render(<ErrorFallback error={error as Error} />);
