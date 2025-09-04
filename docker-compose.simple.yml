@@ -1,0 +1,76 @@
+# ===============================================
+# Docker Compose مبسط للخدمات الأساسية - بنّاء اليمن
+# ===============================================
+version: '3.8'
+
+services:
+  # PostgreSQL مع PostGIS للبيانات المكانية
+  postgres:
+    image: postgis/postgis:15-3.3
+    container_name: binaa-postgres-simple
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: binaa_yemen
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres123
+      POSTGRES_HOST_AUTH_METHOD: trust
+    volumes:
+      - postgres_simple_data:/var/lib/postgresql/data
+      - ./init-sql:/docker-entrypoint-initdb.d:ro
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d binaa_yemen"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  # Redis للذاكرة التخزينية والجلسات
+  redis:
+    image: redis:7-alpine
+    container_name: binaa-redis-simple
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_simple_data:/data
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+
+  # MinIO لتخزين الملفات والوثائق
+  minio:
+    image: minio/minio:latest
+    container_name: binaa-minio-simple
+    restart: unless-stopped
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin123
+    volumes:
+      - minio_simple_data:/data
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    command: server /data --console-address ":9001"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 20s
+      retries: 3
+      start_period: 40s
+
+volumes:
+  postgres_simple_data:
+    driver: local
+  redis_simple_data:
+    driver: local  
+  minio_simple_data:
+    driver: local
+
+networks:
+  default:
+    name: binaa-simple-network

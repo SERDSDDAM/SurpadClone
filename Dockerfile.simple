@@ -1,0 +1,45 @@
+# ===============================================
+# Dockerfile مبسط لنظام بنّاء اليمن
+# ===============================================
+
+# استخدام صورة Node.js الرسمية
+FROM node:18-alpine
+
+# إعداد متغيرات البيئة
+ENV NODE_ENV=development
+ENV PORT=5000
+ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
+
+# تثبيت أدوات النظام الأساسية
+RUN apk add --no-cache \
+    curl \
+    && rm -rf /var/cache/apk/*
+
+# إعداد مجلد العمل
+WORKDIR /app
+
+# نسخ ملفات package للاستفادة من التخزين المؤقت
+COPY package*.json ./
+
+# تثبيت التبعيات
+RUN npm ci
+
+# تثبيت أدوات التطوير العالمية
+RUN npm install -g tsx drizzle-kit
+
+# نسخ المصدر الكامل
+COPY . .
+
+# إنشاء مجلدات مطلوبة
+RUN mkdir -p temp-uploads attached_assets logs && \
+    chmod 755 temp-uploads attached_assets logs
+
+# كشف المنفذ
+EXPOSE 5000
+
+# فحص صحة التطبيق
+HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
+    CMD curl -f http://localhost:5000/api/health || exit 1
+
+# الأمر الافتراضي لتشغيل التطبيق
+CMD ["npm", "run", "dev"]

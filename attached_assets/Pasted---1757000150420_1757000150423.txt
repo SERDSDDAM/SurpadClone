@@ -1,0 +1,130 @@
+سأقوم بتوجيهك خطوة بخطوة لتشغيل ونشر النظام محلياً وفقاً للدليل. لنبدأ بالتحقق من المتطلبات الأساسية أولاً:
+
+h:\PUPLIC\SurpadClone
+docker --version
+Output
+رائع! تم التحقق من أن Docker مثبت لديك (الإصدار 28.3.2). الآن دعنا نتحقق من Docker Compose:
+
+h:\PUPLIC\SurpadClone
+docker-compose --version
+Output
+ممتاز! Docker Compose مثبت لديك أيضاً (الإصدار v2.38.2). الآن سننتقل إلى الخطوة التالية وهي تحضير البيئة.
+
+أولاً، دعنا نتحقق من وجود ملف .env.local.example في المشروع:
+
+h:\PUPLIC\SurpadClone
+dir .env.local.example
+Output
+ممتاز! ملف .env.local.example موجود. الآن سنقوم بنسخه إلى ملف .env.local:
+
+h:\PUPLIC\SurpadClone
+cp .env.local.example .env.local
+Output
+تم نسخ ملف البيئة بنجاح. الآن دعنا نتحقق من محتوى ملف .env.local لمراجعة الإعدادات:
+
+ 
+Success
+View File
+.\.env.local
+تم عرض محتوى ملف .env.local بنجاح. الملف يحتوي على جميع الإعدادات اللازمة لتشغيل النظام محلياً. الإعدادات تبدو مناسبة للبيئة المحلية.
+
+الآن دعنا نتحقق من وجود ملف docker-compose.yml الذي سنستخدمه لتشغيل النظام:
+
+h:\PUPLIC\SurpadClone
+dir docker-compose.yml
+Output
+ممتاز! ملف docker-compose.yml موجود. الآن سنقوم بتشغيل النظام باستخدام Docker Compose:
+
+h:\PUPLIC\SurpadClone
+docker-compose up --build -d
+Output
+يبدو أن عملية بناء وتشغيل النظام بدأت. دعنا ننتظر قليلاً ثم نتحقق من حالة الحاويات لمعرفة ما إذا كانت جميع الخدمات تعمل بشكل صحيح:
+
+h:\PUPLIC\SurpadClone
+docker-compose ps
+Output
+يبدو أن هناك مشكلة في عملية بناء النظام. الخطأ يشير إلى أن ملف tsconfig.json غير موجود، وهو مطلوب لعملية البناء. دعنا نتحقق من وجود هذا الملف في المشروع:
+
+h:\PUPLIC\SurpadClone
+dir tsconfig.json
+Output
+الملف tsconfig.json موجود في المشروع، لكن يبدو أن هناك مشكلة في عملية بناء Docker. دعنا نتحقق من محتوى ملف docker-compose.yml لفهم كيفية تكوين الخدمات:
+
+ 
+Success
+View File
+.\docker-compose.yml
+الآن دعنا نتحقق من ملف Dockerfile المستخدم لبناء التطبيق:
+
+ 
+Success
+View File
+.\Dockerfile
+دعنا نتحقق من وجود الملفات الأخرى المطلوبة في Dockerfile:
+
+h:\PUPLIC\SurpadClone
+dir vite.config.ts tailwind.config.ts postcss.config.js components.json drizzle.config.ts
+Output
+دعنا نتحقق من وجود كل ملف على حدة:
+
+h:\PUPLIC\SurpadClone
+dir vite.config.ts
+Output
+لنستمر في التحقق من وجود الملفات المتبقية:
+
+h:\PUPLIC\SurpadClone
+dir tailwind.config.ts
+Output
+لنستمر في التحقق من الملفات المتبقية:
+
+h:\PUPLIC\SurpadClone
+dir postcss.config.js
+Output
+لنستمر في التحقق من الملفات المتبقية:
+
+h:\PUPLIC\SurpadClone
+dir components.json
+Output
+لنستمر في التحقق من الملف الأخير:
+
+h:\PUPLIC\SurpadClone
+dir drizzle.config.ts
+Output
+جميع الملفات المطلوبة موجودة في المشروع. المشكلة قد تكون في طريقة بناء Docker. دعنا نحاول تشغيل النظام بطريقة مختلفة، باستخدام السكريبت المبسط المذكور في الدليل:
+
+h:\PUPLIC\SurpadClone
+dir docker-run.sh
+Output
+السكريبت docker-run.sh موجود. دعنا نتحقق من محتواه لفهم كيفية عمله:
+
+ 
+Success
+View File
+.\docker-run.sh
+السكريبت docker-run.sh يبدو شاملاً ويقوم بجميع الخطوات اللازمة لتشغيل النظام. دعنا نستخدمه لتشغيل النظام:
+
+h:\PUPLIC\SurpadClone
+bash docker-run.sh start
+Output
+يبدو أن هناك مشكلة في تنفيذ السكريبت بسبب اختلاف في نهايات الأسطر (CRLF مقابل LF). هذا يحدث عادةً عند تحرير الملفات بين أنظمة التشغيل المختلفة. دعنا نحاول تحويل الملف إلى تنسيق Unix ثم تشغيله:
+
+h:\PUPLIC\SurpadClone
+dos2unix docker-run.sh
+Output
+يبدو أن أمر dos2unix غير متوفر في نظام Windows. دعنا نحاول استخدام PowerShell لتحويل الملف:
+
+h:\PUPLIC\SurpadClone
+(Get-Content docker-run.sh) | Set-Content -NoNewline docker-run-unix.sh
+Output
+تم إنشاء ملف جديد docker-run-unix.sh بنسخة معدلة من الملف الأصلي. الآن دعنا نجعل الملف قابلاً للتنفيذ ثم نقوم بتشغيله:
+
+h:\PUPLIC\SurpadClone
+chmod +x docker-run-unix.sh
+عذراً، ماذا تود أن نفعل بعد؟ هل ترغب في:
+
+تجربة تشغيل النظام مباشرة باستخدام أوامر Docker Compose دون الاعتماد على السكريبت؟
+تعديل ملف Dockerfile لحل المشكلة المتعلقة بالبناء؟
+محاولة تشغيل السكريبت بطريقة أخرى؟
+استكشاف مشكلة أخرى في النظام؟
+أخبرني كيف تود المتابعة.
+
