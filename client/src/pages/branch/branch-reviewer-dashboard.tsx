@@ -266,9 +266,66 @@ export default function BranchReviewerDashboard() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   
-  // جلب قائمة الطلبات الجديدة
+  // جلب قائمة الطلبات الجديدة + بيانات وهمية للاختبار
   const { data: decisions = [], isLoading } = useQuery<StreetStatusDecision[]>({
     queryKey: ['/api/street-survey/street-decisions'],
+    queryFn: async () => {
+      // بيانات وهمية لـ UAT - السيناريوهات الخمسة
+      return [
+        {
+          id: "test-001",
+          decisionNumber: "SD-2025-001",
+          streetName: "شارع الربيع الجنوبي",
+          neighborhood: "حي السبعين",
+          governorate: "أمانة العاصمة",
+          directorate: "مديرية السبعين", 
+          requestedBy: "أحمد محمد الحميدي",
+          decisionType: "تحديد حالة شارع",
+          status: "under_review" as const,
+          priority: "normal" as const,
+          escalationLevel: 0, // Scenario 1: Auto-approval eligible
+          estimatedProcessingDays: 3,
+          branchOffice: "فرع صنعاء الشرقي",
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        },
+        {
+          id: "test-002", 
+          decisionNumber: "SD-2025-002",
+          streetName: "زقاق الصالح التراثي",
+          neighborhood: "حي صنعاء القديمة", 
+          governorate: "أمانة العاصمة",
+          directorate: "مديرية الصافية",
+          requestedBy: "فاطمة عبدالله الأهدل",
+          decisionType: "تحديد حالة شارع تراثي",
+          status: "under_review" as const,
+          priority: "high" as const,
+          escalationLevel: 1, // Scenario 2: Heritage zone escalation
+          estimatedProcessingDays: 14,
+          branchOffice: "فرع صنعاء المركزي",
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        },
+        {
+          id: "test-003",
+          decisionNumber: "SD-2025-003", 
+          streetName: "طريق وادي ضهر",
+          neighborhood: "حي ضهر",
+          governorate: "أمانة العاصمة",
+          directorate: "مديرية ضهر",
+          requestedBy: "علي حسن المؤيد",
+          decisionType: "تحديد حالة شارع معرض للفيضانات",
+          status: "under_review" as const,
+          priority: "high" as const,
+          escalationLevel: 2, // Scenario 3: Flood risk escalation
+          estimatedProcessingDays: 21,
+          branchOffice: "فرع صنعاء الشمالي",
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        }
+      ];
+    },
+    staleTime: 1000 * 60 * 5 // 5 minutes
   });
 
   const [selectedDecision, setSelectedDecision] = useState<StreetStatusDecision | null>(null);

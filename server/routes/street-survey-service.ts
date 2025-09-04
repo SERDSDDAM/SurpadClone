@@ -17,6 +17,115 @@ import type { CoordinatePoint } from "../services/gis/point-in-polygon-engine";
 
 const router = Router();
 
+// ================================ 
+// UAT Test Data Generation
+// ================================
+
+// Create UAT test data for the 5 scenarios
+router.post("/uat/create-test-data", async (req, res) => {
+  try {
+    // Scenario 1: Routine Request (Safe Zone) - Auto Approval
+    const scenario1 = await storage.createStreetStatusDecision({
+      decisionNumber: "SD-2025-001",
+      streetName: "شارع الربيع الجنوبي",
+      neighborhood: "حي السبعين",
+      governorate: "أمانة العاصمة",
+      directorate: "مديرية السبعين",
+      coordinates: { latitude: 15.369, longitude: 44.191 },
+      requestedBy: "أحمد محمد الحميدي", 
+      decisionType: "تحديد حالة شارع",
+      status: "under_review",
+      priority: "normal",
+      escalationLevel: 0, // Auto-approval eligible
+      estimatedProcessingDays: 3,
+      branchOffice: "فرع صنعاء الشرقي"
+    });
+
+    // Scenario 2: Heritage Zone - Auto Escalation
+    const scenario2 = await storage.createStreetStatusDecision({
+      decisionNumber: "SD-2025-002", 
+      streetName: "زقاق الصالح التراثي",
+      neighborhood: "حي صنعاء القديمة",
+      governorate: "أمانة العاصمة",
+      directorate: "مديرية الصافية",
+      coordinates: { latitude: 15.354, longitude: 44.215 },
+      requestedBy: "فاطمة عبدالله الأهدل",
+      decisionType: "تحديد حالة شارع تراثي",
+      status: "under_review",
+      priority: "high",
+      escalationLevel: 1, // Heritage auto-escalation
+      estimatedProcessingDays: 14,
+      branchOffice: "فرع صنعاء المركزي"
+    });
+
+    // Scenario 3: Flood Risk Zone - Auto Escalation  
+    const scenario3 = await storage.createStreetStatusDecision({
+      decisionNumber: "SD-2025-003",
+      streetName: "طريق وادي ضهر",
+      neighborhood: "حي ضهر",
+      governorate: "أمانة العاصمة",
+      directorate: "مديرية ضهر",
+      coordinates: { latitude: 15.425, longitude: 44.168 },
+      requestedBy: "علي حسن المؤيد",
+      decisionType: "تحديد حالة شارع معرض للفيضانات", 
+      status: "under_review",
+      priority: "high",
+      escalationLevel: 2, // Flood risk escalation
+      estimatedProcessingDays: 21,
+      branchOffice: "فرع صنعاء الشمالي"
+    });
+
+    // Scenario 4: Outside Urban Plan - Auto Escalation
+    const scenario4 = await storage.createStreetStatusDecision({
+      decisionNumber: "SD-2025-004",
+      streetName: "طريق القرية الزراعية",
+      neighborhood: "خارج حدود المخطط الحضري",
+      governorate: "صنعاء",
+      directorate: "مديرية بني حشيش",
+      coordinates: { latitude: 15.298, longitude: 44.245 },
+      requestedBy: "محمد صالح الزبيري",
+      decisionType: "تحديد حالة طريق خارج المخطط",
+      status: "under_review", 
+      priority: "high",
+      escalationLevel: 3, // Outside plan escalation
+      estimatedProcessingDays: 30,
+      branchOffice: "فرع صنعاء الجنوبي"
+    });
+
+    // Scenario 5: Manual Escalation (Technical Issue)
+    const scenario5 = await storage.createStreetStatusDecision({
+      decisionNumber: "SD-2025-005",
+      streetName: "شارع التحرير الرئيسي", 
+      neighborhood: "حي التحرير",
+      governorate: "أمانة العاصمة",
+      directorate: "مديرية التحرير",
+      coordinates: { latitude: 15.372, longitude: 44.178 },
+      requestedBy: "نادية أحمد باصرة",
+      decisionType: "تحديد حالة شارع رئيسي",
+      status: "under_review",
+      priority: "normal", 
+      escalationLevel: 0, // Will be manually escalated
+      estimatedProcessingDays: 5,
+      branchOffice: "فرع صنعاء المركزي"
+    });
+
+    res.json({
+      success: true,
+      message: "تم إنشاء بيانات اختبار UAT للسيناريوهات الخمسة",
+      scenarios: [
+        { id: scenario1.id, scenario: "Routine - Auto Approval", number: scenario1.decisionNumber },
+        { id: scenario2.id, scenario: "Heritage Zone - Auto Escalation", number: scenario2.decisionNumber },
+        { id: scenario3.id, scenario: "Flood Risk - Auto Escalation", number: scenario3.decisionNumber },
+        { id: scenario4.id, scenario: "Outside Plan - Auto Escalation", number: scenario4.decisionNumber },
+        { id: scenario5.id, scenario: "Manual Escalation", number: scenario5.decisionNumber }
+      ]
+    });
+  } catch (error) {
+    console.error("Error creating UAT test data:", error);
+    res.status(500).json({ success: false, error: "Failed to create UAT test data" });
+  }
+});
+
 // ================================
 // Street Status Decisions API
 // ================================
