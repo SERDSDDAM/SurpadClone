@@ -43,7 +43,6 @@ import SurveyorDashboard from "@/pages/surveyor-dashboard";
 import Review from "@/pages/review";
 import AdvancedFieldApp from "@/pages/field-app-advanced";
 import SimpleFieldTest from "@/pages/simple-field-test";
-import MinimalTest from "@/pages/minimal-test";
 import SurveyRequestForm from "@/pages/survey/survey-request-form";
 import SurveyDashboard from "@/pages/survey/survey-dashboard";
 import CitizenPortal from "@/pages/citizen-portal";

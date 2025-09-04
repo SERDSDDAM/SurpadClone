@@ -76,7 +76,7 @@ function SmartDecisionCard({ decision, onApprove, onEscalate, isProcessing }: Sm
             <div className="text-sm space-y-1">
               <div className="flex items-center gap-2">
                 <Badge variant="outline">{decision.status}</Badge>
-                <span className="text-gray-600">منذ {new Date(decision.createdAt).toLocaleDateString('ar-SA')}</span>
+                <span className="text-gray-600">منذ {new Date(decision.createdAt || new Date()).toLocaleDateString('ar-SA')}</span>
               </div>
               <p><span className="font-medium">الأولوية:</span> {decision.priority}</p>
               <p><span className="font-medium">الأيام المقدرة:</span> {decision.estimatedProcessingDays} يوم</p>
@@ -283,10 +283,7 @@ export default function BranchReviewerDashboard() {
           directorate: "مديرية السبعين",
           coordinates: { latitude: 15.369, longitude: 44.191 },
           requestedBy: "أحمد محمد الحميدي",
-          requestedByPhone: null,
-          requestedByEmail: null,
-          requestedByNationalId: null,
-          requestedByAddress: null,
+
           decisionType: "تحديد حالة شارع",
           status: "under_review",
           statusReason: null,
@@ -295,7 +292,7 @@ export default function BranchReviewerDashboard() {
           estimatedProcessingDays: 3,
           actualProcessingDays: null,
           branchOffice: "فرع صنعاء الشرقي",
-          supervisoryOffice: null,
+          supervisoryOffice: "",
           assignedReviewer: null,
           assignedSurveyor: null,
           reviewerComments: null,
@@ -329,10 +326,7 @@ export default function BranchReviewerDashboard() {
           directorate: "مديرية الصافية",
           coordinates: { latitude: 15.354, longitude: 44.215 },
           requestedBy: "فاطمة عبدالله الأهدل",
-          requestedByPhone: null,
-          requestedByEmail: null,
-          requestedByNationalId: null,
-          requestedByAddress: null,
+
           decisionType: "تحديد حالة شارع تراثي",
           status: "under_review",
           statusReason: null,
@@ -341,7 +335,7 @@ export default function BranchReviewerDashboard() {
           estimatedProcessingDays: 14,
           actualProcessingDays: null,
           branchOffice: "فرع صنعاء المركزي",
-          supervisoryOffice: null,
+          supervisoryOffice: "",
           assignedReviewer: null,
           assignedSurveyor: null,
           reviewerComments: null,
@@ -375,10 +369,7 @@ export default function BranchReviewerDashboard() {
           directorate: "مديرية ضهر",
           coordinates: { latitude: 15.425, longitude: 44.168 },
           requestedBy: "علي حسن المؤيد",
-          requestedByPhone: null,
-          requestedByEmail: null,
-          requestedByNationalId: null,
-          requestedByAddress: null,
+
           decisionType: "تحديد حالة شارع معرض للفيضانات",
           status: "under_review",
           statusReason: null,
@@ -387,7 +378,7 @@ export default function BranchReviewerDashboard() {
           estimatedProcessingDays: 21,
           actualProcessingDays: null,
           branchOffice: "فرع صنعاء الشمالي",
-          supervisoryOffice: null,
+          supervisoryOffice: "",
           assignedReviewer: null,
           assignedSurveyor: null,
           reviewerComments: null,
@@ -539,7 +530,7 @@ export default function BranchReviewerDashboard() {
             <CardContent className="p-6 text-center">
               <ArrowUp className="h-8 w-8 text-purple-600 mx-auto mb-2" />
               <div className="text-2xl font-bold text-gray-900">
-                {decisions.filter((d: StreetStatusDecision) => d.escalationLevel > 0).length}
+                {decisions.filter((d: StreetStatusDecision) => (d.escalationLevel || 0) > 0).length}
               </div>
               <div className="text-sm text-gray-600">مصعّد</div>
             </CardContent>
@@ -602,7 +593,7 @@ export default function BranchReviewerDashboard() {
                             المستوى {decision.escalationLevel}
                           </Badge>
                         </td>
-                        <td className="p-4">{new Date(decision.createdAt).toLocaleDateString('ar-SA')}</td>
+                        <td className="p-4">{new Date(decision.createdAt || new Date()).toLocaleDateString('ar-SA')}</td>
                         <td className="p-4">
                           <Button
                             size="sm"
