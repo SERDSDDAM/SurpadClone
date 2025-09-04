@@ -1,0 +1,366 @@
+(base) PS H:\PUPLIC\SurpadClone> start-ultimate.bat; if (-not $?) { throw 'Command failed' }
+
+=============================================
+  ≡اأ ╪د┘
+         ╪ص┘
+             ╪د┘
+                ┘┘ç╪د╪خ┘è - ┘╪╕╪د┘à ╪ذ┘┘ّ╪د╪ة ╪د┘
+                                                ┘è┘à┘
+=============================================
+
+[┘à╪╣┘
+      ┘ê┘à╪د╪ز] ╪ذ╪»╪ة ╪د┘
+                          ╪ص┘
+                              ╪د┘
+                                 ┘┘ç╪د╪خ┘è...
+
+[┘╪ص╪╡] ╪د┘
+           ╪ز╪ص┘é┘é ┘à┘ ┘à╪ز╪╖┘
+                               ╪ذ╪د╪ز ╪د┘
+                                         ┘╪╕╪د┘à...
+ظ£ô Docker ┘à╪ز┘ê┘╪▒ ┘ê┘à╪ش┘ç╪▓
+
+[╪ز┘╪╕┘è┘] ╪ح╪▓╪د┘
+                  ╪ر ╪د┘
+                        ╪ص╪د┘ê┘è╪د╪ز ┘ê╪د┘
+                                          ╪┤╪ذ┘â╪د╪ز ╪د┘
+                                                        ┘é╪»┘è┘à╪ر...
+[╪ز┘╪╕┘è┘] ╪ح╪▓╪د┘
+                  ╪ر ╪د┘
+                        ╪╡┘ê╪▒ ╪د┘
+                                  ┘é╪»┘è┘à╪ر...
+ظ£ô ╪ز┘à ╪د┘
+            ╪ز┘╪╕┘è┘ ╪ذ┘╪ش╪د╪ص
+
+[╪ح╪╣╪»╪د╪»] ╪ح┘╪┤╪د╪ة ╪د┘
+                          ┘à╪ش┘
+                               ╪»╪د╪ز ╪د┘
+                                         ┘à╪╖┘
+                                              ┘ê╪ذ╪ر...
+ظ£ô ╪ز┘à ╪ح┘╪┤╪د╪ة ╪د┘
+                      ┘à╪ش┘
+                           ╪»╪د╪ز
+
+[╪ح╪╣╪»╪د╪»] ╪ز╪ص╪╢┘è╪▒ ┘é╪د╪╣╪»╪ر ╪د┘
+                                      ╪ذ┘è╪د┘╪د╪ز...
+ظ£ô ╪ز┘à ╪ح╪╣╪»╪د╪» ┘é╪د╪╣╪»╪ر ╪د┘
+                                  ╪ذ┘è╪د┘╪د╪ز
+
+[╪ح╪╣╪»╪د╪»] ╪ز╪ص╪╢┘è╪▒ ┘à╪ز╪║┘è╪▒╪د╪ز ╪د┘
+                                          ╪ذ┘è╪خ╪ر...
+ظ£ô ╪ز┘à ╪ح╪╣╪»╪د╪» ┘à╪ز╪║┘è╪▒╪د╪ز ╪د┘
+                                      ╪ذ┘è╪خ╪ر
+
+[╪ز╪┤╪║┘è┘
+          ] ╪ذ┘╪د╪ة ┘ê╪ز╪┤╪║┘è┘
+                                ╪د┘
+                                   ┘╪╕╪د┘à ╪د┘
+                                              ┘â╪د┘à┘
+                                                     ...
+┘ç╪░╪د ┘é╪» ┘è╪│╪ز╪║╪▒┘é ╪ذ╪╢╪╣ ╪»┘é╪د╪خ┘é ┘┘è ╪د┘
+                                                  ┘à╪▒╪ر ╪د┘
+                                                            ╪ث┘ê┘
+                                                                 ┘ë...
+
+time="2025-09-04T20:12:58+03:00" level=warning msg="H:\\PUPLIC\\SurpadClone\\docker-compose.ultimate.yml: the attribute `version` is obsolete, it will be ignored, please 
+remove it to avoid potential confusion"
+[+] Building 705.9s (16/16) FINISHED
+ => [internal] load local bake definitions                                      0.0s 
+ => => reading from stdin 354B                                                  0.0s 
+ => [internal] load build definition from Dockerfile.ultimate                   0.1s 
+ => => transferring dockerfile: 1.79kB                                          0.0s 
+ => [internal] load metadata for docker.io/library/node:18-alpine               0.0s 
+ => [internal] load .dockerignore                                               0.1s 
+ => => transferring context: 2.64kB                                             0.0s 
+ => CACHED [1/9] FROM docker.io/library/node:18-alpine                          0.0s 
+ => [internal] load build context                                               5.5s 
+ => => transferring context: 86.63MB                                            5.4s 
+ => [2/9] RUN apk add --no-cache     chromium     nss     freetype     harfb  199.8s 
+ => [3/9] WORKDIR /app                                                          0.1s 
+ => [4/9] COPY package*.json ./                                                 0.1s 
+ => [5/9] RUN npm ci --only=production --ignore-scripts || npm install --onl  271.5s 
+ => [6/9] RUN npm install -g drizzle-kit tsx                                   13.8s 
+ => [7/9] COPY . .                                                              0.9s 
+ => [8/9] RUN mkdir -p temp-uploads attached_assets logs &&     chmod -R 755 t  2.2s 
+ => [9/9] RUN addgroup -g 1001 -S nodejs &&     adduser -S appuser -u 1001 -  205.6s 
+ => exporting to image                                                         10.3s 
+ => => exporting layers                                                        10.2s 
+ => => writing image sha256:d0c02094ed9a68b425aa58b8d42049391bfe12c751d3ddcd51  0.0s 
+ => => naming to docker.io/library/surpadclone-app                              0.0s 
+ => resolving provenance for metadata file                                      0.0s 
+[+] Running 9/9
+ ✔ app                                          Built                           0.0s 
+ ✔ Network binaa-ultimate-network               Created                         0.1s 
+ ✔ Volume "surpadclone_minio_ultimate_data"     Created                         0.0s 
+ ✔ Volume "surpadclone_postgres_ultimate_data"  Created                         0.0s 
+ ✔ Volume "surpadclone_redis_ultimate_data"     Created                         0.0s 
+ ✘ Container binaa-postgres-ultimate            Error                           5.7s 
+ ✔ Container binaa-redis-ultimate               Healthy                        12.0s 
+ ✔ Container binaa-minio-ultimate               Healthy                         7.0s 
+ ✔ Container binaa-app-ultimate                 Created                         0.1s 
+dependency failed to start: container binaa-postgres-ultimate is unhealthy
+
+[╪«╪╖╪ث] ┘╪┤┘
+              ┘┘è ╪ز╪┤╪║┘è┘
+                            ╪د┘
+                               ┘╪╕╪د┘à!
+╪ش╪د╪▒┘è ╪╣╪▒╪╢ ╪│╪ش┘
+                      ╪د┘
+                         ╪ث╪«╪╖╪د╪ة...
+time="2025-09-04T20:24:57+03:00" level=warning msg="H:\\PUPLIC\\SurpadClone\\docker-compose.ultimate.yml: the attribute `version` is obsolete, it will be ignored, please 
+remove it to avoid potential confusion"
+binaa-postgres-ultimate  | ********************************************************************************
+binaa-postgres-ultimate  | WARNING: POSTGRES_HOST_AUTH_METHOD has been set to "trust". This will allow
+binaa-postgres-ultimate  |          anyone with access to the Postgres port to access your database without
+binaa-postgres-ultimate  |          a password, even if POSTGRES_PASSWORD is set. See PostgreSQL
+binaa-postgres-ultimate  |          documentation about "trust":
+binaa-postgres-ultimate  |          https://www.postgresql.org/docs/current/auth-trust.html
+binaa-postgres-ultimate  |          In Docker's default configuration, this is effectively any other
+binaa-postgres-ultimate  |          container on the same system.
+binaa-postgres-ultimate  | 
+binaa-postgres-ultimate  |          It is not recommended to use POSTGRES_HOST_AUTH_METHOD=trust. Replace
+binaa-postgres-ultimate  |          it with "-e POSTGRES_PASSWORD=password" instead to set a password in
+binaa-postgres-ultimate  |          "docker run".
+binaa-postgres-ultimate  | ********************************************************************************
+binaa-postgres-ultimate  | The files belonging to this database system will be owned 
+by user "postgres".
+binaa-postgres-ultimate  | This user must also own the server process.
+binaa-postgres-ultimate  | 
+binaa-postgres-ultimate  | The database cluster will be initialized with locale "en_US.utf8".
+binaa-postgres-ultimate  | The default text search configuration will be set to "english".
+binaa-postgres-ultimate  | 
+binaa-postgres-ultimate  | Data page checksums are disabled.
+binaa-postgres-ultimate  | 
+binaa-postgres-ultimate  | fixing permissions on existing directory /var/lib/postgresql/data/pgdata ... ok
+binaa-postgres-ultimate  | creating subdirectories ... ok
+binaa-postgres-ultimate  | selecting dynamic shared memory implementation ... posix  
+binaa-postgres-ultimate  | selecting default max_connections ... 100
+binaa-redis-ultimate     | 1:C 04 Sep 2025 17:24:46.329 * oO0OoO0OoO0Oo Redis is starting oO0OoO0OoO0Oo
+binaa-redis-ultimate     | 1:C 04 Sep 2025 17:24:46.329 * Redis version=7.4.5, bits=64, commit=00000000, modified=0, pid=1, just started
+binaa-redis-ultimate     | 1:C 04 Sep 2025 17:24:46.329 * Configuration loaded       
+binaa-redis-ultimate     | 1:M 04 Sep 2025 17:24:46.330 * monotonic clock: POSIX clock_gettime
+binaa-redis-ultimate     | 1:M 04 Sep 2025 17:24:46.336 * Running mode=standalone, port=6379.
+binaa-redis-ultimate     | 1:M 04 Sep 2025 17:24:46.337 * Server initialized
+binaa-redis-ultimate     | 1:M 04 Sep 2025 17:24:46.351 * Creating AOF base file appendonly.aof.1.base.rdb on server start
+binaa-redis-ultimate     | 1:M 04 Sep 2025 17:24:46.371 * Creating AOF incr file appendonly.aof.1.incr.aof on server start
+binaa-redis-ultimate     | 1:M 04 Sep 2025 17:24:46.371 * Ready to accept connections tcp
+binaa-minio-ultimate     | INFO: Formatting 1st pool, 1 set(s), 1 drives per set.    
+binaa-postgres-ultimate  | selecting default shared_buffers ... 128MB
+binaa-postgres-ultimate  | selecting default time zone ... Etc/UTC
+binaa-postgres-ultimate  | creating configuration files ... ok
+binaa-postgres-ultimate  | running bootstrap script ... ok
+binaa-postgres-ultimate  | performing post-bootstrap initialization ... ok
+binaa-postgres-ultimate  | syncing data to disk ... ok
+binaa-postgres-ultimate  | 
+binaa-postgres-ultimate  | Success. You can now start the database server using:     
+binaa-postgres-ultimate  | 
+binaa-postgres-ultimate  |     pg_ctl -D /var/lib/postgresql/data/pgdata -l logfile start
+binaa-postgres-ultimate  | 
+binaa-postgres-ultimate  | waiting for server to start....2025-09-04 17:24:48.405 UTC [50] LOG:  starting PostgreSQL 15.4 (Debian 15.4-1.pgdg110+1) on x86_64-pc-linux-gnu, compiled by gcc (Debian 10.2.1-6) 10.2.1 20210110, 64-bit
+binaa-postgres-ultimate  | 2025-09-04 17:24:48.413 UTC [50] LOG:  listening on Unix socket "/var/run/postgresql/.s.PGSQL.5432"
+binaa-postgres-ultimate  | 2025-09-04 17:24:48.441 UTC [53] LOG:  database system was shut down at 2025-09-04 17:24:47 UTC
+binaa-postgres-ultimate  | 2025-09-04 17:24:48.467 UTC [50] LOG:  database system is 
+ready to accept connections
+binaa-postgres-ultimate  |  done
+binaa-postgres-ultimate  | server started
+binaa-postgres-ultimate  | 2025-09-04 17:24:48.573 UTC [59] LOG:  connection received: host=[local]
+binaa-postgres-ultimate  | 2025-09-04 17:24:48.574 UTC [59] LOG:  connection authorized: user=postgres database=postgres application_name=psql
+binaa-postgres-ultimate  | 2025-09-04 17:24:48.579 UTC [59] LOG:  statement: SELECT 1 FROM pg_database WHERE datname = 'binaa_yemen' ;
+binaa-postgres-ultimate  | 2025-09-04 17:24:48.580 UTC [59] LOG:  disconnection: session time: 0:00:00.007 user=postgres database=postgres host=[local]
+binaa-postgres-ultimate  | 2025-09-04 17:24:48.620 UTC [61] LOG:  connection received: host=[local]
+binaa-minio-ultimate     | INFO: WARNING: Host local has more than 0 drives of set. A host failure will result in data becoming unavailable.
+binaa-minio-ultimate     | MinIO Object Storage Server
+binaa-minio-ultimate     | Copyright: 2015-2025 MinIO, Inc.
+binaa-minio-ultimate     | License: GNU AGPLv3 - https://www.gnu.org/licenses/agpl-3.0.html
+binaa-minio-ultimate     | Version: RELEASE.2025-07-23T15-54-02Z (go1.24.5 linux/amd64)
+binaa-minio-ultimate     | 
+binaa-minio-ultimate     | API: http://172.18.0.3:9000  http://127.0.0.1:9000        
+binaa-minio-ultimate     | WebUI: http://172.18.0.3:9001 http://127.0.0.1:9001       
+binaa-minio-ultimate     | 
+binaa-minio-ultimate     | Docs: https://docs.min.io
+binaa-postgres-ultimate  | 2025-09-04 17:24:48.621 UTC [61] LOG:  connection authorized: user=postgres database=postgres application_name=psql
+binaa-postgres-ultimate  | 2025-09-04 17:24:48.623 UTC [61] LOG:  statement: CREATE DATABASE "binaa_yemen" ;
+binaa-postgres-ultimate  | CREATE DATABASE
+binaa-postgres-ultimate  | 2025-09-04 17:24:48.704 UTC [61] LOG:  disconnection: session time: 0:00:00.083 user=postgres database=postgres host=[local]
+binaa-postgres-ultimate  | 
+binaa-postgres-ultimate  | 
+binaa-postgres-ultimate  | /usr/local/bin/docker-entrypoint.sh: running /docker-entrypoint-initdb.d/01-create-tables.sql
+binaa-postgres-ultimate  | 2025-09-04 17:24:48.752 UTC [63] LOG:  connection received: host=[local]
+binaa-postgres-ultimate  | 2025-09-04 17:24:48.753 UTC [63] LOG:  connection authorized: user=postgres database=binaa_yemen application_name=psql
+binaa-postgres-ultimate  | 2025-09-04 17:24:48.772 UTC [63] LOG:  statement: CREATE EXTENSION IF NOT EXISTS postgis;
+binaa-postgres-ultimate  | CREATE EXTENSION
+binaa-postgres-ultimate  | 2025-09-04 17:24:49.430 UTC [63] LOG:  statement: CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+binaa-postgres-ultimate  | CREATE EXTENSION
+binaa-postgres-ultimate  | 2025-09-04 17:24:49.437 UTC [63] LOG:  statement: CREATE TABLE IF NOT EXISTS processing_jobs (
+binaa-postgres-ultimate  |          id VARCHAR(255) PRIMARY KEY,
+binaa-postgres-ultimate  |          layer_id VARCHAR(255) NOT NULL,
+binaa-postgres-ultimate  |          status VARCHAR(50) NOT NULL DEFAULT 'queued',    
+binaa-postgres-ultimate  |          progress INTEGER NOT NULL DEFAULT 0 CHECK (progress >= 0 AND progress <= 100),
+binaa-postgres-ultimate  |          metadata JSONB,
+binaa-postgres-ultimate  |          created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+binaa-postgres-ultimate  |          updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()binaa-postgres-ultimate  |      );
+binaa-postgres-ultimate  | CREATE TABLE
+binaa-postgres-ultimate  | 2025-09-04 17:24:49.459 UTC [63] LOG:  statement: CREATE INDEX IF NOT EXISTS idx_processing_jobs_status ON processing_jobs(status);
+binaa-postgres-ultimate  | CREATE INDEX
+binaa-postgres-ultimate  | 2025-09-04 17:24:49.471 UTC [63] LOG:  statement: CREATE INDEX IF NOT EXISTS idx_processing_jobs_created_at ON processing_jobs(created_at);    
+binaa-postgres-ultimate  | CREATE INDEX
+binaa-postgres-ultimate  | 2025-09-04 17:24:49.485 UTC [63] LOG:  statement: CREATE INDEX IF NOT EXISTS idx_processing_jobs_layer_id ON processing_jobs(layer_id);        
+binaa-postgres-ultimate  | CREATE INDEX
+binaa-postgres-ultimate  | 2025-09-04 17:24:49.497 UTC [63] LOG:  statement: CREATE TABLE IF NOT EXISTS gis_layers (
+binaa-postgres-ultimate  |          id VARCHAR(255) PRIMARY KEY,
+binaa-postgres-ultimate  |          filename VARCHAR(500) NOT NULL,
+binaa-postgres-ultimate  |          status VARCHAR(50) NOT NULL DEFAULT 'pending',   
+binaa-postgres-ultimate  |          image_url TEXT,
+binaa-postgres-ultimate  |          cog_url TEXT,
+binaa-postgres-ultimate  |          bounds_wgs84 JSONB,
+binaa-postgres-ultimate  |          width INTEGER,
+binaa-postgres-ultimate  |          height INTEGER,
+binaa-postgres-ultimate  |          crs VARCHAR(100),
+binaa-postgres-ultimate  |          metadata JSONB,
+binaa-postgres-ultimate  |          created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+binaa-postgres-ultimate  |          updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()binaa-postgres-ultimate  |      );
+binaa-postgres-ultimate  | CREATE TABLE
+binaa-postgres-ultimate  | 2025-09-04 17:24:49.519 UTC [63] LOG:  statement: CREATE INDEX IF NOT EXISTS idx_gis_layers_status ON gis_layers(status);
+binaa-postgres-ultimate  | CREATE INDEX
+binaa-postgres-ultimate  | 2025-09-04 17:24:49.531 UTC [63] LOG:  statement: CREATE INDEX IF NOT EXISTS idx_gis_layers_created_at ON gis_layers(created_at);
+binaa-postgres-ultimate  | CREATE INDEX
+binaa-postgres-ultimate  | 2025-09-04 17:24:49.543 UTC [63] LOG:  statement: CREATE TABLE IF NOT EXISTS layer_visibility (
+binaa-postgres-ultimate  |          layer_id VARCHAR(255) PRIMARY KEY,
+binaa-postgres-ultimate  |          visible BOOLEAN NOT NULL DEFAULT true,
+binaa-postgres-ultimate  |          opacity FLOAT NOT NULL DEFAULT 1.0 CHECK (opacity >= 0 AND opacity <= 1),
+binaa-postgres-ultimate  |          z_index INTEGER NOT NULL DEFAULT 1000,
+binaa-postgres-ultimate  |          last_updated TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+binaa-postgres-ultimate  |          FOREIGN KEY (layer_id) REFERENCES gis_layers(id) 
+ON DELETE CASCADE
+binaa-postgres-ultimate  |      );
+binaa-postgres-ultimate  | CREATE TABLE
+binaa-postgres-ultimate  | 2025-09-04 17:24:49.557 UTC [63] LOG:  statement: CREATE TABLE IF NOT EXISTS processing_stats (
+binaa-postgres-ultimate  |          id SERIAL PRIMARY KEY,
+binaa-postgres-ultimate  |          date DATE NOT NULL DEFAULT CURRENT_DATE,
+binaa-postgres-ultimate  |          total_jobs INTEGER NOT NULL DEFAULT 0,
+binaa-postgres-ultimate  |          completed_jobs INTEGER NOT NULL DEFAULT 0,       
+binaa-postgres-ultimate  |          failed_jobs INTEGER NOT NULL DEFAULT 0,
+binaa-postgres-ultimate  |          avg_processing_time_seconds FLOAT,
+binaa-postgres-ultimate  |          created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+binaa-postgres-ultimate  |          UNIQUE(date)
+binaa-postgres-ultimate  |      );
+binaa-postgres-ultimate  | CREATE TABLE
+binaa-postgres-ultimate  | 2025-09-04 17:24:49.580 UTC [63] LOG:  statement: CREATE OR REPLACE FUNCTION update_updated_at_column()
+binaa-postgres-ultimate  |      RETURNS TRIGGER AS $$
+binaa-postgres-ultimate  |      BEGIN
+binaa-postgres-ultimate  |          NEW.updated_at = NOW();
+binaa-postgres-ultimate  |          RETURN NEW;
+binaa-postgres-ultimate  |      END;
+binaa-postgres-ultimate  |      $$ language 'plpgsql';
+binaa-postgres-ultimate  | CREATE FUNCTION
+binaa-postgres-ultimate  | 2025-09-04 17:24:49.584 UTC [63] LOG:  statement: DROP TRIGGER IF EXISTS update_processing_jobs_updated_at ON processing_jobs;
+binaa-postgres-ultimate  | psql:/docker-entrypoint-initdb.d/01-create-tables.sql:76: 
+NOTICE:  trigger "update_processing_jobs_updated_at" for relation "processing_jobs" does not exist, skipping
+binaa-postgres-ultimate  | DROP TRIGGER
+binaa-postgres-ultimate  | 2025-09-04 17:24:49.585 UTC [63] LOG:  statement: CREATE TRIGGER update_processing_jobs_updated_at
+binaa-postgres-ultimate  |          BEFORE UPDATE ON processing_jobs
+binaa-postgres-ultimate  |          FOR EACH ROW
+binaa-postgres-ultimate  |          EXECUTE FUNCTION update_updated_at_column();     
+binaa-postgres-ultimate  | CREATE TRIGGER
+binaa-postgres-ultimate  | 2025-09-04 17:24:49.589 UTC [63] LOG:  statement: DROP TRIGGER IF EXISTS update_gis_layers_updated_at ON gis_layers;
+binaa-postgres-ultimate  | DROP TRIGGER
+binaa-postgres-ultimate  | psql:/docker-entrypoint-initdb.d/01-create-tables.sql:82: 
+NOTICE:  trigger "update_gis_layers_updated_at" for relation "gis_layers" does not exist, skipping
+binaa-postgres-ultimate  | 2025-09-04 17:24:49.589 UTC [63] LOG:  statement: CREATE TRIGGER update_gis_layers_updated_at
+binaa-postgres-ultimate  |          BEFORE UPDATE ON gis_layers
+binaa-postgres-ultimate  |          FOR EACH ROW
+binaa-postgres-ultimate  |          EXECUTE FUNCTION update_updated_at_column();     
+binaa-postgres-ultimate  | CREATE TRIGGER
+binaa-postgres-ultimate  | 2025-09-04 17:24:49.596 UTC [63] LOG:  statement: DROP TRIGGER IF EXISTS update_layer_visibility_updated_at ON layer_visibility;
+binaa-postgres-ultimate  | DROP TRIGGER
+binaa-postgres-ultimate  | psql:/docker-entrypoint-initdb.d/01-create-tables.sql:88: 
+NOTICE:  trigger "update_layer_visibility_updated_at" for relation "layer_visibility" does not exist, skipping
+binaa-postgres-ultimate  | 2025-09-04 17:24:49.596 UTC [63] LOG:  statement: CREATE TRIGGER update_layer_visibility_updated_at
+binaa-postgres-ultimate  |          BEFORE UPDATE ON layer_visibility
+binaa-postgres-ultimate  |          FOR EACH ROW
+binaa-postgres-ultimate  |          EXECUTE FUNCTION update_updated_at_column();     
+binaa-postgres-ultimate  | CREATE TRIGGER
+binaa-postgres-ultimate  | 2025-09-04 17:24:49.600 UTC [63] LOG:  statement: INSERT INTO processing_stats (date) VALUES (CURRENT_DATE) ON CONFLICT DO NOTHING;
+binaa-postgres-ultimate  | INSERT 0 1
+binaa-postgres-ultimate  | 2025-09-04 17:24:49.606 UTC [63] LOG:  disconnection: session time: 0:00:00.853 user=postgres database=binaa_yemen host=[local]
+binaa-postgres-ultimate  | 
+binaa-postgres-ultimate  | 
+binaa-postgres-ultimate  | /usr/local/bin/docker-entrypoint.sh: running /docker-entrypoint-initdb.d/01-extensions.sql
+binaa-postgres-ultimate  | 2025-09-04 17:24:49.649 UTC [65] LOG:  connection received: host=[local]
+binaa-postgres-ultimate  | 2025-09-04 17:24:49.650 UTC [65] LOG:  connection authorized: user=postgres database=binaa_yemen application_name=psql
+binaa-postgres-ultimate  | 2025-09-04 17:24:49.662 UTC [65] LOG:  statement: CREATE EXTENSION IF NOT EXISTS postgis;
+binaa-postgres-ultimate  | CREATE EXTENSION
+binaa-postgres-ultimate  | 2025-09-04 17:24:49.662 UTC [65] LOG:  statement: CREATE EXTENSION IF NOT EXISTS postgis_topology;
+binaa-postgres-ultimate  | psql:/docker-entrypoint-initdb.d/01-extensions.sql:6: NOTICE:  extension "postgis" already exists, skipping
+binaa-postgres-ultimate  | CREATE EXTENSION
+binaa-postgres-ultimate  | 2025-09-04 17:24:49.750 UTC [65] LOG:  statement: CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+binaa-postgres-ultimate  | psql:/docker-entrypoint-initdb.d/01-extensions.sql:10: NOTICE:  extension "uuid-ossp" already exists, skipping
+binaa-postgres-ultimate  | CREATE EXTENSION
+binaa-postgres-ultimate  | 2025-09-04 17:24:49.751 UTC [65] LOG:  statement: CREATE EXTENSION IF NOT EXISTS hstore;
+binaa-postgres-ultimate  | CREATE EXTENSION
+binaa-postgres-ultimate  | 2025-09-04 17:24:49.767 UTC [65] LOG:  statement: CREATE EXTENSION IF NOT EXISTS pg_trgm;
+binaa-postgres-ultimate  | CREATE EXTENSION
+binaa-postgres-ultimate  | 2025-09-04 17:24:49.779 UTC [65] LOG:  statement: CREATE EXTENSION IF NOT EXISTS btree_gin;
+binaa-postgres-ultimate  | CREATE EXTENSION
+binaa-postgres-ultimate  | 2025-09-04 17:24:49.806 UTC [65] LOG:  statement: CREATE EXTENSION IF NOT EXISTS btree_gist;
+binaa-postgres-ultimate  | CREATE EXTENSION
+binaa-postgres-ultimate  | 2025-09-04 17:24:49.845 UTC [65] LOG:  statement: SELECT name, default_version, installed_version
+binaa-postgres-ultimate  |      FROM pg_available_extensions
+binaa-postgres-ultimate  |      WHERE installed_version IS NOT NULL
+binaa-postgres-ultimate  |      ORDER BY name;
+binaa-postgres-ultimate  |        name       | default_version | installed_version   
+binaa-postgres-ultimate  | ------------------+-----------------+-------------------  
+binaa-postgres-ultimate  |  btree_gin        | 1.3             | 1.3
+binaa-postgres-ultimate  |  btree_gist       | 1.7             | 1.7
+binaa-postgres-ultimate  |  hstore           | 1.8             | 1.8
+binaa-postgres-ultimate  |  pg_trgm          | 1.6             | 1.6
+binaa-postgres-ultimate  |  plpgsql          | 1.0             | 1.0
+binaa-postgres-ultimate  |  postgis          | 3.3.4           | 3.3.4
+binaa-postgres-ultimate  |  postgis_topology | 3.3.4           | 3.3.4
+binaa-postgres-ultimate  |  uuid-ossp        | 1.1             | 1.1
+binaa-postgres-ultimate  | (8 rows)
+binaa-postgres-ultimate  | 
+binaa-postgres-ultimate  | 2025-09-04 17:24:49.850 UTC [65] LOG:  disconnection: session time: 0:00:00.201 user=postgres database=binaa_yemen host=[local]
+binaa-postgres-ultimate  | 
+binaa-postgres-ultimate  | 
+binaa-postgres-ultimate  | /usr/local/bin/docker-entrypoint.sh: running /docker-entrypoint-initdb.d/01-setup.sql
+binaa-postgres-ultimate  | 2025-09-04 17:24:49.892 UTC [67] LOG:  connection received: host=[local]
+binaa-postgres-ultimate  | 2025-09-04 17:24:49.893 UTC [67] LOG:  connection authorized: user=postgres database=binaa_yemen application_name=psql
+binaa-postgres-ultimate  | 2025-09-04 17:24:49.904 UTC [67] LOG:  statement: ALTER USER postgres PASSWORD 'postgres123';
+binaa-postgres-ultimate  | ALTER ROLE
+binaa-postgres-ultimate  | 2025-09-04 17:24:49.915 UTC [67] ERROR:  syntax error at or near "NOT" at character 20
+binaa-postgres-ultimate  | 2025-09-04 17:24:49.915 UTC [67] STATEMENT:  CREATE DATABASE IF NOT EXISTS binaa_yemen OWNER postgres;
+binaa-postgres-ultimate  | psql:/docker-entrypoint-initdb.d/01-setup.sql:3: ERROR:  syntax error at or near "NOT"
+binaa-postgres-ultimate  | LINE 1: CREATE DATABASE IF NOT EXISTS binaa_yemen OWNER postgres;
+binaa-postgres-ultimate  |                            ^
+binaa-postgres-ultimate  | 2025-09-04 17:24:49.916 UTC [67] LOG:  disconnection: session time: 0:00:00.023 user=postgres database=binaa_yemen host=[local]
+binaa-postgres-ultimate  | 
+binaa-postgres-ultimate  | PostgreSQL Database directory appears to contain a database; Skipping initialization
+binaa-postgres-ultimate  | 
+binaa-postgres-ultimate  | 2025-09-04 17:24:51.137 UTC [1] LOG:  starting PostgreSQL 
+15.4 (Debian 15.4-1.pgdg110+1) on x86_64-pc-linux-gnu, compiled by gcc (Debian 10.2.1-6) 10.2.1 20210110, 64-bit
+binaa-postgres-ultimate  | 2025-09-04 17:24:51.137 UTC [1] LOG:  listening on IPv4 address "0.0.0.0", port 5432
+binaa-postgres-ultimate  | 2025-09-04 17:24:51.137 UTC [1] LOG:  listening on IPv6 address "::", port 5432
+binaa-postgres-ultimate  | 2025-09-04 17:24:51.163 UTC [1] LOG:  listening on Unix socket "/var/run/postgresql/.s.PGSQL.5432"
+binaa-postgres-ultimate  | 2025-09-04 17:24:51.190 UTC [29] LOG:  database system was interrupted; last known up at 2025-09-04 17:24:48 UTC
+binaa-postgres-ultimate  | 2025-09-04 17:24:51.633 UTC [29] LOG:  database system was not properly shut down; automatic recovery in progress
+binaa-postgres-ultimate  | 2025-09-04 17:24:51.644 UTC [29] LOG:  redo starts at 0/14FE0E8
+binaa-postgres-ultimate  | 2025-09-04 17:24:51.758 UTC [29] LOG:  invalid record length at 0/23F47D0: wanted 24, got 0
+binaa-postgres-ultimate  | 2025-09-04 17:24:51.758 UTC [29] LOG:  redo done at 0/23F4778 system usage: CPU: user: 0.10 s, system: 0.00 s, elapsed: 0.11 s
+binaa-postgres-ultimate  | 2025-09-04 17:24:51.775 UTC [27] LOG:  checkpoint starting: end-of-recovery immediate wait
+binaa-postgres-ultimate  | 2025-09-04 17:24:52.019 UTC [27] LOG:  checkpoint complete: wrote 2075 buffers (6.3%); 0 WAL file(s) added, 0 removed, 1 recycled; write=0.060 
+s, sync=0.139 s, total=0.252 s; sync files=340, longest=0.032 s, average=0.001 s; distance=15321 kB, estimate=15321 kB
+binaa-postgres-ultimate  | 2025-09-04 17:24:52.036 UTC [1] LOG:  database system is ready to accept connections
+binaa-postgres-ultimate  | 2025-09-04 17:24:56.775 UTC [40] LOG:  connection received: host=[local]
+binaa-postgres-ultimate  | 2025-09-04 17:24:56.775 UTC [40] LOG:  connection authorized: user=postgres database=binaa_yemen application_name=pg_isready
+binaa-postgres-ultimate  | 2025-09-04 17:24:56.779 UTC [40] LOG:  disconnection: session time: 0:00:00.004 user=postgres database=binaa_yemen host=[local]
+Press any key to continue . . .
+Command failed
+At line:1 char:36
++ start-ultimate.bat; if (-not $?) { throw 'Command failed' }
++                                    ~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : OperationStopped: (Command failed:String) [], Runtime  
+   Exception
+    + FullyQualifiedErrorId : Command failed
+ 
+(base) PS H:\PUPLIC\SurpadClone> 
