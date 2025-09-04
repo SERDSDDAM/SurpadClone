@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { CheckCircle, XCircle, Clock, AlertTriangle, Eye } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import type { StreetStatusDecision } from '../../shared/survey-schema';
+import type { StreetStatusDecision } from '@shared/schema';
 
 interface DashboardStats {
   total: number;
