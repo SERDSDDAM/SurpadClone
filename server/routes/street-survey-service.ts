@@ -12,6 +12,8 @@ import {
   type BranchPeriodicReport 
 } from "@shared/schema";
 import { toArrayResponse, toObjectResponse, toErrorResponse } from "../adapters/response";
+import { escalationEngine, type RequestContext } from "../services/gis/escalation-engine";
+import type { CoordinatePoint } from "../services/gis/point-in-polygon-engine";
 
 const router = Router();
 
@@ -44,15 +46,97 @@ router.get("/street-decisions/:id", async (req, res) => {
   }
 });
 
-// Create new street status decision
+// Create new street status decision with intelligent routing
 router.post("/street-decisions", async (req, res) => {
   try {
     const validatedData = insertStreetStatusDecisionSchema.parse(req.body);
+    
+    // استخراج الإحداثيات من البيانات المرسلة
+    let coordinates: CoordinatePoint | null = null;
+    if (validatedData.coordinates && typeof validatedData.coordinates === 'object') {
+      const coords = validatedData.coordinates as any;
+      if (coords.latitude && coords.longitude) {
+        coordinates = {
+          latitude: Number(coords.latitude),
+          longitude: Number(coords.longitude),
+          coordinateSystem: coords.coordinateSystem || 'WGS84'
+        };
+      }
+    }
+
+    // إنشاء سياق الطلب للمحرك
+    const requestContext: RequestContext = {
+      requestType: (validatedData.decisionType as any) || 'new_construction',
+      projectSize: 'medium', // يمكن استخراجه من البيانات لاحقاً
+      projectValue: 1000000, // قيمة افتراضية - يمكن تحسينها
+      applicantType: 'individual', // يمكن استخراجه من applicantDetails
+      urgency: 'routine',
+      hasExistingPermits: false,
+      documentationComplete: (validatedData.attachedDocuments as any[])?.length > 0
+    };
+
+    let escalationResult = null;
+    
+    // تشغيل محرك التحليل والتصعيد إذا توفرت الإحداثيات
+    if (coordinates) {
+      console.log('🔍 تشغيل محرك التحليل الجغرافي والتصعيد');
+      console.log('📍 الإحداثيات:', coordinates);
+      
+      try {
+        escalationResult = await escalationEngine.analyzeAndEscalate(coordinates, requestContext);
+        console.log('✅ نتيجة التحليل:', escalationResult);
+        
+        // تحديث البيانات بناءً على نتيجة التحليل
+        if (escalationResult.assignedBranch && !validatedData.branchOffice) {
+          (validatedData as any).branchOffice = escalationResult.assignedBranch;
+        }
+        if (escalationResult.supervisoryOffice && !validatedData.supervisoryOffice) {
+          (validatedData as any).supervisoryOffice = escalationResult.supervisoryOffice;
+        }
+        if (escalationResult.escalationLevel !== undefined) {
+          (validatedData as any).escalationLevel = escalationResult.escalationLevel;
+        }
+        if (escalationResult.reasoning.length > 0) {
+          (validatedData as any).escalationReason = escalationResult.reasoning.join('; ');
+        }
+        if (escalationResult.estimatedProcessingDays) {
+          (validatedData as any).estimatedProcessingDays = escalationResult.estimatedProcessingDays;
+        }
+        
+      } catch (escalationError) {
+        console.error('خطأ في محرك التصعيد:', escalationError);
+        // المتابعة بدون تطبيق نتائج التصعيد في حالة الخطأ
+      }
+    } else {
+      console.log('⚠️ لم يتم العثور على إحداثيات صالحة - تم تخطي التحليل التلقائي');
+    }
+
+    // إنشاء القرار في قاعدة البيانات
     const decision = await storage.createStreetStatusDecision(validatedData);
-    res.status(201).json(toObjectResponse(decision));
+    
+    // إرجاع الاستجابة مع معلومات التحليل إن وجدت
+    const response = {
+      decision,
+      analysis: escalationResult ? {
+        escalationLevel: escalationResult.escalationLevel,
+        assignedBranch: escalationResult.assignedBranch,
+        supervisoryOffice: escalationResult.supervisoryOffice,
+        estimatedDays: escalationResult.estimatedProcessingDays,
+        reasoning: escalationResult.reasoning,
+        autoApprovalEligible: escalationResult.autoApprovalEligible
+      } : null
+    };
+    
+    console.log('📝 تم إنشاء القرار المساحي بنجاح:', decision.id);
+    res.status(201).json(toObjectResponse(response, 'تم إنشاء القرار المساحي مع التحليل التلقائي'));
+    
   } catch (error) {
     console.error("Error creating street decision:", error);
-    res.status(500).json({ success: false, error: "Failed to create street decision" });
+    if (error instanceof Error && error.name === 'ZodError') {
+      res.status(400).json({ success: false, error: "بيانات غير صالحة", details: (error as any).errors });
+    } else {
+      res.status(500).json({ success: false, error: "Failed to create street decision" });
+    }
   }
 });
 
