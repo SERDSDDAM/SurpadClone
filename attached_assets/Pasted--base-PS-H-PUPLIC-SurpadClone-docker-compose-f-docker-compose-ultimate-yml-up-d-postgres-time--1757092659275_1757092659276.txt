@@ -1,0 +1,683 @@
+(base) PS H:\PUPLIC\SurpadClone> docker-compose -f docker-compose.ultimate.yml up -d postgres
+time="2025-09-05T20:08:38+03:00" level=warning msg="H:\PUPLIC\SurpadClone\docker-compose.ultimate.yml: the attribute version is obsolete, it will be ignored, please remove it to avoid potential confusion"
+✔ Container binaa-postgres-ultimate Running 0.0s
+(base) PS H:\PUPLIC\SurpadClone> docker-compose -f docker-compose.ultimate.yml up -d redis
+time="2025-09-05T20:08:47+03:00" level=warning msg="H:\PUPLIC\SurpadClone\docker-compose.ultimate.yml: the attribute version is obsolete, it will be ignored, please remove it to avoid potential confusion"
+[+] Running 1/1
+✔ Container binaa-redis-ultimate Running 0.0s
+(base) PS H:\PUPLIC\SurpadClone> docker-compose -f docker-compose.ultimate.yml up -d minio
+the attribute version is obsolete, it will be ignored, please remove it to avoid potential confusion"
+[+] Running 1/1
+✔ Container binaa-minio-ultimate Running 0.0s
+(base) PS H:\PUPLIC\SurpadClone> docker-compose -f docker-compose.ultimate.yml ps
+time="2025-09-05T20:09:05+03:00" level=warning msg="H:\PUPLIC\SurpadClone\docker-compose.ultimate.yml: the attribute version is obsolete, it will be ignored, please remove it to avoid potential confusion"
+NAME IMAGE COMMAND SERVICE CREATED STATUS PORTS
+binaa-app-ultimate surpadclone-app "docker-entrypoint.s…" app 14 minutes ago Restarting (1) 48 seconds ago
+binaa-minio-ultimate minio/minio:latest "/usr/bin/docker-ent…" minio 3 hours ago Up 4 minutes (healthy) 0.0.0.0:9000-9001->9000-9001/tcp, [::]:9000-9001->9000-9001/tcp
+binaa-postgres-ultimate postgis/postgis:15-3.3 "docker-entrypoint.s…" postgres 3 hours ago Up 4 minutes (healthy) 0.0.0.0:5432->5432/tcp, [::]:5432->5432/tcp
+binaa-redis-ultimate redis:7-alpine "docker-entrypoint.s…" redis 3 hours ago Up 4 minutes (healthy) 0.0.0.0:6379->6379/tcp, [::]:6379->6379/tcp
+(base) PS H:\PUPLIC\SurpadClone> docker-compose -f docker-compose.ultimate.yml up -d app
+time="2025-09-05T20:09:20+03:00" level=warning msg="H:\PUPLIC\SurpadClone\docker-compose.ultimate.yml: the attribute version is obsolete, it will be ignored, please remove it to avoid potential confusion"
+[+] Running 4/4
+✔ Container binaa-minio-ultimate Healthy 0.5s
+✔ Container binaa-postgres-ultimate Healthy 0.5s
+✔ Container binaa-redis-ultimate Healthy 0.5s
+✔ Container binaa-app-ultimate Started 0.1s
+(base) PS H:\PUPLIC\SurpadClone> docker-compose -f docker-compose.ultimate.yml logs app
+time="2025-09-05T20:09:35+03:00" level=warning msg="H:\PUPLIC\SurpadClone\docker-compose.ultimate.yml: the attribute version is obsolete, it will be ignored, please remove it to avoid potential confusion"
+binaa-app-ultimate |
+binaa-app-ultimate | node:internal/process/esm_loader:40
+binaa-app-ultimate | internalBinding('errors').triggerUncaughtException(
+binaa-app-ultimate | ^
+binaa-app-ultimate | Error [ERR_MODULE_NOT_FOUND]: Cannot find package '@shared/schema' imported from /app/server/routes.ts
+binaa-app-ultimate | at new NodeError (node:internal/errors:405:5)
+binaa-app-ultimate | at packageResolve (node:internal/modules/esm/resolve:916:9)
+binaa-app-ultimate | at moduleResolve (node:internal/modules/esm/resolve:973:20)
+binaa-app-ultimate | at defaultResolve (node:internal/modules/esm/resolve:1206:11)
+binaa-app-ultimate | at nextResolve (node:internal/modules/esm/hooks:864:28)
+binaa-app-ultimate | at resolveBase (file:///usr/local/lib/node_modules/tsx/dist/esm/index.mjs?1757091281199:2:3744)
+binaa-app-ultimate | at resolveDirectory (file:///usr/local/lib/node_modules/tsx/dist/esm/index.mjs?1757091281199:2:4243)
+binaa-app-ultimate | at resolveTsPaths (file:///usr/local/lib/node_modules/tsx/dist/esm/index.mjs?1757091281199:2:4984)
+binaa-app-ultimate | at resolve (file:///usr/local/lib/node_modules/tsx/dist/esm/index.mjs?1757091281199:2:5361)
+binaa-app-ultimate | at nextResolve (node:internal/modules/esm/hooks:864:28) {
+binaa-app-ultimate | code: 'ERR_MODULE_NOT_FOUND'
+binaa-app-ultimate | }
+binaa-app-ultimate |
+binaa-app-ultimate | Node.js v18.20.8
+binaa-app-ultimate |
+binaa-app-ultimate | node:internal/process/esm_loader:40
+binaa-app-ultimate | internalBinding('errors').triggerUncaughtException(
+binaa-app-ultimate | ^
+binaa-app-ultimate | Error [ERR_MODULE_NOT_FOUND]: Cannot find package '@shared/schema' imported from /app/server/routes.ts
+binaa-app-ultimate | at new NodeError (node:internal/errors:405:5)
+binaa-app-ultimate | at packageResolve (node:internal/modules/esm/resolve:916:9)
+binaa-app-ultimate | at moduleResolve (node:internal/modules/esm/resolve:973:20)
+binaa-app-ultimate | at defaultResolve (node:internal/modules/esm/resolve:1206:11)
+binaa-app-ultimate | at nextResolve (node:internal/modules/esm/hooks:864:28)
+binaa-app-ultimate | at resolveBase (file:///usr/local/lib/node_modules/tsx/dist/esm/index.mjs?1757091282856:2:3744)
+binaa-app-ultimate | at resolveDirectory (file:///usr/local/lib/node_modules/tsx/dist/esm/index.mjs?1757091282856:2:4243)
+binaa-app-ultimate | at resolveTsPaths (file:///usr/local/lib/node_modules/tsx/dist/esm/index.mjs?1757091282856:2:4984)
+binaa-app-ultimate | at resolve (file:///usr/local/lib/node_modules/tsx/dist/esm/index.mjs?1757091282856:2:5361)
+binaa-app-ultimate | at nextResolve (node:internal/modules/esm/hooks:864:28) {
+binaa-app-ultimate | code: 'ERR_MODULE_NOT_FOUND'
+binaa-app-ultimate | }
+binaa-app-ultimate |
+binaa-app-ultimate | Node.js v18.20.8
+binaa-app-ultimate |
+binaa-app-ultimate | node:internal/process/esm_loader:40
+binaa-app-ultimate | internalBinding('errors').triggerUncaughtException(
+binaa-app-ultimate | ^
+binaa-app-ultimate | Error [ERR_MODULE_NOT_FOUND]: Cannot find package '@shared/schema' imported from /app/server/routes.ts
+binaa-app-ultimate | at new NodeError (node:internal/errors:405:5)
+binaa-app-ultimate | at packageResolve (node:internal/modules/esm/resolve:916:9)
+binaa-app-ultimate | at moduleResolve (node:internal/modules/esm/resolve:973:20)
+binaa-app-ultimate | at defaultResolve (node:internal/modules/esm/resolve:1206:11)
+binaa-app-ultimate | at nextResolve (node:internal/modules/esm/hooks:864:28)
+binaa-app-ultimate | at resolveBase (file:///usr/local/lib/node_modules/tsx/dist/esm/index.mjs?1757091284041:2:3744)
+binaa-app-ultimate | at resolveDirectory (file:///usr/local/lib/node_modules/tsx/dist/esm/index.mjs?1757091284041:2:4243)
+binaa-app-ultimate | at resolveTsPaths (file:///usr/local/lib/node_modules/tsx/dist/esm/index.mjs?1757091284041:2:4984)
+binaa-app-ultimate | at resolve (file:///usr/local/lib/node_modules/tsx/dist/esm/index.mjs?1757091284041:2:5361)
+binaa-app-ultimate | at nextResolve (node:internal/modules/esm/hooks:864:28) {
+binaa-app-ultimate | code: 'ERR_MODULE_NOT_FOUND'
+binaa-app-ultimate | }
+binaa-app-ultimate |
+binaa-app-ultimate | Node.js v18.20.8
+binaa-app-ultimate |
+binaa-app-ultimate | node:internal/process/esm_loader:40
+binaa-app-ultimate | internalBinding('errors').triggerUncaughtException(
+binaa-app-ultimate | ^
+binaa-app-ultimate | Error [ERR_MODULE_NOT_FOUND]: Cannot find package '@shared/schema' imported from /app/server/routes.ts
+binaa-app-ultimate | at new NodeError (node:internal/errors:405:5)
+binaa-app-ultimate | at packageResolve (node:internal/modules/esm/resolve:916:9)
+binaa-app-ultimate | at moduleResolve (node:internal/modules/esm/resolve:973:20)
+binaa-app-ultimate | at defaultResolve (node:internal/modules/esm/resolve:1206:11)
+binaa-app-ultimate | at nextResolve (node:internal/modules/esm/hooks:864:28)
+binaa-app-ultimate | at resolveBase (file:///usr/local/lib/node_modules/tsx/dist/esm/index.mjs?1757091285304:2:3744)
+binaa-app-ultimate | at resolveDirectory (file:///usr/local/lib/node_modules/tsx/dist/esm/index.mjs?1757091285304:2:4243)
+binaa-app-ultimate | at resolveTsPaths (file:///usr/local/lib/node_modules/tsx/dist/esm/index.mjs?1757091285304:2:4984)
+binaa-app-ultimate | at resolve (file:///usr/local/lib/node_modules/tsx/dist/esm/index.mjs?1757091285304:2:5361)
+binaa-app-ultimate | at nextResolve (node:internal/modules/esm/hooks:864:28) {
+binaa-app-ultimate | code: 'ERR_MODULE_NOT_FOUND'
+binaa-app-ultimate | }
+binaa-app-ultimate |
+binaa-app-ultimate | Node.js v18.20.8
+binaa-app-ultimate |
+binaa-app-ultimate | node:internal/process/esm_loader:40
+binaa-app-ultimate | internalBinding('errors').triggerUncaughtException(
+binaa-app-ultimate | ^
+binaa-app-ultimate | Error [ERR_MODULE_NOT_FOUND]: Cannot find package '@shared/schema' imported from /app/server/routes.ts
+binaa-app-ultimate | at new NodeError (node:internal/errors:405:5)
+binaa-app-ultimate | at packageResolve (node:internal/modules/esm/resolve:916:9)
+binaa-app-ultimate | at moduleResolve (node:internal/modules/esm/resolve:973:20)
+binaa-app-ultimate | at defaultResolve (node:internal/modules/esm/resolve:1206:11)
+binaa-app-ultimate | at nextResolve (node:internal/modules/esm/hooks:864:28)
+binaa-app-ultimate | at resolveBase (file:///usr/local/lib/node_modules/tsx/dist/esm/index.mjs?1757091287048:2:3744)
+binaa-app-ultimate | at resolveDirectory (file:///usr/local/lib/node_modules/tsx/dist/esm/index.mjs?1757091287048:2:4243)
+binaa-app-ultimate | at resolveTsPaths (file:///usr/local/lib/node_modules/tsx/dist/esm/index.mjs?1757091287048:2:4984)
+binaa-app-ultimate | at resolve (file:///usr/local/lib/node_modules/tsx/dist/esm/index.mjs?1757091287048:2:5361)
+binaa-app-ultimate | at nextResolve (node:internal/modules/esm/hooks:864:28) {
+binaa-app-ultimate | code: 'ERR_MODULE_NOT_FOUND'
+binaa-app-ultimate | }
+binaa-app-ultimate |
+binaa-app-ultimate | Node.js v18.20.8
+binaa-app-ultimate |
+binaa-app-ultimate | node:internal/process/esm_loader:40
+binaa-app-ultimate | internalBinding('errors').triggerUncaughtException(
+binaa-app-ultimate | ^
+binaa-app-ultimate | Error [ERR_MODULE_NOT_FOUND]: Cannot find package '@shared/schema' imported from /app/server/routes.ts
+binaa-app-ultimate | at new NodeError (node:internal/errors:405:5)
+binaa-app-ultimate | at packageResolve (node:internal/modules/esm/resolve:916:9)
+binaa-app-ultimate | at moduleResolve (node:internal/modules/esm/resolve:973:20)
+binaa-app-ultimate | at defaultResolve (node:internal/modules/esm/resolve:1206:11)
+binaa-app-ultimate | at nextResolve (node:internal/modules/esm/hooks:864:28)
+binaa-app-ultimate | at resolveBase (file:///usr/local/lib/node_modules/tsx/dist/esm/index.mjs?1757091289501:2:3744)
+binaa-app-ultimate | at resolveDirectory (file:///usr/local/lib/node_modules/tsx/dist/esm/index.mjs?1757091289501:2:4243)
+binaa-app-ultimate | at resolveTsPaths (file:///usr/local/lib/node_modules/tsx/dist/esm/index.mjs?1757091289501:2:4984)
+binaa-app-ultimate | at resolve (file:///usr/local/lib/node_modules/tsx/dist/esm/index.mjs?1757091289501:2:5361)
+binaa-app-ultimate | at nextResolve (node:internal/modules/esm/hooks:864:28) {
+binaa-app-ultimate | code: 'ERR_MODULE_NOT_FOUND'
+binaa-app-ultimate | }
+binaa-app-ultimate |
+binaa-app-ultimate | Node.js v18.20.8
+binaa-app-ultimate |
+binaa-app-ultimate | node:internal/process/esm_loader:40
+binaa-app-ultimate | internalBinding('errors').triggerUncaughtException(
+binaa-app-ultimate | ^
+binaa-app-ultimate | Error [ERR_MODULE_NOT_FOUND]: Cannot find package '@shared/schema' imported from /app/server/routes.ts
+binaa-app-ultimate | at new NodeError (node:internal/errors:405:5)
+binaa-app-ultimate | at packageResolve (node:internal/modules/esm/resolve:916:9)
+binaa-app-ultimate | at moduleResolve (node:internal/modules/esm/resolve:973:20)
+binaa-app-ultimate | at defaultResolve (node:internal/modules/esm/resolve:1206:11)
+binaa-app-ultimate | at nextResolve (node:internal/modules/esm/hooks:864:28)
+binaa-app-ultimate | at resolveBase (file:///usr/local/lib/node_modules/tsx/dist/esm/index.mjs?1757091293498:2:3744)
+binaa-app-ultimate | at resolveDirectory (file:///usr/local/lib/node_modules/tsx/dist/esm/index.mjs?1757091293498:2:4243)
+binaa-app-ultimate | at resolveTsPaths (file:///usr/local/lib/node_modules/tsx/dist/esm/index.mjs?1757091293498:2:4984)
+binaa-app-ultimate | at resolve (file:///usr/local/lib/node_modules/tsx/dist/esm/index.mjs?1757091293498:2:5361)
+binaa-app-ultimate | at nextResolve (node:internal/modules/esm/hooks:864:28) {
+binaa-app-ultimate | code: 'ERR_MODULE_NOT_FOUND'
+binaa-app-ultimate | }
+binaa-app-ultimate |
+binaa-app-ultimate | Node.js v18.20.8
+binaa-app-ultimate |
+binaa-app-ultimate | node:internal/process/esm_loader:40
+binaa-app-ultimate | internalBinding('errors').triggerUncaughtException(
+binaa-app-ultimate | ^
+binaa-app-ultimate | Error [ERR_MODULE_NOT_FOUND]: Cannot find package '@shared/schema' imported from /app/server/routes.ts
+binaa-app-ultimate | at new NodeError (node:internal/errors:405:5)
+binaa-app-ultimate | at packageResolve (node:internal/modules/esm/resolve:916:9)
+binaa-app-ultimate | at moduleResolve (node:internal/modules/esm/resolve:973:20)
+binaa-app-ultimate | at defaultResolve (node:internal/modules/esm/resolve:1206:11)
+binaa-app-ultimate | at nextResolve (node:internal/modules/esm/hooks:864:28)
+binaa-app-ultimate | at resolveBase (file:///usr/local/lib/node_modules/tsx/dist/esm/index.mjs?1757091303979:2:3744)
+binaa-app-ultimate | at resolveDirectory (file:///usr/local/lib/node_modules/tsx/dist/esm/index.mjs?1757091303979:2:4243)
+binaa-app-ultimate | at resolveTsPaths (file:///usr/local/lib/node_modules/tsx/dist/esm/index.mjs?1757091303979:2:4984)
+binaa-app-ultimate | at resolve (file:///usr/local/lib/node_modules/tsx/dist/esm/index.mjs?1757091303979:2:5361)
+binaa-app-ultimate | at nextResolve (node:internal/modules/esm/hooks:864:28) {
+binaa-app-ultimate | code: 'ERR_MODULE_NOT_FOUND'
+binaa-app-ultimate | }
+binaa-app-ultimate |
+binaa-app-ultimate | Node.js v18.20.8
+binaa-app-ultimate |
+binaa-app-ultimate | node:internal/process/esm_loader:40
+binaa-app-ultimate | internalBinding('errors').triggerUncaughtException(
+binaa-app-ultimate | ^
+binaa-app-ultimate | Error [ERR_MODULE_NOT_FOUND]: Cannot find package '@shared/schema' imported from /app/server/routes.ts
+binaa-app-ultimate | at new NodeError (node:internal/errors:405:5)
+binaa-app-ultimate | at packageResolve (node:internal/modules/esm/resolve:916:9)
+binaa-app-ultimate | at moduleResolve (node:internal/modules/esm/resolve:973:20)
+binaa-app-ultimate | at defaultResolve (node:internal/modules/esm/resolve:1206:11)
+binaa-app-ultimate | at nextResolve (node:internal/modules/esm/hooks:864:28)
+binaa-app-ultimate | at resolveBase (file:///usr/local/lib/node_modules/tsx/dist/esm/index.mjs?1757091317481:2:3744)
+binaa-app-ultimate | at resolveDirectory (file:///usr/local/lib/node_modules/tsx/dist/esm/index.mjs?1757091317481:2:4243)
+binaa-app-ultimate | at resolveTsPaths (file:///usr/local/lib/node_modules/tsx/dist/esm/index.mjs?1757091317481:2:4984)
+binaa-app-ultimate | at resolve (file:///usr/local/lib/node_modules/tsx/dist/esm/index.mjs?1757091317481:2:5361)
+binaa-app-ultimate | at nextResolve (node:internal/modules/esm/hooks:864:28) {
+binaa-app-ultimate | code: 'ERR_MODULE_NOT_FOUND'
+binaa-app-ultimate | }
+binaa-app-ultimate |
+binaa-app-ultimate | Node.js v18.20.8
+binaa-app-ultimate |
+binaa-app-ultimate | node:internal/process/esm_loader:40
+binaa-app-ultimate | internalBinding('errors').triggerUncaughtException(
+binaa-app-ultimate | ^
+binaa-app-ultimate | Error [ERR_MODULE_NOT_FOUND]: Cannot find package '@shared/schema' imported from /app/server/routes.ts
+binaa-app-ultimate | at new NodeError (node:internal/errors:405:5)
+binaa-app-ultimate | at packageResolve (node:internal/modules/esm/resolve:916:9)
+binaa-app-ultimate | at moduleResolve (node:internal/modules/esm/resolve:973:20)
+binaa-app-ultimate | at defaultResolve (node:internal/modules/esm/resolve:1206:11)
+binaa-app-ultimate | at nextResolve (node:internal/modules/esm/hooks:864:28)
+binaa-app-ultimate | at resolveBase (file:///usr/local/lib/node_modules/tsx/dist/esm/index.mjs?1757091346956:2:3744)
+binaa-app-ultimate | at resolveDirectory (file:///usr/local/lib/node_modules/tsx/dist/esm/index.mjs?1757091346956:2:4243)
+binaa-app-ultimate | at resolveTsPaths (file:///usr/local/lib/node_modules/tsx/dist/esm/index.mjs?1757091346956:2:4984)
+binaa-app-ultimate | at resolve (file:///usr/local/lib/node_modules/tsx/dist/esm/index.mjs?1757091346956:2:5361)
+binaa-app-ultimate | at nextResolve (node:internal/modules/esm/hooks:864:28) {
+binaa-app-ultimate | code: 'ERR_MODULE_NOT_FOUND'
+binaa-app-ultimate | }
+binaa-app-ultimate |
+binaa-app-ultimate | Node.js v18.20.8
+binaa-app-ultimate |
+binaa-app-ultimate | node:internal/process/esm_loader:40
+binaa-app-ultimate | internalBinding('errors').triggerUncaughtException(
+binaa-app-ultimate | ^
+binaa-app-ultimate | Error [ERR_MODULE_NOT_FOUND]: Cannot find package '@shared/schema' imported from /app/server/routes.ts
+binaa-app-ultimate | at new NodeError (node:internal/errors:405:5)
+binaa-app-ultimate | at packageResolve (node:internal/modules/esm/resolve:916:9)
+binaa-app-ultimate | at moduleResolve (node:internal/modules/esm/resolve:973:20)
+binaa-app-ultimate | at defaultResolve (node:internal/modules/esm/resolve:1206:11)
+binaa-app-ultimate | at nextResolve (node:internal/modules/esm/hooks:864:28)
+binaa-app-ultimate | at resolveBase (file:///usr/local/lib/node_modules/tsx/dist/esm/index.mjs?1757091403421:2:3744)
+binaa-app-ultimate | at resolveDirectory (file:///usr/local/lib/node_modules/tsx/dist/esm/index.mjs?1757091403421:2:4243)
+binaa-app-ultimate | at resolveTsPaths (file:///usr/local/lib/node_modules/tsx/dist/esm/index.mjs?1757091403421:2:4984)
+binaa-app-ultimate | at resolve (file:///usr/local/lib/node_modules/tsx/dist/esm/index.mjs?1757091403421:2:5361)
+binaa-app-ultimate | at nextResolve (node:internal/modules/esm/hooks:864:28) {
+binaa-app-ultimate | code: 'ERR_MODULE_NOT_FOUND'
+binaa-app-ultimate | }
+binaa-app-ultimate |
+binaa-app-ultimate | Node.js v18.20.8
+binaa-app-ultimate |
+binaa-app-ultimate | node:internal/process/esm_loader:40
+binaa-app-ultimate | internalBinding('errors').triggerUncaughtException(
+binaa-app-ultimate | ^
+binaa-app-ultimate | Error [ERR_MODULE_NOT_FOUND]: Cannot find package '@shared/schema' imported from /app/server/routes.ts
+binaa-app-ultimate | at new NodeError (node:internal/errors:405:5)
+binaa-app-ultimate | at packageResolve (node:internal/modules/esm/resolve:916:9)
+binaa-app-ultimate | at moduleResolve (node:internal/modules/esm/resolve:973:20)
+binaa-app-ultimate | at defaultResolve (node:internal/modules/esm/resolve:1206:11)
+binaa-app-ultimate | at nextResolve (node:internal/modules/esm/hooks:864:28)
+binaa-app-ultimate | at resolveBase (file:///usr/local/lib/node_modules/tsx/dist/esm/index.mjs?1757091472625:2:3744)
+binaa-app-ultimate | at resolveDirectory (file:///usr/local/lib/node_modules/tsx/dist/esm/index.mjs?1757091472625:2:4243)
+binaa-app-ultimate | at resolveTsPaths (file:///usr/local/lib/node_modules/tsx/dist/esm/index.mjs?1757091472625:2:4984)
+binaa-app-ultimate | at resolve (file:///usr/local/lib/node_modules/tsx/dist/esm/index.mjs?1757091472625:2:5361)
+binaa-app-ultimate | at nextResolve (node:internal/modules/esm/hooks:864:28) {
+binaa-app-ultimate | code: 'ERR_MODULE_NOT_FOUND'
+binaa-app-ultimate | }
+binaa-app-ultimate |
+binaa-app-ultimate | Node.js v18.20.8
+binaa-app-ultimate |
+binaa-app-ultimate | node:internal/process/esm_loader:40
+binaa-app-ultimate | internalBinding('errors').triggerUncaughtException(
+binaa-app-ultimate | ^
+binaa-app-ultimate | Error [ERR_MODULE_NOT_FOUND]: Cannot find package '@shared/schema' imported from /app/server/routes.ts
+binaa-app-ultimate | at new NodeError (node:internal/errors:405:5)
+binaa-app-ultimate | at packageResolve (node:internal/modules/esm/resolve:916:9)
+binaa-app-ultimate | at moduleResolve (node:internal/modules/esm/resolve:973:20)
+binaa-app-ultimate | at defaultResolve (node:internal/modules/esm/resolve:1206:11)
+binaa-app-ultimate | at nextResolve (node:internal/modules/esm/hooks:864:28)
+binaa-app-ultimate | at resolveBase (file:///usr/local/lib/node_modules/tsx/dist/esm/index.mjs?1757091540190:2:3744)
+binaa-app-ultimate | at resolveDirectory (file:///usr/local/lib/node_modules/tsx/dist/esm/index.mjs?1757091540190:2:4243)
+binaa-app-ultimate | at resolveTsPaths (file:///usr/local/lib/node_modules/tsx/dist/esm/index.mjs?1757091540190:2:4984)
+binaa-app-ultimate | at resolve (file:///usr/local/lib/node_modules/tsx/dist/esm/index.mjs?1757091540190:2:5361)
+binaa-app-ultimate | at nextResolve (node:internal/modules/esm/hooks:864:28) {
+binaa-app-ultimate | code: 'ERR_MODULE_NOT_FOUND'
+binaa-app-ultimate | }
+binaa-app-ultimate |
+binaa-app-ultimate | Node.js v18.20.8
+binaa-app-ultimate |
+binaa-app-ultimate | node:internal/process/esm_loader:40
+binaa-app-ultimate | internalBinding('errors').triggerUncaughtException(
+binaa-app-ultimate | ^
+binaa-app-ultimate | Error [ERR_MODULE_NOT_FOUND]: Cannot find package '@shared/schema' imported from /app/server/routes.ts
+binaa-app-ultimate | at new NodeError (node:internal/errors:405:5)
+binaa-app-ultimate | at packageResolve (node:internal/modules/esm/resolve:916:9)
+binaa-app-ultimate | at moduleResolve (node:internal/modules/esm/resolve:973:20)
+binaa-app-ultimate | at defaultResolve (node:internal/modules/esm/resolve:1206:11)
+binaa-app-ultimate | at nextResolve (node:internal/modules/esm/hooks:864:28)
+binaa-app-ultimate | at resolveBase (file:///usr/local/lib/node_modules/tsx/dist/esm/index.mjs?1757091605563:2:3744)
+binaa-app-ultimate | at resolveDirectory (file:///usr/local/lib/node_modules/tsx/dist/esm/index.mjs?1757091605563:2:4243)
+binaa-app-ultimate | at resolveTsPaths (file:///usr/local/lib/node_modules/tsx/dist/esm/index.mjs?1757091605563:2:4984)
+binaa-app-ultimate | at resolve (file:///usr/local/lib/node_modules/tsx/dist/esm/index.mjs?1757091605563:2:5361)
+binaa-app-ultimate | at nextResolve (node:internal/modules/esm/hooks:864:28) {
+binaa-app-ultimate | code: 'ERR_MODULE_NOT_FOUND'
+binaa-app-ultimate | }
+binaa-app-ultimate |
+binaa-app-ultimate | Node.js v18.20.8
+binaa-app-ultimate |
+binaa-app-ultimate | node:internal/process/esm_loader:40
+binaa-app-ultimate | internalBinding('errors').triggerUncaughtException(
+binaa-app-ultimate | ^
+binaa-app-ultimate | Error [ERR_MODULE_NOT_FOUND]: Cannot find package '@shared/schema' imported from /app/server/routes.ts
+binaa-app-ultimate | at new NodeError (node:internal/errors:405:5)
+binaa-app-ultimate | at packageResolve (node:internal/modules/esm/resolve:916:9)
+binaa-app-ultimate | at moduleResolve (node:internal/modules/esm/resolve:973:20)
+binaa-app-ultimate | at defaultResolve (node:internal/modules/esm/resolve:1206:11)
+binaa-app-ultimate | at nextResolve (node:internal/modules/esm/hooks:864:28)
+binaa-app-ultimate | at resolveBase (file:///usr/local/lib/node_modules/tsx/dist/esm/index.mjs?1757091674709:2:3744)
+binaa-app-ultimate | at resolveDirectory (file:///usr/local/lib/node_modules/tsx/dist/esm/index.mjs?1757091674709:2:4243)
+binaa-app-ultimate | at resolveTsPaths (file:///usr/local/lib/node_modules/tsx/dist/esm/index.mjs?1757091674709:2:4984)
+binaa-app-ultimate | at resolve (file:///usr/local/lib/node_modules/tsx/dist/esm/index.mjs?1757091674709:2:5361)
+binaa-app-ultimate | at nextResolve (node:internal/modules/esm/hooks:864:28) {
+binaa-app-ultimate | code: 'ERR_MODULE_NOT_FOUND'
+binaa-app-ultimate | }
+binaa-app-ultimate |
+binaa-app-ultimate | Node.js v18.20.8
+binaa-app-ultimate |
+binaa-app-ultimate | node:internal/process/esm_loader:40
+binaa-app-ultimate | internalBinding('errors').triggerUncaughtException(
+binaa-app-ultimate | ^
+binaa-app-ultimate | Error [ERR_MODULE_NOT_FOUND]: Cannot find package '@shared/schema' imported from /app/server/routes.ts
+binaa-app-ultimate | at new NodeError (node:internal/errors:405:5)
+binaa-app-ultimate | at packageResolve (node:internal/modules/esm/resolve:916:9)
+binaa-app-ultimate | at moduleResolve (node:internal/modules/esm/resolve:973:20)
+binaa-app-ultimate | at defaultResolve (node:internal/modules/esm/resolve:1206:11)
+binaa-app-ultimate | at nextResolve (node:internal/modules/esm/hooks:864:28)
+binaa-app-ultimate | at resolveBase (file:///usr/local/lib/node_modules/tsx/dist/esm/index.mjs?1757091742008:2:3744)
+binaa-app-ultimate | at resolveDirectory (file:///usr/local/lib/node_modules/tsx/dist/esm/index.mjs?1757091742008:2:4243)
+binaa-app-ultimate | at resolveTsPaths (file:///usr/local/lib/node_modules/tsx/dist/esm/index.mjs?1757091742008:2:4984)
+binaa-app-ultimate | at resolve (file:///usr/local/lib/node_modules/tsx/dist/esm/index.mjs?1757091742008:2:5361)
+binaa-app-ultimate | at nextResolve (node:internal/modules/esm/hooks:864:28) {
+binaa-app-ultimate | code: 'ERR_MODULE_NOT_FOUND'
+binaa-app-ultimate | }
+binaa-app-ultimate |
+binaa-app-ultimate | Node.js v18.20.8
+binaa-app-ultimate |
+binaa-app-ultimate | node:internal/process/esm_loader:40
+binaa-app-ultimate | internalBinding('errors').triggerUncaughtException(
+binaa-app-ultimate | ^
+binaa-app-ultimate | Error [ERR_MODULE_NOT_FOUND]: Cannot find package '@shared/schema' imported from /app/server/routes.ts
+binaa-app-ultimate | at new NodeError (node:internal/errors:405:5)
+binaa-app-ultimate | at packageResolve (node:internal/modules/esm/resolve:916:9)
+binaa-app-ultimate | at moduleResolve (node:internal/modules/esm/resolve:973:20)
+binaa-app-ultimate | at defaultResolve (node:internal/modules/esm/resolve:1206:11)
+binaa-app-ultimate | at nextResolve (node:internal/modules/esm/hooks:864:28)
+binaa-app-ultimate | at resolveBase (file:///usr/local/lib/node_modules/tsx/dist/esm/index.mjs?1757091809279:2:3744)
+binaa-app-ultimate | at resolveDirectory (file:///usr/local/lib/node_modules/tsx/dist/esm/index.mjs?1757091809279:2:4243)
+binaa-app-ultimate | at resolveTsPaths (file:///usr/local/lib/node_modules/tsx/dist/esm/index.mjs?1757091809279:2:4984)
+binaa-app-ultimate | at resolve (file:///usr/local/lib/node_modules/tsx/dist/esm/index.mjs?1757091809279:2:5361)
+binaa-app-ultimate | at nextResolve (node:internal/modules/esm/hooks:864:28) {
+binaa-app-ultimate | code: 'ERR_MODULE_NOT_FOUND'
+binaa-app-ultimate | }
+binaa-app-ultimate |
+binaa-app-ultimate | Node.js v18.20.8
+binaa-app-ultimate |
+binaa-app-ultimate | node:internal/process/esm_loader:40
+binaa-app-ultimate | internalBinding('errors').triggerUncaughtException(
+binaa-app-ultimate | ^
+binaa-app-ultimate | Error [ERR_MODULE_NOT_FOUND]: Cannot find package '@shared/schema' imported from /app/server/routes.ts
+binaa-app-ultimate | at new NodeError (node:internal/errors:405:5)
+binaa-app-ultimate | at packageResolve (node:internal/modules/esm/resolve:916:9)
+binaa-app-ultimate | at moduleResolve (node:internal/modules/esm/resolve:973:20)
+binaa-app-ultimate | at defaultResolve (node:internal/modules/esm/resolve:1206:11)
+binaa-app-ultimate | at nextResolve (node:internal/modules/esm/hooks:864:28)
+binaa-app-ultimate | at resolveBase (file:///usr/local/lib/node_modules/tsx/dist/esm/index.mjs?1757091877315:2:3744)
+binaa-app-ultimate | at resolveDirectory (file:///usr/local/lib/node_modules/tsx/dist/esm/index.mjs?1757091877315:2:4243)
+binaa-app-ultimate | at resolveTsPaths (file:///usr/local/lib/node_modules/tsx/dist/esm/index.mjs?1757091877315:2:4984)
+binaa-app-ultimate | at resolve (file:///usr/local/lib/node_modules/tsx/dist/esm/index.mjs?1757091877315:2:5361)
+binaa-app-ultimate | at nextResolve (node:internal/modules/esm/hooks:864:28) {
+binaa-app-ultimate | code: 'ERR_MODULE_NOT_FOUND'
+binaa-app-ultimate | }
+binaa-app-ultimate |
+binaa-app-ultimate | Node.js v18.20.8
+binaa-app-ultimate |
+binaa-app-ultimate | node:internal/process/esm_loader:40
+binaa-app-ultimate | internalBinding('errors').triggerUncaughtException(
+binaa-app-ultimate | ^
+binaa-app-ultimate | Error [ERR_MODULE_NOT_FOUND]: Cannot find package '@shared/schema' imported from /app/server/routes.ts
+binaa-app-ultimate | at new NodeError (node:internal/errors:405:5)
+binaa-app-ultimate | at packageResolve (node:internal/modules/esm/resolve:916:9)
+binaa-app-ultimate | at moduleResolve (node:internal/modules/esm/resolve:973:20)
+binaa-app-ultimate | at defaultResolve (node:internal/modules/esm/resolve:1206:11)
+binaa-app-ultimate | at nextResolve (node:internal/modules/esm/hooks:864:28)
+binaa-app-ultimate | at resolveBase (file:///usr/local/lib/node_modules/tsx/dist/esm/index.mjs?1757091905752:2:3744)
+binaa-app-ultimate | at resolveDirectory (file:///usr/local/lib/node_modules/tsx/dist/esm/index.mjs?1757091905752:2:4243)
+binaa-app-ultimate | at resolveTsPaths (file:///usr/local/lib/node_modules/tsx/dist/esm/index.mjs?1757091905752:2:4984)
+binaa-app-ultimate | at resolve (file:///usr/local/lib/node_modules/tsx/dist/esm/index.mjs?1757091905752:2:5361)
+binaa-app-ultimate | at nextResolve (node:internal/modules/esm/hooks:864:28) {
+binaa-app-ultimate | code: 'ERR_MODULE_NOT_FOUND'
+binaa-app-ultimate | }
+binaa-app-ultimate |
+binaa-app-ultimate | Node.js v18.20.8
+binaa-app-ultimate |
+binaa-app-ultimate | node:internal/process/esm_loader:40
+binaa-app-ultimate | internalBinding('errors').triggerUncaughtException(
+binaa-app-ultimate | ^
+binaa-app-ultimate | Error [ERR_MODULE_NOT_FOUND]: Cannot find package '@shared/schema' imported from /app/server/routes.ts
+binaa-app-ultimate | at new NodeError (node:internal/errors:405:5)
+binaa-app-ultimate | at packageResolve (node:internal/modules/esm/resolve:916:9)
+binaa-app-ultimate | at moduleResolve (node:internal/modules/esm/resolve:973:20)
+binaa-app-ultimate | at defaultResolve (node:internal/modules/esm/resolve:1206:11)
+binaa-app-ultimate | at nextResolve (node:internal/modules/esm/hooks:864:28)
+binaa-app-ultimate | at resolveBase (file:///usr/local/lib/node_modules/tsx/dist/esm/index.mjs?1757091906944:2:3744)
+binaa-app-ultimate | at resolveDirectory (file:///usr/local/lib/node_modules/tsx/dist/esm/index.mjs?1757091906944:2:4243)
+binaa-app-ultimate | at resolveTsPaths (file:///usr/local/lib/node_modules/tsx/dist/esm/index.mjs?1757091906944:2:4984)
+binaa-app-ultimate | at resolve (file:///usr/local/lib/node_modules/tsx/dist/esm/index.mjs?1757091906944:2:5361)
+binaa-app-ultimate | at nextResolve (node:internal/modules/esm/hooks:864:28) {
+binaa-app-ultimate | code: 'ERR_MODULE_NOT_FOUND'
+binaa-app-ultimate | }
+binaa-app-ultimate |
+binaa-app-ultimate | Node.js v18.20.8
+binaa-app-ultimate |
+binaa-app-ultimate | node:internal/process/esm_loader:40
+binaa-app-ultimate | internalBinding('errors').triggerUncaughtException(
+binaa-app-ultimate | ^
+binaa-app-ultimate | Error [ERR_MODULE_NOT_FOUND]: Cannot find package '@shared/schema' imported from /app/server/routes.ts
+binaa-app-ultimate | at new NodeError (node:internal/errors:405:5)
+binaa-app-ultimate | at packageResolve (node:internal/modules/esm/resolve:916:9)
+binaa-app-ultimate | at moduleResolve (node:internal/modules/esm/resolve:973:20)
+binaa-app-ultimate | at defaultResolve (node:internal/modules/esm/resolve:1206:11)
+binaa-app-ultimate | at nextResolve (node:internal/modules/esm/hooks:864:28)
+binaa-app-ultimate | at resolveBase (file:///usr/local/lib/node_modules/tsx/dist/esm/index.mjs?1757091907995:2:3744)
+binaa-app-ultimate | at resolveDirectory (file:///usr/local/lib/node_modules/tsx/dist/esm/index.mjs?1757091907995:2:4243)
+binaa-app-ultimate | at resolveTsPaths (file:///usr/local/lib/node_modules/tsx/dist/esm/index.mjs?1757091907995:2:4984)
+binaa-app-ultimate | at resolve (file:///usr/local/lib/node_modules/tsx/dist/esm/index.mjs?1757091907995:2:5361)
+binaa-app-ultimate | at nextResolve (node:internal/modules/esm/hooks:864:28) {
+binaa-app-ultimate | code: 'ERR_MODULE_NOT_FOUND'
+binaa-app-ultimate | }
+binaa-app-ultimate |
+binaa-app-ultimate | Node.js v18.20.8
+binaa-app-ultimate |
+binaa-app-ultimate | node:internal/process/esm_loader:40
+binaa-app-ultimate | internalBinding('errors').triggerUncaughtException(
+binaa-app-ultimate | ^
+binaa-app-ultimate | Error [ERR_MODULE_NOT_FOUND]: Cannot find package '@shared/schema' imported from /app/server/routes.ts
+binaa-app-ultimate | at new NodeError (node:internal/errors:405:5)
+binaa-app-ultimate | at packageResolve (node:internal/modules/esm/resolve:916:9)
+binaa-app-ultimate | at moduleResolve (node:internal/modules/esm/resolve:973:20)
+binaa-app-ultimate | at defaultResolve (node:internal/modules/esm/resolve:1206:11)
+binaa-app-ultimate | at nextResolve (node:internal/modules/esm/hooks:864:28)
+binaa-app-ultimate | at resolveBase (file:///usr/local/lib/node_modules/tsx/dist/esm/index.mjs?1757091909166:2:3744)
+binaa-app-ultimate | at resolveDirectory (file:///usr/local/lib/node_modules/tsx/dist/esm/index.mjs?1757091909166:2:4243)
+binaa-app-ultimate | at resolveTsPaths (file:///usr/local/lib/node_modules/tsx/dist/esm/index.mjs?1757091909166:2:4984)
+binaa-app-ultimate | at resolve (file:///usr/local/lib/node_modules/tsx/dist/esm/index.mjs?1757091909166:2:5361)
+binaa-app-ultimate | at nextResolve (node:internal/modules/esm/hooks:864:28) {
+binaa-app-ultimate | code: 'ERR_MODULE_NOT_FOUND'
+binaa-app-ultimate | }
+binaa-app-ultimate |
+binaa-app-ultimate | Node.js v18.20.8
+binaa-app-ultimate |
+binaa-app-ultimate | node:internal/process/esm_loader:40
+binaa-app-ultimate | internalBinding('errors').triggerUncaughtException(
+binaa-app-ultimate | ^
+binaa-app-ultimate | Error [ERR_MODULE_NOT_FOUND]: Cannot find package '@shared/schema' imported from /app/server/routes.ts
+binaa-app-ultimate | at new NodeError (node:internal/errors:405:5)
+binaa-app-ultimate | at packageResolve (node:internal/modules/esm/resolve:916:9)
+binaa-app-ultimate | at moduleResolve (node:internal/modules/esm/resolve:973:20)
+binaa-app-ultimate | at defaultResolve (node:internal/modules/esm/resolve:1206:11)
+binaa-app-ultimate | at nextResolve (node:internal/modules/esm/hooks:864:28)
+binaa-app-ultimate | at resolveBase (file:///usr/local/lib/node_modules/tsx/dist/esm/index.mjs?1757091910815:2:3744)
+binaa-app-ultimate | at resolveDirectory (file:///usr/local/lib/node_modules/tsx/dist/esm/index.mjs?1757091910815:2:4243)
+binaa-app-ultimate | at resolveTsPaths (file:///usr/local/lib/node_modules/tsx/dist/esm/index.mjs?1757091910815:2:4984)
+binaa-app-ultimate | at resolve (file:///usr/local/lib/node_modules/tsx/dist/esm/index.mjs?1757091910815:2:5361)
+binaa-app-ultimate | at nextResolve (node:internal/modules/esm/hooks:864:28) {
+binaa-app-ultimate | code: 'ERR_MODULE_NOT_FOUND'
+binaa-app-ultimate | }
+binaa-app-ultimate |
+binaa-app-ultimate | Node.js v18.20.8
+binaa-app-ultimate |
+binaa-app-ultimate | node:internal/process/esm_loader:40
+binaa-app-ultimate | internalBinding('errors').triggerUncaughtException(
+binaa-app-ultimate | ^
+binaa-app-ultimate | Error [ERR_MODULE_NOT_FOUND]: Cannot find package '@shared/schema' imported from /app/server/routes.ts
+binaa-app-ultimate | at new NodeError (node:internal/errors:405:5)
+binaa-app-ultimate | at packageResolve (node:internal/modules/esm/resolve:916:9)
+binaa-app-ultimate | at moduleResolve (node:internal/modules/esm/resolve:973:20)
+binaa-app-ultimate | at defaultResolve (node:internal/modules/esm/resolve:1206:11)
+binaa-app-ultimate | at nextResolve (node:internal/modules/esm/hooks:864:28)
+binaa-app-ultimate | at resolveBase (file:///usr/local/lib/node_modules/tsx/dist/esm/index.mjs?1757091913242:2:3744)
+binaa-app-ultimate | at resolveDirectory (file:///usr/local/lib/node_modules/tsx/dist/esm/index.mjs?1757091913242:2:4243)
+binaa-app-ultimate | at resolveTsPaths (file:///usr/local/lib/node_modules/tsx/dist/esm/index.mjs?1757091913242:2:4984)
+binaa-app-ultimate | at resolve (file:///usr/local/lib/node_modules/tsx/dist/esm/index.mjs?1757091913242:2:5361)
+binaa-app-ultimate | at nextResolve (node:internal/modules/esm/hooks:864:28) {
+binaa-app-ultimate | code: 'ERR_MODULE_NOT_FOUND'
+binaa-app-ultimate | }
+binaa-app-ultimate |
+binaa-app-ultimate | Node.js v18.20.8
+binaa-app-ultimate |
+binaa-app-ultimate | node:internal/process/esm_loader:40
+binaa-app-ultimate | internalBinding('errors').triggerUncaughtException(
+binaa-app-ultimate | ^
+binaa-app-ultimate | Error [ERR_MODULE_NOT_FOUND]: Cannot find package '@shared/schema' imported from /app/server/routes.ts
+binaa-app-ultimate | at new NodeError (node:internal/errors:405:5)
+binaa-app-ultimate | at packageResolve (node:internal/modules/esm/resolve:916:9)
+binaa-app-ultimate | at moduleResolve (node:internal/modules/esm/resolve:973:20)
+binaa-app-ultimate | at defaultResolve (node:internal/modules/esm/resolve:1206:11)
+binaa-app-ultimate | at nextResolve (node:internal/modules/esm/hooks:864:28)
+binaa-app-ultimate | at resolveBase (file:///usr/local/lib/node_modules/tsx/dist/esm/index.mjs?1757091917241:2:3744)
+binaa-app-ultimate | at resolveDirectory (file:///usr/local/lib/node_modules/tsx/dist/esm/index.mjs?1757091917241:2:4243)
+binaa-app-ultimate | at resolveTsPaths (file:///usr/local/lib/node_modules/tsx/dist/esm/index.mjs?1757091917241:2:4984)
+binaa-app-ultimate | at resolve (file:///usr/local/lib/node_modules/tsx/dist/esm/index.mjs?1757091917241:2:5361)
+binaa-app-ultimate | at nextResolve (node:internal/modules/esm/hooks:864:28) {
+binaa-app-ultimate | code: 'ERR_MODULE_NOT_FOUND'
+binaa-app-ultimate | }
+binaa-app-ultimate |
+binaa-app-ultimate | Node.js v18.20.8
+binaa-app-ultimate |
+binaa-app-ultimate | node:internal/process/esm_loader:40
+binaa-app-ultimate | internalBinding('errors').triggerUncaughtException(
+binaa-app-ultimate | ^
+binaa-app-ultimate | Error [ERR_MODULE_NOT_FOUND]: Cannot find package '@shared/schema' imported from /app/server/routes.ts
+binaa-app-ultimate | at new NodeError (node:internal/errors:405:5)
+binaa-app-ultimate | at packageResolve (node:internal/modules/esm/resolve:916:9)
+binaa-app-ultimate | at moduleResolve (node:internal/modules/esm/resolve:973:20)
+binaa-app-ultimate | at defaultResolve (node:internal/modules/esm/resolve:1206:11)
+binaa-app-ultimate | at nextResolve (node:internal/modules/esm/hooks:864:28)
+binaa-app-ultimate | at resolveBase (file:///usr/local/lib/node_modules/tsx/dist/esm/index.mjs?1757091924511:2:3744)
+binaa-app-ultimate | at resolveDirectory (file:///usr/local/lib/node_modules/tsx/dist/esm/index.mjs?1757091924511:2:4243)
+binaa-app-ultimate | at resolveTsPaths (file:///usr/local/lib/node_modules/tsx/dist/esm/index.mjs?1757091924511:2:4984)
+binaa-app-ultimate | at resolve (file:///usr/local/lib/node_modules/tsx/dist/esm/index.mjs?1757091924511:2:5361)
+binaa-app-ultimate | at nextResolve (node:internal/modules/esm/hooks:864:28) {
+binaa-app-ultimate | code: 'ERR_MODULE_NOT_FOUND'
+binaa-app-ultimate | }
+binaa-app-ultimate |
+binaa-app-ultimate | Node.js v18.20.8
+binaa-app-ultimate |
+binaa-app-ultimate | node:internal/process/esm_loader:40
+binaa-app-ultimate | internalBinding('errors').triggerUncaughtException(
+binaa-app-ultimate | ^
+binaa-app-ultimate | Error [ERR_MODULE_NOT_FOUND]: Cannot find package '@shared/schema' imported from /app/server/routes.ts
+binaa-app-ultimate | at new NodeError (node:internal/errors:405:5)
+binaa-app-ultimate | at packageResolve (node:internal/modules/esm/resolve:916:9)
+binaa-app-ultimate | at moduleResolve (node:internal/modules/esm/resolve:973:20)
+binaa-app-ultimate | at defaultResolve (node:internal/modules/esm/resolve:1206:11)
+binaa-app-ultimate | at nextResolve (node:internal/modules/esm/hooks:864:28)
+binaa-app-ultimate | at resolveBase (file:///usr/local/lib/node_modules/tsx/dist/esm/index.mjs?1757091941395:2:3744)
+binaa-app-ultimate | at resolveDirectory (file:///usr/local/lib/node_modules/tsx/dist/esm/index.mjs?1757091941395:2:4243)
+binaa-app-ultimate | at resolveTsPaths (file:///usr/local/lib/node_modules/tsx/dist/esm/index.mjs?1757091941395:2:4984)
+binaa-app-ultimate | at resolve (file:///usr/local/lib/node_modules/tsx/dist/esm/index.mjs?1757091941395:2:5361)
+binaa-app-ultimate | at nextResolve (node:internal/modules/esm/hooks:864:28) {
+binaa-app-ultimate | code: 'ERR_MODULE_NOT_FOUND'
+binaa-app-ultimate | }
+binaa-app-ultimate |
+binaa-app-ultimate | Node.js v18.20.8
+binaa-app-ultimate |
+binaa-app-ultimate | node:internal/process/esm_loader:40
+binaa-app-ultimate | internalBinding('errors').triggerUncaughtException(
+binaa-app-ultimate | ^
+binaa-app-ultimate | Error [ERR_MODULE_NOT_FOUND]: Cannot find package '@shared/schema' imported from /app/server/routes.ts
+binaa-app-ultimate | at new NodeError (node:internal/errors:405:5)
+binaa-app-ultimate | at packageResolve (node:internal/modules/esm/resolve:916:9)
+binaa-app-ultimate | at moduleResolve (node:internal/modules/esm/resolve:973:20)
+binaa-app-ultimate | at defaultResolve (node:internal/modules/esm/resolve:1206:11)
+binaa-app-ultimate | at nextResolve (node:internal/modules/esm/hooks:864:28)
+binaa-app-ultimate | at resolveBase (file:///usr/local/lib/node_modules/tsx/dist/esm/index.mjs?1757091970876:2:3744)
+binaa-app-ultimate | at resolveDirectory (file:///usr/local/lib/node_modules/tsx/dist/esm/index.mjs?1757091970876:2:4243)
+binaa-app-ultimate | at resolveTsPaths (file:///usr/local/lib/node_modules/tsx/dist/esm/index.mjs?1757091970876:2:4984)
+binaa-app-ultimate | at resolve (file:///usr/local/lib/node_modules/tsx/dist/esm/index.mjs?1757091970876:2:5361)
+binaa-app-ultimate | at nextResolve (node:internal/modules/esm/hooks:864:28) {
+binaa-app-ultimate | code: 'ERR_MODULE_NOT_FOUND'
+binaa-app-ultimate | }
+binaa-app-ultimate |
+binaa-app-ultimate | Node.js v18.20.8
+binaa-app-ultimate |
+binaa-app-ultimate | node:internal/process/esm_loader:40
+binaa-app-ultimate | internalBinding('errors').triggerUncaughtException(
+binaa-app-ultimate | ^
+binaa-app-ultimate | Error [ERR_MODULE_NOT_FOUND]: Cannot find package '@shared/schema' imported from /app/server/routes.ts
+binaa-app-ultimate | at new NodeError (node:internal/errors:405:5)
+binaa-app-ultimate | at packageResolve (node:internal/modules/esm/resolve:916:9)
+binaa-app-ultimate | at moduleResolve (node:internal/modules/esm/resolve:973:20)
+binaa-app-ultimate | at defaultResolve (node:internal/modules/esm/resolve:1206:11)
+binaa-app-ultimate | at nextResolve (node:internal/modules/esm/hooks:864:28)
+binaa-app-ultimate | at resolveBase (file:///usr/local/lib/node_modules/tsx/dist/esm/index.mjs?1757092027287:2:3744)
+binaa-app-ultimate | at resolveDirectory (file:///usr/local/lib/node_modules/tsx/dist/esm/index.mjs?1757092027287:2:4243)
+binaa-app-ultimate | at resolveTsPaths (file:///usr/local/lib/node_modules/tsx/dist/esm/index.mjs?1757092027287:2:4984)
+binaa-app-ultimate | at resolve (file:///usr/local/lib/node_modules/tsx/dist/esm/index.mjs?1757092027287:2:5361)
+binaa-app-ultimate | at nextResolve (node:internal/modules/esm/hooks:864:28) {
+binaa-app-ultimate | code: 'ERR_MODULE_NOT_FOUND'
+binaa-app-ultimate | }
+binaa-app-ultimate |
+binaa-app-ultimate | Node.js v18.20.8
+binaa-app-ultimate |
+binaa-app-ultimate | node:internal/process/esm_loader:40
+binaa-app-ultimate | internalBinding('errors').triggerUncaughtException(
+binaa-app-ultimate | ^
+binaa-app-ultimate | Error [ERR_MODULE_NOT_FOUND]: Cannot find package '@shared/schema' imported from /app/server/routes.ts
+binaa-app-ultimate | at new NodeError (node:internal/errors:405:5)
+binaa-app-ultimate | at packageResolve (node:internal/modules/esm/resolve:916:9)
+binaa-app-ultimate | at moduleResolve (node:internal/modules/esm/resolve:973:20)
+binaa-app-ultimate | at defaultResolve (node:internal/modules/esm/resolve:1206:11)
+binaa-app-ultimate | at nextResolve (node:internal/modules/esm/hooks:864:28)
+binaa-app-ultimate | at resolveBase (file:///usr/local/lib/node_modules/tsx/dist/esm/index.mjs?1757092096228:2:3744)
+binaa-app-ultimate | at resolveDirectory (file:///usr/local/lib/node_modules/tsx/dist/esm/index.mjs?1757092096228:2:4243)
+binaa-app-ultimate | at resolveTsPaths (file:///usr/local/lib/node_modules/tsx/dist/esm/index.mjs?1757092096228:2:4984)
+binaa-app-ultimate | at resolve (file:///usr/local/lib/node_modules/tsx/dist/esm/index.mjs?1757092096228:2:5361)
+binaa-app-ultimate | at nextResolve (node:internal/modules/esm/hooks:864:28) {
+binaa-app-ultimate | code: 'ERR_MODULE_NOT_FOUND'
+binaa-app-ultimate | }
+binaa-app-ultimate |
+binaa-app-ultimate | Node.js v18.20.8
+binaa-app-ultimate |
+binaa-app-ultimate | node:internal/process/esm_loader:40
+binaa-app-ultimate | internalBinding('errors').triggerUncaughtException(
+binaa-app-ultimate | ^
+binaa-app-ultimate | Error [ERR_MODULE_NOT_FOUND]: Cannot find package '@shared/schema' imported from /app/server/routes.ts
+binaa-app-ultimate | at new NodeError (node:internal/errors:405:5)
+binaa-app-ultimate | at packageResolve (node:internal/modules/esm/resolve:916:9)
+binaa-app-ultimate | at moduleResolve (node:internal/modules/esm/resolve:973:20)
+binaa-app-ultimate | at defaultResolve (node:internal/modules/esm/resolve:1206:11)
+binaa-app-ultimate | at nextResolve (node:internal/modules/esm/hooks:864:28)
+binaa-app-ultimate | at resolveBase (file:///usr/local/lib/node_modules/tsx/dist/esm/index.mjs?1757092163543:2:3744)
+binaa-app-ultimate | at resolveDirectory (file:///usr/local/lib/node_modules/tsx/dist/esm/index.mjs?1757092163543:2:4243)
+binaa-app-ultimate | at resolveTsPaths (file:///usr/local/lib/node_modules/tsx/dist/esm/index.mjs?1757092163543:2:4984)
+binaa-app-ultimate | at resolve (file:///usr/local/lib/node_modules/tsx/dist/esm/index.mjs?1757092163543:2:5361)
+binaa-app-ultimate | at nextResolve (node:internal/modules/esm/hooks:864:28) {
+binaa-app-ultimate | code: 'ERR_MODULE_NOT_FOUND'
+binaa-app-ultimate | }
+binaa-app-ultimate |
+binaa-app-ultimate | Node.js v18.20.8
+(base) PS H:\PUPLIC\SurpadClone>
+
+CodeGeeX
+بناءً على المخرجات التي قدمتها، يمكنني تحديد المشكلة الرئيسية التي تمنع تشغيل التطبيق بشكل صحيح:
+
+المشكلة الرئيسية: خطأ في العثور على حزمة '@shared/schema'
+من سجلات الأخطاء، نرى أن التطبيق يفشل في العثور على حزمة @shared/schema المستوردة من ملف /app/server/routes.ts. هذا الخطأ يتكرر بشكل مستمر، مما يشير إلى أن هذه مشكلة جوهرية تمنع التطبيق من العمل.
+
+التفاصيل:
+
+الخطأ: Error [ERR_MODULE_NOT_FOUND]: Cannot find package '@shared/schema' imported from /app/server/routes.ts
+هذا الخطأ يحدث عندما يحاول Node.js تحميل وحدة @shared/schema لكنه لا يجدها.
+المشكلة قد تكون بسبب:
+عدم وجود المجلد shared في المشروع.
+عدم تكوين المسارات بشكل صحيح في ملف package.json.
+مشكلة في عملية بناء الصورة Docker حيث لا يتم نسخ المجلد shared بشكل صحيح.
+الحلول المقترحة:
+1. التحقق من وجود المجلد shared
+دعنا نتحقق أولاً من وجود المجلد shared في المشروع:
+
+ 
+Success
+List Directory
+.\shared
+المجلد shared موجود بالفعل ويحتوي على ملف schema.ts. دعنا نتحقق من محتوى ملف server/routes.ts لفهم كيفية استيراده لوحدة @shared/schema:
+
+ 
+Success
+View File
+.\server\routes.ts
+يبدو أن الملف طويل جدًا ولا يمكن عرضه بالكامل. دعنا نتحقق من ملف package.json لفهم كيفية تكوين المسارات، خاصة بالنسبة لمسار @shared/schema:
+
+ 
+Success
+View File
+.\package.json
+لا أرى تكوين المسارات في ملف package.json في الأجزاء المعروضة. دعنا نتحقق من وجود ملف tsconfig.json الذي قد يحتوي على تكوين المسارات:
+
+ 
+Success
+View File
+.\tsconfig.json
+الآن فهمت المشكلة! في ملف tsconfig.json، تم تكوين المسارات بشكل صحيح:
+
+json
+ Copy
+ Insert
+ Export
+
+"paths": {
+  "@/*": ["./client/src/*"],
+  "@shared/*": ["./shared/*"]
+}
+هذا يعني أن المسار @shared/* يجب أن يشير إلى المجلد ./shared/*. لكن المشكلة هي أن هذا التكوين يعمل فقط مع TypeScript أثناء التطوير، ولكن عند بناء التطبيق في Docker، يتم تجميع الكود إلى JavaScript وهذه المسارات لا تعمل بشكل افتراضي.
+
+دعنا نتحقق من ملف Dockerfile.ultimate لفهم كيفية بناء التطبيق:
+
+ 
+Success
+View File
+.\Dockerfile.ultimate
+الآن فهمت المشكلة بالكامل! المشكلة هي أن Dockerfile.ultimate يستخدم tsx لتشغيل الكود مباشرة دون تجميعه، ولكنه لا يتعامل مع مسارات TypeScript المخصصة مثل @shared/*.
+
+المشكلة بالتفصيل:
+في ملف tsconfig.json، تم تعريف مسار مخصص @shared/* للإشارة إلى المجلد ./shared/*.
+في ملف server/routes.ts، يتم استيراد المخططات باستخدام هذا المسار المخصص: import { insertSurveyorSchema, ... } from "@shared/schema";.
+عند تشغيل التطبيق باستخدام tsx في Docker، لا يتم التعرف على هذا المسار المخصص لأن tsx لا يقرأ تلقائيًا إعدادات المسارات من tsconfig.json بدون تكوين إضافي.

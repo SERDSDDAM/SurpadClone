@@ -31,8 +31,8 @@ COPY package*.json ./
 # تثبيت التبعيات مع تجاهل الأخطاء البسيطة
 RUN npm ci --only=production --ignore-scripts || npm install --only=production
 
-# تثبيت أدوات التطوير العالمية
-RUN npm install -g drizzle-kit tsx
+# تثبيت أدوات التطوير العالمية مع tsconfig-paths لحل مسارات TypeScript
+RUN npm install -g drizzle-kit tsx tsconfig-paths
 
 # نسخ كامل المصدر
 COPY . .
@@ -56,5 +56,5 @@ EXPOSE 3000
 HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
     CMD curl -f http://localhost:3000/api/health || exit 1
 
-# أمر التشغيل
-CMD ["npm", "run", "dev"]
+# أمر التشغيل مع حل مسارات TypeScript
+CMD ["npx", "tsx", "--loader", "tsconfig-paths/esm", "server/index.ts"]
