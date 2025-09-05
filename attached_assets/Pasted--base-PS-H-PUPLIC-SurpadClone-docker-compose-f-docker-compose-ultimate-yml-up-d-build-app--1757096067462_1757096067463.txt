@@ -1,0 +1,281 @@
+(base) PS H:\PUPLIC\SurpadClone> docker-compose -f docker-compose.ultimate.yml up -d --build app
+[+] Building 0.9s (16/16) FINISHED
+ => [internal] load local bake definitions                                                          0.0s 
+ => => reading from stdin 354B                                                                      0.0s 
+ => [internal] load build definition from Dockerfile.ultimate                                       0.0s 
+ => => transferring dockerfile: 1.95kB                                                              0.0s 
+ => [internal] load metadata for docker.io/library/node:18-alpine                                   0.0s 
+ => [internal] load .dockerignore                                                                   0.0s 
+ => => transferring context: 2.64kB                                                                 0.0s 
+ => [1/9] FROM docker.io/library/node:18-alpine                                                     0.0s 
+ => [internal] load build context                                                                   0.1s 
+ => => transferring context: 36.57kB                                                                0.1s 
+ => CACHED [2/9] RUN apk add --no-cache     chromium     nss     freetype     harfbuzz     ca-cert  0.0s 
+ => CACHED [3/9] WORKDIR /app                                                                       0.0s 
+ => CACHED [4/9] COPY package*.json ./                                                              0.0s 
+ => CACHED [5/9] RUN npm ci --only=production --ignore-scripts || npm install --only=production     0.0s 
+ => CACHED [6/9] RUN npm install -g drizzle-kit tsx tsconfig-paths                                  0.0s 
+ => CACHED [7/9] COPY . .                                                                           0.0s 
+ => CACHED [8/9] RUN mkdir -p temp-uploads attached_assets logs &&     chmod -R 755 temp-uploads a  0.0s 
+ => CACHED [9/9] RUN addgroup -g 1001 -S nodejs &&     adduser -S appuser -u 1001 -G nodejs &&      0.0s 
+ => exporting to image                                                                              0.0s 
+ => => exporting layers                                                                             0.0s 
+ => => writing image sha256:52a2074b4c927b27d20cd51561f9be83a52d7eb31202038408d27269ab81e533        0.0s 
+ => => naming to docker.io/library/surpadclone-app                                                  0.0s 
+ => resolving provenance for metadata file                                                          0.0s 
+[+] Running 5/5
+ ✔ app                                Built                                                         0.0s 
+ ✔ Container binaa-minio-ultimate     Healthy                                                       0.5s 
+ ✔ Container binaa-redis-ultimate     Healthy                                                       0.5s 
+ ✔ Container binaa-postgres-ultimate  Healthy                                                       0.5s 
+ ✔ Container binaa-app-ultimate       Started                                                       0.1s 
+(base) PS H:\PUPLIC\SurpadClone> docker-compose -f docker-compose.ultimate.yml ps
+NAME                      IMAGE                                                                     COMMAND                  SERVICE    CREATED          STATUS                          PORTS
+binaa-app-ultimate        sha256:a975959746e6568ff544ddc939760f7769fa4a7c57bd85925f0e58c216675ac0   "docker-entrypoint.s…"   app        14 minutes ago   Restarting (1) 51 seconds ago
+binaa-minio-ultimate      minio/minio:latest                                                        "/usr/bin/docker-ent…"   minio      14 minutes ago   Up 14 minutes (healthy)         0.0.0.0:9000-9001->9000-9001/tcp, [::]:9000-9001->9000-9001/tcp
+binaa-postgres-ultimate   postgis/postgis:15-3.3                                                    "docker-entrypoint.s…"   postgres   14 minutes ago   Up 14 minutes (healthy)         0.0.0.0:5432->5432/tcp, [::]:5432->5432/tcp
+binaa-redis-ultimate      redis:7-alpine                                                            "docker-entrypoint.s…"   redis      14 minutes ago   Up 14 minutes (healthy)         0.0.0.0:6379->6379/tcp, [::]:6379->6379/tcp
+(base) PS H:\PUPLIC\SurpadClone> docker-compose -f docker-compose.ultimate.yml logs app
+binaa-app-ultimate  | (node:29) ExperimentalWarning: `--experimental-loader` may be removed in the future; instead use `register()`:
+binaa-app-ultimate  | --import 'data:text/javascript,import { register } from "node:module"; import { pathToFileURL } from "node:url"; register("tsconfig-paths/esm", pathToFileURL("./"));'
+binaa-app-ultimate  | (Use `node --trace-warnings ...` to show where the warning was created)
+binaa-app-ultimate  | 
+binaa-app-ultimate  | node:internal/process/esm_loader:40
+binaa-app-ultimate  |       internalBinding('errors').triggerUncaughtException(
+binaa-app-ultimate  |                                 ^
+binaa-app-ultimate  | Error [ERR_MODULE_NOT_FOUND]: Cannot find package 'tsconfig-paths' imported from /app/
+binaa-app-ultimate  |     at new NodeError (node:internal/errors:405:5)
+binaa-app-ultimate  |     at packageResolve (node:internal/modules/esm/resolve:916:9)
+binaa-app-ultimate  |     at moduleResolve (node:internal/modules/esm/resolve:973:20)
+binaa-app-ultimate  |     at defaultResolve (node:internal/modules/esm/resolve:1206:11)
+binaa-app-ultimate  |     at nextResolve (node:internal/modules/esm/hooks:864:28)
+binaa-app-ultimate  |     at Hooks.resolve (node:internal/modules/esm/hooks:302:30)
+binaa-app-ultimate  |     at ModuleLoader.resolve (node:internal/modules/esm/loader:366:35)
+binaa-app-ultimate  |     at ModuleLoader.getModuleJob (node:internal/modules/esm/loader:250:38)
+binaa-app-ultimate  |     at ModuleLoader.import (node:internal/modules/esm/loader:336:34)
+binaa-app-ultimate  |     at Hooks.register (node:internal/modules/esm/hooks:163:51) {
+binaa-app-ultimate  |   code: 'ERR_MODULE_NOT_FOUND'
+binaa-app-ultimate  | }
+binaa-app-ultimate  | 
+binaa-app-ultimate  | Node.js v18.20.8
+binaa-app-ultimate  | (node:29) ExperimentalWarning: `--experimental-loader` may be removed in the future; instead use `register()`:
+binaa-app-ultimate  | --import 'data:text/javascript,import { register } from "node:module"; import { pathToFileURL } from "node:url"; register("tsconfig-paths/esm", pathToFileURL("./"));'
+binaa-app-ultimate  | (Use `node --trace-warnings ...` to show where the warning was created)
+binaa-app-ultimate  | 
+binaa-app-ultimate  | node:internal/process/esm_loader:40
+binaa-app-ultimate  |       internalBinding('errors').triggerUncaughtException(
+binaa-app-ultimate  |                                 ^
+binaa-app-ultimate  | Error [ERR_MODULE_NOT_FOUND]: Cannot find package 'tsconfig-paths' imported from /app/
+binaa-app-ultimate  |     at new NodeError (node:internal/errors:405:5)
+binaa-app-ultimate  |     at packageResolve (node:internal/modules/esm/resolve:916:9)
+binaa-app-ultimate  |     at moduleResolve (node:internal/modules/esm/resolve:973:20)
+binaa-app-ultimate  |     at defaultResolve (node:internal/modules/esm/resolve:1206:11)
+binaa-app-ultimate  |     at nextResolve (node:internal/modules/esm/hooks:864:28)
+binaa-app-ultimate  |     at Hooks.resolve (node:internal/modules/esm/hooks:302:30)
+binaa-app-ultimate  |     at ModuleLoader.resolve (node:internal/modules/esm/loader:366:35)
+binaa-app-ultimate  |     at ModuleLoader.getModuleJob (node:internal/modules/esm/loader:250:38)
+binaa-app-ultimate  |     at ModuleLoader.import (node:internal/modules/esm/loader:336:34)
+binaa-app-ultimate  |     at Hooks.register (node:internal/modules/esm/hooks:163:51) {
+binaa-app-ultimate  |   code: 'ERR_MODULE_NOT_FOUND'
+binaa-app-ultimate  | }
+binaa-app-ultimate  | 
+binaa-app-ultimate  | Node.js v18.20.8
+binaa-app-ultimate  | (node:29) ExperimentalWarning: `--experimental-loader` may be removed in the future; instead use `register()`:
+binaa-app-ultimate  | --import 'data:text/javascript,import { register } from "node:module"; import { pathToFileURL } from "node:url"; register("tsconfig-paths/esm", pathToFileURL("./"));'
+binaa-app-ultimate  | (Use `node --trace-warnings ...` to show where the warning was created)
+binaa-app-ultimate  | 
+binaa-app-ultimate  | node:internal/process/esm_loader:40
+binaa-app-ultimate  |       internalBinding('errors').triggerUncaughtException(
+binaa-app-ultimate  |                                 ^
+binaa-app-ultimate  | Error [ERR_MODULE_NOT_FOUND]: Cannot find package 'tsconfig-paths' imported from /app/
+binaa-app-ultimate  |     at new NodeError (node:internal/errors:405:5)
+binaa-app-ultimate  |     at packageResolve (node:internal/modules/esm/resolve:916:9)
+binaa-app-ultimate  |     at moduleResolve (node:internal/modules/esm/resolve:973:20)
+binaa-app-ultimate  |     at defaultResolve (node:internal/modules/esm/resolve:1206:11)
+binaa-app-ultimate  |     at nextResolve (node:internal/modules/esm/hooks:864:28)
+binaa-app-ultimate  |     at Hooks.resolve (node:internal/modules/esm/hooks:302:30)
+binaa-app-ultimate  |     at ModuleLoader.resolve (node:internal/modules/esm/loader:366:35)
+binaa-app-ultimate  |     at ModuleLoader.getModuleJob (node:internal/modules/esm/loader:250:38)
+binaa-app-ultimate  |     at ModuleLoader.import (node:internal/modules/esm/loader:336:34)
+binaa-app-ultimate  |     at Hooks.register (node:internal/modules/esm/hooks:163:51) {
+binaa-app-ultimate  |   code: 'ERR_MODULE_NOT_FOUND'
+binaa-app-ultimate  | }
+binaa-app-ultimate  | 
+binaa-app-ultimate  | Node.js v18.20.8
+binaa-app-ultimate  | (node:29) ExperimentalWarning: `--experimental-loader` may be removed in the future; instead use `register()`:
+binaa-app-ultimate  | --import 'data:text/javascript,import { register } from "node:module"; import { pathToFileURL } from "node:url"; register("tsconfig-paths/esm", pathToFileURL("./"));'
+binaa-app-ultimate  | (Use `node --trace-warnings ...` to show where the warning was created)
+binaa-app-ultimate  | 
+binaa-app-ultimate  | node:internal/process/esm_loader:40
+binaa-app-ultimate  |       internalBinding('errors').triggerUncaughtException(
+binaa-app-ultimate  |                                 ^
+binaa-app-ultimate  | Error [ERR_MODULE_NOT_FOUND]: Cannot find package 'tsconfig-paths' imported from /app/
+binaa-app-ultimate  |     at new NodeError (node:internal/errors:405:5)
+binaa-app-ultimate  |     at packageResolve (node:internal/modules/esm/resolve:916:9)
+binaa-app-ultimate  |     at moduleResolve (node:internal/modules/esm/resolve:973:20)
+binaa-app-ultimate  |     at defaultResolve (node:internal/modules/esm/resolve:1206:11)
+binaa-app-ultimate  |     at nextResolve (node:internal/modules/esm/hooks:864:28)
+binaa-app-ultimate  |     at Hooks.resolve (node:internal/modules/esm/hooks:302:30)
+binaa-app-ultimate  |     at ModuleLoader.resolve (node:internal/modules/esm/loader:366:35)
+binaa-app-ultimate  |     at ModuleLoader.getModuleJob (node:internal/modules/esm/loader:250:38)
+binaa-app-ultimate  |     at ModuleLoader.import (node:internal/modules/esm/loader:336:34)
+binaa-app-ultimate  |     at Hooks.register (node:internal/modules/esm/hooks:163:51) {
+binaa-app-ultimate  |   code: 'ERR_MODULE_NOT_FOUND'
+binaa-app-ultimate  | }
+binaa-app-ultimate  | 
+binaa-app-ultimate  | Node.js v18.20.8
+binaa-app-ultimate  | (node:30) ExperimentalWarning: `--experimental-loader` may be removed in the future; instead use `register()`:
+binaa-app-ultimate  | --import 'data:text/javascript,import { register } from "node:module"; import { pathToFileURL } from "node:url"; register("tsconfig-paths/esm", pathToFileURL("./"));'
+binaa-app-ultimate  | (Use `node --trace-warnings ...` to show where the warning was created)
+binaa-app-ultimate  | 
+binaa-app-ultimate  | node:internal/process/esm_loader:40
+binaa-app-ultimate  |       internalBinding('errors').triggerUncaughtException(
+binaa-app-ultimate  |                                 ^
+binaa-app-ultimate  | Error [ERR_MODULE_NOT_FOUND]: Cannot find package 'tsconfig-paths' imported from /app/
+binaa-app-ultimate  |     at new NodeError (node:internal/errors:405:5)
+binaa-app-ultimate  |     at packageResolve (node:internal/modules/esm/resolve:916:9)
+binaa-app-ultimate  |     at moduleResolve (node:internal/modules/esm/resolve:973:20)
+binaa-app-ultimate  |     at defaultResolve (node:internal/modules/esm/resolve:1206:11)
+binaa-app-ultimate  |     at nextResolve (node:internal/modules/esm/hooks:864:28)
+binaa-app-ultimate  |     at Hooks.resolve (node:internal/modules/esm/hooks:302:30)
+binaa-app-ultimate  |     at ModuleLoader.resolve (node:internal/modules/esm/loader:366:35)
+binaa-app-ultimate  |     at ModuleLoader.getModuleJob (node:internal/modules/esm/loader:250:38)
+binaa-app-ultimate  |     at ModuleLoader.import (node:internal/modules/esm/loader:336:34)
+binaa-app-ultimate  |     at Hooks.register (node:internal/modules/esm/hooks:163:51) {
+binaa-app-ultimate  |   code: 'ERR_MODULE_NOT_FOUND'
+binaa-app-ultimate  | }
+binaa-app-ultimate  | 
+binaa-app-ultimate  | Node.js v18.20.8
+binaa-app-ultimate  | (node:29) ExperimentalWarning: `--experimental-loader` may be removed in the future; instead use `register()`:
+binaa-app-ultimate  | --import 'data:text/javascript,import { register } from "node:module"; import { pathToFileURL } from "node:url"; register("tsconfig-paths/esm", pathToFileURL("./"));'
+binaa-app-ultimate  | (Use `node --trace-warnings ...` to show where the warning was created)
+binaa-app-ultimate  | 
+binaa-app-ultimate  | node:internal/process/esm_loader:40
+binaa-app-ultimate  |       internalBinding('errors').triggerUncaughtException(
+binaa-app-ultimate  |                                 ^
+binaa-app-ultimate  | Error [ERR_MODULE_NOT_FOUND]: Cannot find package 'tsconfig-paths' imported from /app/
+binaa-app-ultimate  |     at new NodeError (node:internal/errors:405:5)
+binaa-app-ultimate  |     at packageResolve (node:internal/modules/esm/resolve:916:9)
+binaa-app-ultimate  |     at moduleResolve (node:internal/modules/esm/resolve:973:20)
+binaa-app-ultimate  |     at defaultResolve (node:internal/modules/esm/resolve:1206:11)
+binaa-app-ultimate  |     at nextResolve (node:internal/modules/esm/hooks:864:28)
+binaa-app-ultimate  |     at Hooks.resolve (node:internal/modules/esm/hooks:302:30)
+binaa-app-ultimate  |     at ModuleLoader.resolve (node:internal/modules/esm/loader:366:35)
+binaa-app-ultimate  |     at ModuleLoader.getModuleJob (node:internal/modules/esm/loader:250:38)
+binaa-app-ultimate  |     at ModuleLoader.import (node:internal/modules/esm/loader:336:34)
+binaa-app-ultimate  |     at Hooks.register (node:internal/modules/esm/hooks:163:51) {
+binaa-app-ultimate  |   code: 'ERR_MODULE_NOT_FOUND'
+binaa-app-ultimate  | }
+binaa-app-ultimate  | 
+binaa-app-ultimate  | Node.js v18.20.8
+binaa-app-ultimate  | (node:29) ExperimentalWarning: `--experimental-loader` may be removed in the future; instead use `register()`:
+binaa-app-ultimate  | --import 'data:text/javascript,import { register } from "node:module"; import { pathToFileURL } from "node:url"; register("tsconfig-paths/esm", pathToFileURL("./"));'
+binaa-app-ultimate  | (Use `node --trace-warnings ...` to show where the warning was created)
+binaa-app-ultimate  | 
+binaa-app-ultimate  | node:internal/process/esm_loader:40
+binaa-app-ultimate  |       internalBinding('errors').triggerUncaughtException(
+binaa-app-ultimate  |                                 ^
+binaa-app-ultimate  | Error [ERR_MODULE_NOT_FOUND]: Cannot find package 'tsconfig-paths' imported from /app/
+binaa-app-ultimate  |     at new NodeError (node:internal/errors:405:5)
+binaa-app-ultimate  |     at packageResolve (node:internal/modules/esm/resolve:916:9)
+binaa-app-ultimate  |     at moduleResolve (node:internal/modules/esm/resolve:973:20)
+binaa-app-ultimate  |     at defaultResolve (node:internal/modules/esm/resolve:1206:11)
+binaa-app-ultimate  |     at nextResolve (node:internal/modules/esm/hooks:864:28)
+binaa-app-ultimate  |     at Hooks.resolve (node:internal/modules/esm/hooks:302:30)
+binaa-app-ultimate  |     at ModuleLoader.resolve (node:internal/modules/esm/loader:366:35)
+binaa-app-ultimate  |     at ModuleLoader.getModuleJob (node:internal/modules/esm/loader:250:38)
+binaa-app-ultimate  |     at ModuleLoader.import (node:internal/modules/esm/loader:336:34)
+binaa-app-ultimate  |     at Hooks.register (node:internal/modules/esm/hooks:163:51) {
+binaa-app-ultimate  |   code: 'ERR_MODULE_NOT_FOUND'
+binaa-app-ultimate  | }
+binaa-app-ultimate  | 
+binaa-app-ultimate  | Node.js v18.20.8
+binaa-app-ultimate  | (node:29) ExperimentalWarning: `--experimental-loader` may be removed in the future; instead use `register()`:
+binaa-app-ultimate  | --import 'data:text/javascript,import { register } from "node:module"; import { pathToFileURL } from "node:url"; register("tsconfig-paths/esm", pathToFileURL("./"));'
+binaa-app-ultimate  | (Use `node --trace-warnings ...` to show where the warning was created)
+binaa-app-ultimate  | 
+binaa-app-ultimate  | node:internal/process/esm_loader:40
+binaa-app-ultimate  |       internalBinding('errors').triggerUncaughtException(
+binaa-app-ultimate  |                                 ^
+binaa-app-ultimate  | Error [ERR_MODULE_NOT_FOUND]: Cannot find package 'tsconfig-paths' imported from /app/
+binaa-app-ultimate  |     at new NodeError (node:internal/errors:405:5)
+binaa-app-ultimate  |     at packageResolve (node:internal/modules/esm/resolve:916:9)
+binaa-app-ultimate  |     at moduleResolve (node:internal/modules/esm/resolve:973:20)
+binaa-app-ultimate  |     at defaultResolve (node:internal/modules/esm/resolve:1206:11)
+binaa-app-ultimate  |     at nextResolve (node:internal/modules/esm/hooks:864:28)
+binaa-app-ultimate  |     at Hooks.resolve (node:internal/modules/esm/hooks:302:30)
+binaa-app-ultimate  |     at ModuleLoader.resolve (node:internal/modules/esm/loader:366:35)
+binaa-app-ultimate  |     at ModuleLoader.getModuleJob (node:internal/modules/esm/loader:250:38)
+binaa-app-ultimate  |     at ModuleLoader.import (node:internal/modules/esm/loader:336:34)
+binaa-app-ultimate  |     at Hooks.register (node:internal/modules/esm/hooks:163:51) {
+binaa-app-ultimate  |   code: 'ERR_MODULE_NOT_FOUND'
+binaa-app-ultimate  | }
+binaa-app-ultimate  | 
+binaa-app-ultimate  | Node.js v18.20.8
+binaa-app-ultimate  | (node:29) ExperimentalWarning: `--experimental-loader` may be removed in the future; instead use `register()`:
+binaa-app-ultimate  | --import 'data:text/javascript,import { register } from "node:module"; import { pathToFileURL } from "node:url"; register("tsconfig-paths/esm", pathToFileURL("./"));'
+binaa-app-ultimate  | (Use `node --trace-warnings ...` to show where the warning was created)
+binaa-app-ultimate  | 
+binaa-app-ultimate  | node:internal/process/esm_loader:40
+binaa-app-ultimate  |       internalBinding('errors').triggerUncaughtException(
+binaa-app-ultimate  |                                 ^
+binaa-app-ultimate  | Error [ERR_MODULE_NOT_FOUND]: Cannot find package 'tsconfig-paths' imported from /app/
+binaa-app-ultimate  |     at new NodeError (node:internal/errors:405:5)
+binaa-app-ultimate  |     at packageResolve (node:internal/modules/esm/resolve:916:9)
+binaa-app-ultimate  |     at moduleResolve (node:internal/modules/esm/resolve:973:20)
+binaa-app-ultimate  |     at defaultResolve (node:internal/modules/esm/resolve:1206:11)
+binaa-app-ultimate  |     at nextResolve (node:internal/modules/esm/hooks:864:28)
+binaa-app-ultimate  |     at Hooks.resolve (node:internal/modules/esm/hooks:302:30)
+binaa-app-ultimate  |     at ModuleLoader.resolve (node:internal/modules/esm/loader:366:35)
+binaa-app-ultimate  |     at ModuleLoader.getModuleJob (node:internal/modules/esm/loader:250:38)
+binaa-app-ultimate  |     at ModuleLoader.import (node:internal/modules/esm/loader:336:34)
+binaa-app-ultimate  |     at Hooks.register (node:internal/modules/esm/hooks:163:51) {
+binaa-app-ultimate  |   code: 'ERR_MODULE_NOT_FOUND'
+binaa-app-ultimate  | }
+binaa-app-ultimate  | 
+binaa-app-ultimate  | Node.js v18.20.8
+binaa-app-ultimate  | (node:29) ExperimentalWarning: `--experimental-loader` may be removed in the future; instead use `register()`:
+binaa-app-ultimate  | --import 'data:text/javascript,import { register } from "node:module"; import { pathToFileURL } from "node:url"; register("tsconfig-paths/esm", pathToFileURL("./"));'
+binaa-app-ultimate  | (Use `node --trace-warnings ...` to show where the warning was created)
+binaa-app-ultimate  | 
+binaa-app-ultimate  | node:internal/process/esm_loader:40
+binaa-app-ultimate  |       internalBinding('errors').triggerUncaughtException(
+binaa-app-ultimate  |                                 ^
+binaa-app-ultimate  | Error [ERR_MODULE_NOT_FOUND]: Cannot find package 'tsconfig-paths' imported from /app/
+binaa-app-ultimate  |     at new NodeError (node:internal/errors:405:5)
+binaa-app-ultimate  |     at packageResolve (node:internal/modules/esm/resolve:916:9)
+binaa-app-ultimate  |     at moduleResolve (node:internal/modules/esm/resolve:973:20)
+binaa-app-ultimate  |     at defaultResolve (node:internal/modules/esm/resolve:1206:11)
+binaa-app-ultimate  |     at nextResolve (node:internal/modules/esm/hooks:864:28)
+binaa-app-ultimate  |     at Hooks.resolve (node:internal/modules/esm/hooks:302:30)
+binaa-app-ultimate  |     at ModuleLoader.resolve (node:internal/modules/esm/loader:366:35)
+binaa-app-ultimate  |     at ModuleLoader.getModuleJob (node:internal/modules/esm/loader:250:38)
+binaa-app-ultimate  |     at ModuleLoader.import (node:internal/modules/esm/loader:336:34)
+binaa-app-ultimate  |     at Hooks.register (node:internal/modules/esm/hooks:163:51) {
+binaa-app-ultimate  |   code: 'ERR_MODULE_NOT_FOUND'
+binaa-app-ultimate  | }
+binaa-app-ultimate  | 
+binaa-app-ultimate  | Node.js v18.20.8
+binaa-app-ultimate  | (node:29) ExperimentalWarning: `--experimental-loader` may be removed in the future; instead use `register()`:
+binaa-app-ultimate  | --import 'data:text/javascript,import { register } from "node:module"; import { pathToFileURL } from "node:url"; register("tsconfig-paths/esm", pathToFileURL("./"));'
+binaa-app-ultimate  | (Use `node --trace-warnings ...` to show where the warning was created)
+binaa-app-ultimate  | 
+binaa-app-ultimate  | node:internal/process/esm_loader:40
+binaa-app-ultimate  |       internalBinding('errors').triggerUncaughtException(
+binaa-app-ultimate  |                                 ^
+binaa-app-ultimate  | Error [ERR_MODULE_NOT_FOUND]: Cannot find package 'tsconfig-paths' imported from /app/
+binaa-app-ultimate  |     at new NodeError (node:internal/errors:405:5)
+binaa-app-ultimate  |     at packageResolve (node:internal/modules/esm/resolve:916:9)
+binaa-app-ultimate  |     at moduleResolve (node:internal/modules/esm/resolve:973:20)
+binaa-app-ultimate  |     at defaultResolve (node:internal/modules/esm/resolve:1206:11)
+binaa-app-ultimate  |     at nextResolve (node:internal/modules/esm/hooks:864:28)
+binaa-app-ultimate  |     at Hooks.resolve (node:internal/modules/esm/hooks:302:30)
+binaa-app-ultimate  |     at ModuleLoader.resolve (node:internal/modules/esm/loader:366:35)
+binaa-app-ultimate  |     at ModuleLoader.getModuleJob (node:internal/modules/esm/loader:250:38)
+binaa-app-ultimate  |     at ModuleLoader.import (node:internal/modules/esm/loader:336:34)
+binaa-app-ultimate  |     at Hooks.register (node:internal/modules/esm/hooks:163:51) {
+binaa-app-ultimate  |   code: 'ERR_MODULE_NOT_FOUND'
+binaa-app-ultimate  | }
+binaa-app-ultimate  | 
+binaa-app-ultimate  | Node.js v18.20.8
+(base) PS H:\PUPLIC\SurpadClone> 
