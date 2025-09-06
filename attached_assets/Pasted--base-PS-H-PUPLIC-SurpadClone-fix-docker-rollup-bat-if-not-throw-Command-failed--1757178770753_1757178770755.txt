@@ -1,0 +1,488 @@
+(base) PS H:\PUPLIC\SurpadClone> fix-docker-rollup.bat; if (-not $?) { throw 'Command failed' }
+
+==========================================
+  ≡ا¤د ╪ح╪╡┘
+            ╪د╪ص ┘à╪┤┘â┘
+                        ╪ر rollup ┘┘è Docker
+==========================================
+
+[╪ز┘╪╕┘è┘] ╪ح╪▓╪د┘
+                  ╪ر ╪د┘
+                        ╪ص╪د┘ê┘è╪د╪ز ┘ê╪د┘
+                                          ╪╡┘ê╪▒ ╪د┘
+                                                    ┘é╪»┘è┘à╪ر...
+Deleted build cache objects:
+xehg09pmgrkw0rllym3r2awh4
+5lv1u5n8mads8ob3vf2ybg8f8
+c5hgm77yv2ak74zqtmflg9fdx
+
+Total reclaimed space: 87.02MB
+
+[╪ح╪╡┘
+      ╪د╪ص] ╪ذ┘╪د╪ة Docker ┘à╪╣ ╪ح╪╡┘
+                                     ╪د╪ص rollup...
+[+] Building 406.8s (7/18)
+ => [internal] load local bake definitions                                                                             0.0s 
+ => => reading from stdin 378B                                                                                         0.0s 
+ => [internal] load build definition from Dockerfile.ultimate                                                          0.0s 
+ => => transferring dockerfile: 2.75kB                                                                                 0.0s 
+ => [internal] load metadata for docker.io/library/node:18-alpine                                                      0.0s 
+ => [internal] load .dockerignore                                                                                      0.0s 
+ => => transferring context: 2.63kB                                                                                    0.0s 
+ => CACHED [ 1/13] FROM docker.io/library/node:18-alpine                                                               0.0s 
+ => [internal] load build context                                                                                      4.1s 
+ => => transferring context: 87.08MB                                                                                   4.1s 
+ => ERROR [ 2/13] RUN apk add --no-cache     chromium     nss     freetype     harfbuzz     ca-certificates     cur  405.7s 
+------
+ > [ 2/13] RUN apk add --no-cache     chromium     nss     freetype     harfbuzz     ca-certificates     curl     postgresql-client     && rm -rf /var/cache/apk/*:
+0.395 fetch https://dl-cdn.alpinelinux.org/alpine/v3.21/main/x86_64/APKINDEX.tar.gz
+1.787 fetch https://dl-cdn.alpinelinux.org/alpine/v3.21/community/x86_64/APKINDEX.tar.gz
+4.764 (1/183) Installing ca-certificates (20250619-r0)
+5.034 (2/183) Installing libexpat (2.7.0-r0)
+5.216 (3/183) Installing brotli-libs (1.1.0-r2)
+5.635 (4/183) Installing libbz2 (1.0.8-r6)
+5.787 (5/183) Installing libpng (1.6.47-r0)
+5.998 (6/183) Installing freetype (2.13.3-r0)
+6.341 (7/183) Installing fontconfig (2.15.0-r1)
+6.579 (8/183) Installing libfontenc (1.1.8-r0)
+6.724 (9/183) Installing mkfontscale (1.2.3-r1)
+6.871 (10/183) Installing font-opensans (0_git20210927-r1)
+8.208 (11/183) Installing pkgconf (2.3.0-r0)
+8.380 (12/183) Installing libffi (3.4.7-r0)
+8.543 (13/183) Installing libintl (0.22.5-r0)
+8.696 (14/183) Installing libeconf (0.6.3-r0)
+8.861 (15/183) Installing libblkid (2.40.4-r1)
+9.058 (16/183) Installing libmount (2.40.4-r1)
+9.275 (17/183) Installing pcre2 (10.43-r0)
+9.673 (18/183) Installing glib (2.82.5-r0)
+11.14 (19/183) Installing xz-libs (5.6.3-r1)
+11.37 (20/183) Installing libxml2 (2.13.4-r6)
+11.91 (21/183) Installing shared-mime-info (2.4-r2)
+12.31 (22/183) Installing hicolor-icon-theme (0.18-r0)
+12.63 (23/183) Installing libjpeg-turbo (3.0.4-r0)
+12.93 (24/183) Installing libsharpyuv (1.4.0-r0)
+13.06 (25/183) Installing libwebp (1.4.0-r0)
+13.39 (26/183) Installing zstd-libs (1.5.6-r2)
+14.08 (27/183) Installing tiff (4.7.0-r0)
+14.50 (28/183) Installing gdk-pixbuf (2.42.12-r1)
+14.85 (29/183) Installing gtk-update-icon-cache (3.24.49-r0)
+15.04 (30/183) Installing libxau (1.0.11-r4)
+15.17 (31/183) Installing libmd (1.1.0-r0)
+15.32 (32/183) Installing libbsd (0.12.2-r0)
+15.47 (33/183) Installing libxdmcp (1.1.5-r1)
+15.61 (34/183) Installing libxcb (1.16.1-r0)
+15.90 (35/183) Installing libx11 (1.8.10-r0)
+16.66 (36/183) Installing libxcomposite (0.4.6-r5)
+16.81 (37/183) Installing libxfixes (6.0.1-r4)
+16.98 (38/183) Installing libxrender (0.9.11-r5)
+17.13 (39/183) Installing libxcursor (1.2.3-r0)
+17.26 (40/183) Installing libxdamage (1.1.6-r5)
+17.41 (41/183) Installing libxext (1.3.6-r2)
+17.57 (42/183) Installing libxi (1.8.2-r0)
+17.72 (43/183) Installing libxinerama (1.1.5-r4)
+17.85 (44/183) Installing libxrandr (1.5.4-r1)
+17.99 (45/183) Installing libatk-1.0 (2.54.1-r0)
+18.17 (46/183) Installing libxtst (1.2.5-r0)
+18.31 (47/183) Installing dbus-libs (1.14.10-r4)
+18.52 (48/183) Installing at-spi2-core (2.54.1-r0)
+18.75 (49/183) Installing libatk-bridge-2.0 (2.54.1-r0)
+18.95 (50/183) Installing pixman (0.43.4-r1)
+19.81 (51/183) Installing cairo (1.18.4-r0)
+20.28 (52/183) Installing cairo-gobject (1.18.4-r0)
+20.41 (53/183) Installing avahi-libs (0.8-r19)
+20.62 (54/183) Installing gmp (6.3.0-r2)
+20.91 (55/183) Installing nettle (3.10-r1)
+21.25 (56/183) Installing libunistring (1.2-r0)
+21.83 (57/183) Installing libidn2 (2.3.7-r0)
+22.04 (58/183) Installing libtasn1 (4.20.0-r0)
+22.18 (59/183) Installing p11-kit (0.25.5-r2)
+22.52 (60/183) Installing gnutls (3.8.8-r0)
+26.54 (61/183) Installing cups-libs (2.4.11-r0)
+26.81 (62/183) Installing libepoxy (1.5.10-r1)
+27.08 (63/183) Installing fribidi (1.0.16-r0)
+27.26 (64/183) Installing graphite2 (1.3.14-r6)
+27.48 (65/183) Installing harfbuzz (9.0.0-r1)
+28.06 (66/183) Installing libxft (2.3.8-r3)
+28.28 (67/183) Installing pango (1.54.0-r1)
+28.71 (68/183) Installing wayland-libs-client (1.23.1-r0)
+28.87 (69/183) Installing wayland-libs-cursor (1.23.1-r0)
+29.00 (70/183) Installing wayland-libs-egl (1.23.1-r0)
+29.22 (71/183) Installing xkeyboard-config (2.43-r0)
+29.79 (72/183) Installing libxkbcommon (1.7.0-r1)
+30.17 (73/183) Installing gtk+3.0 (3.24.49-r0)
+32.94 (74/183) Installing icu-data-full (74.2-r1)
+40.27 (75/183) Installing llvm19-libs (19.1.4-r1)
+92.87 (76/183) Installing hwdata-pci (0.393-r0)
+93.27 (77/183) Installing libpciaccess (0.18.1-r0)
+93.55 (78/183) Installing libdrm (2.4.123-r1)
+93.85 (79/183) Installing libelf (0.191-r0)
+94.01 (80/183) Installing mesa-glapi (24.2.8-r0)
+94.29 (81/183) Installing libxshmfence (1.3.2-r6)
+94.50 (82/183) Installing mesa (24.2.8-r0)
+118.7 (83/183) Installing wayland-libs-server (1.23.1-r0)
+118.9 (84/183) Installing mesa-gbm (24.2.8-r0)
+119.0 (85/183) Installing mesa-dri-gallium (24.2.8-r0)
+119.2 (86/183) Installing eudev-libs (3.2.14-r5)
+119.4 (87/183) Installing libmagic (5.46-r2)
+120.0 (88/183) Installing file (5.46-r2)
+120.2 (89/183) Installing xprop (1.2.8-r0)
+120.3 (90/183) Installing libice (1.1.1-r6)
+120.5 (91/183) Installing libuuid (2.40.4-r1)
+120.6 (92/183) Installing libsm (1.2.4-r4)
+120.8 (93/183) Installing libxt (1.3.1-r0)
+121.0 (94/183) Installing libxmu (1.2.1-r0)
+121.2 (95/183) Installing xset (1.2.5-r1)
+121.3 (96/183) Installing xdg-utils (1.2.1-r1)
+121.5 (97/183) Installing libogg (1.3.5-r5)
+121.7 (98/183) Installing libflac (1.4.3-r1)
+122.0 (99/183) Installing alsa-lib (1.2.12-r0)
+125.9 (100/183) Installing libSvtAv1Enc (2.2.1-r0)
+128.6 (101/183) Installing aom-libs (3.11.0-r0)
+131.5 (102/183) Installing libva (2.22.0-r1)
+131.7 (103/183) Installing libvdpau (1.5-r4)
+132.0 (104/183) Installing onevpl-libs (2023.3.1-r2)
+132.2 (105/183) Installing ffmpeg-libavutil (6.1.2-r1)
+132.6 (106/183) Installing libdav1d (1.5.0-r0)
+133.1 (107/183) Installing openexr-libiex (3.3.2-r0)
+133.4 (108/183) Installing openexr-libilmthread (3.3.2-r0)
+133.5 (109/183) Installing imath (3.1.12-r0)
+133.7 (110/183) Installing libdeflate (1.22-r0)
+133.9 (111/183) Installing openexr-libopenexrcore (3.3.2-r0)
+134.3 (112/183) Installing openexr-libopenexr (3.3.2-r0)
+134.7 (113/183) Installing giflib (5.2.2-r1)
+134.8 (114/183) Installing libhwy (1.0.7-r0)
+135.0 (115/183) Installing lcms2 (2.16-r0)
+135.2 (116/183) Installing libjxl (0.10.4-r0)
+136.5 (117/183) Installing lame-libs (3.100-r5)
+136.6 (118/183) Installing opus (1.5.2-r1)
+137.0 (119/183) Installing rav1e-libs (0.7.1-r0)
+137.8 (120/183) Installing libgomp (14.2.0-r4)
+138.1 (121/183) Installing soxr (0.1.3-r7)
+138.3 (122/183) Installing ffmpeg-libswresample (6.1.2-r1)
+138.5 (123/183) Installing libtheora (1.1.1-r18)
+138.9 (124/183) Installing libvorbis (1.3.7-r2)
+139.2 (125/183) Installing libvpx (1.15.0-r0)
+140.5 (126/183) Installing libwebpmux (1.4.0-r0)
+140.6 (127/183) Installing x264-libs (0.164.3108-r0)
+141.6 (128/183) Installing numactl (2.0.18-r0)
+141.8 (129/183) Installing x265-libs (3.6-r0)
+145.1 (130/183) Installing xvidcore (1.3.7-r2)
+145.5 (131/183) Installing ffmpeg-libavcodec (6.1.2-r1)
+151.6 (132/183) Installing libbluray (1.3.4-r1)
+151.8 (133/183) Installing mpg123-libs (1.32.9-r0)
+152.1 (134/183) Installing libopenmpt (0.7.12-r0)
+152.7 (135/183) Installing cjson (1.7.18-r0)
+152.8 (136/183) Installing mbedtls (3.6.4-r0)
+153.2 (137/183) Installing librist (0.2.10-r1)
+153.6 (138/183) Installing libsrt (1.5.3-r0)
+154.2 (139/183) Installing libssh (0.11.1-r0)
+154.4 (140/183) Installing libsodium (1.0.20-r0)
+154.7 (141/183) Installing libzmq (4.3.5-r2)
+155.0 (142/183) Installing ffmpeg-libavformat (6.1.2-r1)
+156.6 (143/183) Installing crc32c (1.1.2-r1)
+159.4 (144/183) Installing double-conversion (3.3.0-r0)
+159.6 (145/183) Installing harfbuzz-subset (9.0.0-r1)
+160.2 (146/183) Installing icu-libs (74.2-r1)
+161.3 (147/183) Installing minizip (1.3.1-r0)
+161.4 (148/183) Installing nspr (4.36-r0)
+161.6 (149/183) Installing sqlite-libs (3.48.0-r3)
+162.2 (150/183) Installing nss (3.109-r0)
+163.3 (151/183) Installing openh264 (2.6.0-r0)
+163.9 (152/183) Installing libcamera-ipa (0.3.2-r0)
+164.1 (153/183) Installing libunwind (1.8.1-r0)
+164.3 (154/183) Installing yaml (0.2.5-r2)
+164.4 (155/183) Installing libcamera (0.3.2-r0)
+164.9 (156/183) Installing speexdsp (1.2.1-r2)
+165.1 (157/183) Installing libuv (1.49.2-r0)
+165.3 (158/183) Installing roc-toolkit-libs (0.4.0-r0)
+165.7 (159/183) Installing libsndfile (1.2.2-r2)
+166.0 (160/183) Installing webrtc-audio-processing-1 (1.3-r1)
+166.5 (161/183) Installing pipewire-libs (1.2.7-r0)
+168.2 (162/183) Installing libasyncns (0.8-r4)
+168.3 (163/183) Installing libltdl (2.4.7-r3)
+168.5 (164/183) Installing orc (0.4.40-r1)
+168.8 (165/183) Installing tdb-libs (1.4.12-r0)
+170.8 (166/183) Installing libpulse (17.0-r4)
+172.0 (167/183) Installing libwebpdemux (1.4.0-r0)
+172.1 (168/183) Installing libgpg-error (1.51-r0)
+172.3 (169/183) Installing libgcrypt (1.10.3-r1)
+172.8 (170/183) Installing libxslt (1.1.42-r2)
+173.1 (171/183) Installing chromium (136.0.7103.113-r0)
+399.8 ERROR: Failed to create usr/lib/chromium/chromium: I/O error
+399.8 ERROR: chromium-136.0.7103.113-r0: IO ERROR
+399.8 (172/183) Installing c-ares (1.34.5-r0)
+400.8 (173/183) Installing nghttp2-libs (1.64.0-r0)
+401.2 (174/183) Installing libpsl (0.21.5-r3)
+401.5 (175/183) Installing libcurl (8.12.1-r1)
+402.1 (176/183) Installing curl (8.12.1-r1)
+402.5 (177/183) Installing postgresql-common (1.2-r1)
+402.6 Executing postgresql-common-1.2-r1.pre-install
+402.7 (178/183) Installing lz4-libs (1.10.0-r0)
+402.9 (179/183) Installing libpq (17.6-r0)
+403.2 (180/183) Installing ncurses-terminfo-base (6.5_p20241006-r3)
+403.3 (181/183) Installing libncursesw (6.5_p20241006-r3)
+403.6 (182/183) Installing readline (8.2.13-r0)
+403.8 (183/183) Installing postgresql17-client (17.6-r0)
+404.8 Executing busybox-1.37.0-r12.trigger
+404.8 Executing ca-certificates-20250619-r0.trigger
+404.9 Executing fontconfig-2.15.0-r1.trigger
+404.9 Executing mkfontscale-1.2.3-r1.trigger
+404.9 Executing glib-2.82.5-r0.trigger
+404.9 Executing shared-mime-info-2.4-r2.trigger
+405.3 Executing gdk-pixbuf-2.42.12-r1.trigger
+405.3 Executing gtk-update-icon-cache-3.24.49-r0.trigger
+405.3 Executing gtk+3.0-3.24.49-r0.trigger
+405.4 Executing postgresql-common-1.2-r1.trigger
+405.4 * Setting postgresql17 as the default version
+405.5 WARNING: opening from cache https://dl-cdn.alpinelinux.org/alpine/v3.21/main: No such file or directory
+405.5 WARNING: opening from cache https://dl-cdn.alpinelinux.org/alpine/v3.21/community: No such file or directory
+405.5 1 error; 487 MiB in 199 packages
+------
+Dockerfile.ultimate:19
+
+--------------------
+
+  18 |     # تثبيت أدوات النظام المطلوبة
+
+  19 | >>> RUN apk add --no-cache \
+
+  20 | >>>     chromium \
+
+  21 | >>>     nss \
+
+  22 | >>>     freetype \
+
+  23 | >>>     harfbuzz \
+
+  24 | >>>     ca-certificates \
+
+  25 | >>>     curl \
+
+  26 | >>>     postgresql-client \
+
+  27 | >>>     && rm -rf /var/cache/apk/*
+
+  28 |
+
+--------------------
+
+failed to solve: process "/bin/sh -c apk add --no-cache     chromium     nss     freetype     harfbuzz     ca-certificates  
+   curl     postgresql-client     && rm -rf /var/cache/apk/*" did not complete successfully: exit code: 1
+
+
+
+View build details: docker-desktop://dashboard/build/desktop-linux/desktop-linux/xowe44zofihn7rr4vs6tkwh87
+
+ظإî ┘╪┤┘
+         ╪د┘
+            ╪ذ┘╪د╪ة - ╪╣╪▒╪╢ ╪د┘
+                                ╪ث╪«╪╖╪د╪ة:
+
+==========================================
+      ≡ا» ╪د┘╪ز┘ç╪ز ╪╣┘à┘
+                         ┘è╪ر ╪د┘
+                                 ╪ح╪╡┘
+                                      ╪د╪ص
+==========================================
+
+≡اôï ╪ث┘ê╪د┘à╪▒ ┘à┘┘è╪»╪ر:
+  ╪╣╪▒╪╢ ╪د┘
+            ╪│╪ش┘
+                 ╪د╪ز ╪د┘
+                         ┘à╪ذ╪د╪┤╪▒╪ر: docker logs binaa-app-ultimate -f
+  ╪ح╪╣╪د╪»╪ر ╪د┘
+
+--------------------
+
+failed to solve: process "/bin/sh -c apk add --no-cache     chromium     nss     freetype     harfbuzz     ca-certificates  
+   curl     postgresql-client     && rm -rf /var/cache/apk/*" did not complete successfully: exit code: 1
+
+
+
+View build details: docker-desktop://dashboard/build/desktop-linux/desktop-linux/xowe44zofihn7rr4vs6tkwh87
+
+ظإî ┘╪┤┘S H:\PUPLIC\SurpadClone> 
+         ╪د┘
+            ╪ذ┘╪د╪ة - ╪╣╪▒╪╢ ╪د┘
+                                ╪ث╪«╪╖╪د╪ة:
+
+==========================================
+      ≡ا» ╪د┘╪ز┘ç╪ز ╪╣┘à┘
+                         ┘è╪ر ╪د┘
+                                 ╪ح╪╡┘
+                                      ╪د╪ص
+==========================================
+
+≡اôï ╪ث┘ê╪د┘à╪▒ ┘à┘┘è╪»╪ر:
+  ╪╣╪▒╪╢ ╪د┘
+            ╪│╪ش┘
+                 ╪د╪ز ╪د┘
+                         ┘à╪ذ╪د╪┤╪▒╪ر: docker logs binaa-app-ultimate -f
+  ╪ح╪╣╪د╪»╪ر ╪د┘
+   curl     postgresql-client     && rm -rf /var/cache/apk/*" did not complete successfully: exit code: 1
+
+
+
+View build details: docker-desktop://dashboard/build/desktop-linux/desktop-linux/xowe44zofihn7rr4vs6tkwh87
+
+ظإî ┘╪┤┘  ╪د┘
+         ╪د┘ ╪ص╪د┘ê┘è╪ر: docker exec -it binaa-app-ultimate sh
+            ╪ذ┘╪د╪ة - ╪╣╪▒╪╢ ╪د┘
+Press any key to continue . . . ╪ث╪«╪╖╪د╪ة:
+
+==========================================
+      ≡ا» ╪د┘╪ز┘ç╪ز ╪╣┘à┘
+                         ┘è╪ر ╪د┘
+                                 ╪ح╪╡┘
+                                      ╪د╪ص
+==========================================
+
+≡اôï ╪ث┘ê╪د┘à╪▒ ┘à┘┘è╪»╪ر:
+  ╪╣╪▒╪╢ ╪د┘
+            ╪│╪ش┘
+                 ╪د╪ز ╪د┘
+                         ┘à╪ذ╪د╪┤╪▒╪ر: docker logs binaa-app-ultimate -f
+  ╪ح╪╣╪د╪»╪ر ╪د┘
+                ╪ز╪┤╪║┘è┘
+                         : docker-compose -f docker-compose.ultimate.yml restart app
+  ╪ص╪د┘
+       ╪ر ╪د┘
+             ┘╪╕╪د┘à: docker-compose -f docker-compose.ultimate.yml ps
+  ╪»╪«┘ê┘
+
+View build details: docker-desktop://dashboard/build/desktop-linux/desktop-linux/xowe44zofihn7rr4vs6tkwh87
+
+ظإî ┘╪┤┘y key to continue . . .
+(base) P ╪د┘\PUPLIC\SurpadClone>
+            ╪ذ┘╪د╪ة - ╪╣╪▒╪╢ ╪د┘
+                                ╪ث╪«╪╖╪د╪ة:
+
+==========================================
+      ≡ا» ╪د┘╪ز┘ç╪ز ╪╣┘à┘
+                         ┘è╪ر ╪د┘
+                                 ╪ح╪╡┘
+                                      ╪د╪ص
+==========================================
+
+≡اôï ╪ث┘ê╪د┘à╪▒ ┘à┘┘è╪»╪ر:
+  ╪╣╪▒╪╢ ╪د┘
+            ╪│╪ش┘
+                 ╪د╪ز ╪د┘
+                         ┘à╪ذ╪د╪┤╪▒╪ر: docker logs binaa-app-ultimate -f
+  ╪ح╪╣╪د╪»╪ر ╪د┘
+                ╪ز╪┤╪║┘è┘
+                         : docker-compose -f docker-compose.ultimate.yml restart app
+  ╪ص╪د┘
+       ╪ر ╪د┘
+             ┘╪╕╪د┘à: docker-compose -f docker-compose.ultimate.yml ps
+  ╪»╪«┘ê┘
+View build details: docker-desktop://dashboard/build/desktop-linux/desktop-linux/xowe44zofihn7rr4vs6tkwh87
+
+ظإî ┘╪┤┘
+Press an ╪د┘y to continue . . .
+(base) PS H:╪ذ┘╪د╪ة - ╪╣╪▒╪╢ ╪د┘
+                                ╪ث╪«╪╖╪د╪ة:
+
+==========================================
+      ≡ا» ╪د┘╪ز┘ç╪ز ╪╣┘à┘
+                         ┘è╪ر ╪د┘
+                                 ╪ح╪╡┘
+                                      ╪د╪ص
+==========================================
+
+≡اôï ╪ث┘ê╪د┘à╪▒ ┘à┘┘è╪»╪ر:
+  ╪╣╪▒╪╢ ╪د┘
+            ╪│╪ش┘
+                 ╪د╪ز ╪د┘
+                         ┘à╪ذ╪د╪┤╪▒╪ر: docker logs binaa-app-ultimate -f
+  ╪ح╪╣╪د╪»╪ر ╪د┘
+                ╪ز╪┤╪║┘è┘
+                         : docker-compose -f docker-compose.ultimate.yml restart app
+  ╪ص╪د┘
+       ╪ر ╪د┘
+             ┘╪╕╪د┘à: docker-compose -f docker-compose.ultimate.yml ps
+  ╪»╪«┘ê┘
+          ╪د┘
+             ╪ص╪د┘ê┘è╪ر: docker exec -it binaa-app-ultimate sh
+
+
+ظإî ┘╪┤┘S H:\PUPLIC\SurpadClone>
+         ╪د┘
+            ╪ذ┘╪د╪ة - ╪╣╪▒╪╢ ╪د┘
+                                ╪ث╪«╪╖╪د╪ة:
+
+==========================================
+      ≡ا» ╪د┘╪ز┘ç╪ز ╪╣┘à┘
+                         ┘è╪ر ╪د┘
+                                 ╪ح╪╡┘
+                                      ╪د╪ص
+==========================================
+
+≡اôï ╪ث┘ê╪د┘à╪▒ ┘à┘┘è╪»╪ر:
+  ╪╣╪▒╪╢ ╪د┘
+            ╪│╪ش┘
+                 ╪د╪ز ╪د┘
+                         ┘à╪ذ╪د╪┤╪▒╪ر: docker logs binaa-app-ultimate -f
+  ╪ح╪╣╪د╪»╪ر ╪د┘
+                ╪ز╪┤╪║┘è┘
+                         : docker-compose -f docker-compose.ultimate.yml restart app
+  ╪ص╪د┘
+       ╪ر ╪د┘
+             ┘╪╕╪د┘à: docker-compose -f docker-compose.ultimate.yml ps
+  ╪»╪«┘ê┘
+          ╪د┘
+             ╪ص╪د┘ê┘è╪ر: docker exec -it binaa-app-ultimate sh
+
+
+==========================================
+      ≡ا» ╪د┘╪ز┘ç╪ز ╪╣┘à┘
+                         ┘è╪ر ╪د┘
+                                 ╪ح╪╡┘
+                                      ╪د╪ص
+==========================================
+
+≡اôï ╪ث┘ê╪د┘à╪▒ ┘à┘┘è╪»╪ر:
+  ╪╣╪▒╪╢ ╪د┘
+            ╪│╪ش┘
+                 ╪د╪ز ╪د┘
+                         ┘à╪ذ╪د╪┤╪▒╪ر: docker logs binaa-app-ultimate -f
+  ╪ح╪╣╪د╪»╪ر ╪د┘
+                ╪ز╪┤╪║┘è┘
+                         : docker-compose -f docker-compose.ultimate.yml restart app
+  ╪ص╪د┘
+       ╪ر ╪د┘
+             ┘╪╕╪د┘à: docker-compose -f docker-compose.ultimate.yml ps
+  ╪»╪«┘ê┘
+          ╪د┘
+             ╪ص╪د┘ê┘è╪ر: docker exec -it binaa-app-ultimate sh
+
+      ≡ا» ╪د┘╪ز┘ç╪ز ╪╣┘à┘ . . .
+(base) PS H:\PUPLIC\Surpa┘è╪ر ╪د┘
+                                 ╪ح╪╡┘
+                                      ╪د╪ص
+==========================================
+
+≡اôï ╪ث┘ê╪د┘à╪▒ ┘à┘┘è╪»╪ر:
+  ╪╣╪▒╪╢ ╪د┘
+            ╪│╪ش┘
+                 ╪د╪ز ╪د┘
+                         ┘à╪ذ╪د╪┤╪▒╪ر: docker logs binaa-app-ultimate -f
+  ╪ح╪╣╪د╪»╪ر ╪د┘
+                ╪ز╪┤╪║┘è┘
+                         : docker-compose -f docker-compose.ultimate.yml restart app
+  ╪ص╪د┘
+       ╪ر ╪د┘
+             ┘╪╕╪د┘à: docker-compose -f docker-compose.ultimate.yml ps
+  ╪»╪«┘ê┘
+          ╪د┘
+             ╪ص╪د┘ê┘è╪ر: docker exec -it binaa-app-ultimate sh
+
+  ╪ص╪د┘ny key to continue . . .
+(base) ╪ر ╪د┘PUPLIC\SurpadClone>
+             ┘╪╕╪د┘à: docker-compose -f docker-compose.ultimate.yml ps
+  ╪»╪«┘ê┘
+          ╪د┘
+             ╪ص╪د┘ê┘è╪ر: docker exec -it binaa-app-ultimate sh
+
+Press any key to continue . . .
+(base) PS H:\PUPLIC\SurpadClone>

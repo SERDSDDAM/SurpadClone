@@ -1,0 +1,60 @@
+# ===============================================
+# Dockerfile للإنتاج - مبسط بدون Chromium
+# حجم صغير (~100MB) - تثبيت سريع وموثوق
+# ===============================================
+
+FROM node:18-alpine
+
+# إعداد متغيرات البيئة للإنتاج
+ENV NODE_ENV=production
+ENV PORT=3000
+ENV NPM_CONFIG_FUND=false
+ENV NPM_CONFIG_AUDIT=false
+
+# تثبيت أدوات النظام الأساسية فقط
+RUN apk add --no-cache \
+    curl \
+    postgresql-client \
+    ca-certificates \
+    && rm -rf /var/cache/apk/*
+
+# إعداد مجلد العمل
+WORKDIR /app
+
+# نسخ ملفات package للاستفادة من Docker cache
+COPY package*.json ./
+COPY tsconfig.json ./
+
+# تحديث npm وتثبيت التبعيات للإنتاج فقط
+RUN npm install -g npm@latest && \
+    npm cache clean --force && \
+    npm ci --only=production --ignore-scripts
+
+# تثبيت أدوات TypeScript الأساسية
+RUN npm install -g tsx drizzle-kit && \
+    npm install tsconfig-paths
+
+# نسخ المصدر
+COPY . .
+
+# إنشاء المجلدات المطلوبة
+RUN mkdir -p temp-uploads attached_assets logs && \
+    chmod -R 755 temp-uploads attached_assets logs
+
+# إنشاء مستخدم آمن
+RUN addgroup -g 1001 -S nodejs && \
+    adduser -S appuser -u 1001 -G nodejs && \
+    chown -R appuser:nodejs /app
+
+# التبديل للمستخدم الآمن
+USER appuser
+
+# كشف المنفذ
+EXPOSE 3000
+
+# فحص صحة التطبيق (مبسط)
+HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \
+    CMD curl -f http://localhost:3000/api/health || exit 1
+
+# أمر التشغيل المباشر
+CMD ["npx", "tsx", "--require", "tsconfig-paths/register", "server/index.ts"]

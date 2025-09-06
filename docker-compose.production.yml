@@ -1,0 +1,135 @@
+version: '3.8'
+
+services:
+  # التطبيق الرئيسي - نسخة الإنتاج المبسطة
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile.production
+    container_name: binaa-app-production
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - DATABASE_URL=postgresql://binaa_user:binaa_secure_2024@postgres:5432/binaa_db
+      - REDIS_URL=redis://redis:6379
+      - MINIO_ENDPOINT=minio
+      - MINIO_PORT=9000
+      - MINIO_ACCESS_KEY=minioadmin
+      - MINIO_SECRET_KEY=minioadmin123
+      - SESSION_SECRET=your-super-secret-session-key-here
+      # تعطيل PDF generation مؤقتاً
+      - PDF_SERVICE_ENABLED=false
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    volumes:
+      - ./temp-uploads:/app/temp-uploads
+      - ./attached_assets:/app/attached_assets
+      - ./logs:/app/logs
+    networks:
+      - binaa-production-network
+    restart: unless-stopped
+    # حدود الموارد للإنتاج
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '0.5'
+        reservations:
+          memory: 256M
+          cpus: '0.25'
+
+  # قاعدة بيانات PostgreSQL مع PostGIS
+  postgres:
+    image: postgis/postgis:15-3.3
+    container_name: binaa-postgres-production
+    environment:
+      POSTGRES_DB: binaa_db
+      POSTGRES_USER: binaa_user
+      POSTGRES_PASSWORD: binaa_secure_2024
+      POSTGRES_INITDB_ARGS: "--encoding=UTF-8 --locale=C"
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data_production:/var/lib/postgresql/data
+      - ./init-sql:/docker-entrypoint-initdb.d:ro
+    networks:
+      - binaa-production-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U binaa_user -d binaa_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: '1.0'
+
+  # Redis للجلسات والتخزين المؤقت
+  redis:
+    image: redis:7-alpine
+    container_name: binaa-redis-production
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data_production:/data
+    networks:
+      - binaa-production-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+          cpus: '0.25'
+
+  # MinIO لتخزين الملفات
+  minio:
+    image: minio/minio:latest
+    container_name: binaa-minio-production
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin123
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio_data_production:/data
+    networks:
+      - binaa-production-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '0.5'
+
+volumes:
+  postgres_data_production:
+    driver: local
+  redis_data_production:
+    driver: local
+  minio_data_production:
+    driver: local
+
+networks:
+  binaa-production-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
