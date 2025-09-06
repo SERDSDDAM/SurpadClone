@@ -1,0 +1,106 @@
+(base) PS H:\PUPLIC\SurpadClone> run-production.bat
+
+==========================================
+  ≡اأ Docker ╪د┘
+                ╪ح┘╪ز╪د╪ش - ┘╪│╪«╪ر ┘à╪ذ╪│╪╖╪ر
+==========================================
+
+[╪ز┘╪╕┘è┘] ╪ح╪▓╪د┘
+                  ╪ر ╪د┘
+                        ╪ص╪د┘ê┘è╪د╪ز ╪د┘
+                                        ┘é╪»┘è┘à╪ر...
+time="2025-09-06T20:41:21+03:00" level=warning msg="H:\\PUPLIC\\SurpadClone\\docker-compose.production.yml: the attribute `version` is obsolete, it will be ignored, please remove it to avoid potential confusion"
+Deleted build cache objects:
+yi175bpbcnplk6416pf4a7cw2
+fmlkqjmgm59uxwu2ahxpczles
+ei8ct59me5iubpeiwbmeezsbd
+
+Total reclaimed space: 87.02MB
+
+[╪ذ┘╪د╪ة] ╪ح┘╪┤╪د╪ة ╪╡┘ê╪▒╪ر ╪د┘
+                                ╪ح┘╪ز╪د╪ش ╪د┘
+                                             ┘à╪ذ╪│╪╖╪ر...
+ظ▒ي╕ ┘ç╪░╪د ╪│┘è╪│╪ز╪║╪▒┘é ~2-3 ╪»┘é╪د╪خ┘é (╪ذ╪»┘
+                                                 ╪د┘ï ┘à┘ ╪│╪د╪╣╪ر)
+time="2025-09-06T20:41:21+03:00" level=warning msg="H:\\PUPLIC\\SurpadClone\\docker-compose.production.yml: the attribute `version` is obsolete, it will be ignored, please remove it to avoid potential confusion"
+[+] Building 19.1s (11/15)
+ => [internal] load local bake definitions                                                                             0.0s 
+ => => reading from stdin 380B                                                                                         0.0s 
+ => [internal] load build definition from Dockerfile.production                                                        0.1s 
+ => => transferring dockerfile: 1.85kB                                                                                 0.0s 
+ => [internal] load metadata for docker.io/library/node:18-alpine                                                      0.0s 
+ => [internal] load .dockerignore                                                                                      0.1s 
+ => => transferring context: 2.63kB                                                                                    0.0s 
+ => CACHED [ 1/10] FROM docker.io/library/node:18-alpine                                                               0.0s 
+ => [internal] load build context                                                                                      3.8s 
+ => => transferring context: 87.10MB                                                                                   3.7s 
+ => [ 2/10] RUN apk add --no-cache     curl     postgresql-client     ca-certificates     && rm -rf /var/cache/apk/*  10.5s 
+ => [ 3/10] WORKDIR /app                                                                                               0.2s 
+ => [ 4/10] COPY package*.json ./                                                                                      0.2s 
+ => [ 5/10] COPY tsconfig.json ./                                                                                      0.1s 
+ => ERROR [ 6/10] RUN npm install -g npm@latest &&     npm cache clean --force &&     npm ci --only=production --igno  8.8s 
+------
+ > [ 6/10] RUN npm install -g npm@latest &&     npm cache clean --force &&     npm ci --only=production --ignore-scripts:   
+8.615 npm error code EBADENGINE
+8.618 npm error engine Unsupported engine
+8.618 npm error engine Not compatible with your version of node/npm: npm@11.6.0
+8.619 npm error notsup Not compatible with your version of node/npm: npm@11.6.0
+8.619 npm error notsup Required: {"node":"^20.17.0 || >=22.9.0"}
+8.619 npm error notsup Actual:   {"npm":"10.8.2","node":"v18.20.8"}
+8.639 npm error A complete log of this run can be found in: /root/.npm/_logs/2025-09-06T17_41_36_930Z-debug-0.log
+------
+Dockerfile.production:29
+
+--------------------
+
+  28 |     # تحديث npm وتثبيت التبعيات للإنتاج فقط
+
+  29 | >>> RUN npm install -g npm@latest && \
+
+  30 | >>>     npm cache clean --force && \
+
+  31 | >>>     npm ci --only=production --ignore-scripts
+
+  32 |
+
+--------------------
+
+failed to solve: process "/bin/sh -c npm install -g npm@latest &&     npm cache clean --force &&     npm ci --only=production --ignore-scripts" did not complete successfully: exit code: 1
+
+
+
+View build details: docker-desktop://dashboard/build/desktop-linux/desktop-linux/0k6dbpevlbiwnlpn2bwypw95v
+
+≡اù
+   ي╕ ┘é╪د╪╣╪»╪ر ╪د┘
+                    ╪ذ┘è╪د┘╪د╪ز: localhost:5432
+
+≡اôè ╪ح╪ص╪╡╪د╪خ┘è╪د╪ز:
+  ظأة ┘ê┘é╪ز ╪د┘
+                ╪ذ┘╪د╪ة: ~3 ╪»┘é╪د╪خ┘é (vs 2+ ╪│╪د╪╣╪د╪ز ┘à╪╣ Chromium)
+  ≡اô ╪ص╪ش┘à ╪د┘
+                ╪╡┘ê╪▒╪ر: ~100MB (vs 2GB ┘à╪╣ Chromium)
+  ≡اأ ┘ê┘é╪ز ╪د┘
+                ╪ذ╪»╪ة: ~30 ╪س╪د┘┘è╪ر
+  ≡اْ╛ ╪د╪│╪ز┘ç┘
+               ╪د┘â ╪د┘
+                       ╪░╪د┘â╪▒╪ر: ~256MB
+
+ظإî ┘╪┤┘
+         ┘┘è ╪د┘
+                ╪ذ┘╪د╪ة
+time="2025-09-06T20:41:41+03:00" level=warning msg="H:\\PUPLIC\\SurpadClone\\docker-compose.production.yml: the attribute `version` is obsolete, it will be ignored, please remove it to avoid potential confusion"
+
+≡اôï ╪ث┘ê╪د┘à╪▒ ┘à┘┘è╪»╪ر:
+  ╪╣╪▒╪╢ ╪د┘
+            ╪│╪ش┘
+                 ╪د╪ز: docker logs binaa-app-production -f
+  ╪ح╪╣╪د╪»╪ر ╪د┘
+                ╪ز╪┤╪║┘è┘
+                         : docker-compose -f docker-compose.production.yml restart
+  ╪ح┘è┘é╪د┘ ╪د┘
+               ┘╪╕╪د┘à: docker-compose -f docker-compose.production.yml down
+  ┘à╪▒╪د┘é╪ذ╪ر ╪د┘
+                  ┘à┘ê╪د╪▒╪»: docker stats
+
+Press any key to continue . . .
