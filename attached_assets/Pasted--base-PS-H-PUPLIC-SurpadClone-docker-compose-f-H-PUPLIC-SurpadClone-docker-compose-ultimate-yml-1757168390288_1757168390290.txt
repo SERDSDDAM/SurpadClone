@@ -1,0 +1,398 @@
+(base) PS H:\PUPLIC\SurpadClone> docker-compose -f H:\PUPLIC\SurpadClone\docker-compose.ultimate.yml build --no-cache app; if (-not $?) { throw 'Command failed' }
+[+] Building 6200.3s (19/19) FINISHED
+ => [internal] load local bake definitions                                                          0.0s 
+ => => reading from stdin 378B                                                                      0.0s 
+ => [internal] load build definition from Dockerfile.ultimate                                       0.0s 
+ => => transferring dockerfile: 2.26kB                                                              0.0s 
+ => [internal] load metadata for docker.io/library/node:18-alpine                                   0.0s 
+ => => transferring context: 2.63kB                                                                 0.0s 
+ => CACHED [ 1/12] FROM docker.io/library/node:18-alpine                                            0.0s 
+ => [internal] load build context                                                                   0.1s 
+ => => transferring context: 36.89kB                                                                0.1s 
+ => [ 2/12] RUN apk add --no-cache     nss     freetype     harfbuzz     ca-certificates     cur  537.5s 
+ => [ 3/12] RUN apk add --no-cache chromium     || apk add --no-cache chromium --repository=htt  4997.3s 
+ => [ 6/12] RUN npm ci --only=production --ignore-scripts || npm install --only=production        273.7s
+ => [ 7/12] RUN npm install -g drizzle-kit tsx                                                     11.6s
+ => [ 8/12] COPY tsconfig.json ./                                                                   0.1s
+ => [ 9/12] RUN npm install tsconfig-paths                                                        170.6s
+ => [10/12] COPY . .                                                                                0.6s
+ => [11/12] RUN mkdir -p temp-uploads attached_assets logs &&     chmod -R 755 temp-uploads attach  0.9s
+ => [12/12] RUN addgroup -g 1001 -S nodejs &&     adduser -S appuser -u 1001 -G nodejs &&     ch  197.8s
+ => exporting to image                                                                              9.8s
+ => => exporting layers                                                                             9.7s
+ => => writing image sha256:9f4aa962affb158356e93f6671b36b3857ff3bbf3a48d5fabcde256389b13918        0.0s
+ => resolving provenance for metadata file                                                          0.0s
+[+] Building 1/1
+ ✔ app  Built                                                                                       0.0s
+(base) PS H:\PUPLIC\SurpadClone> docker-compose -f H:\PUPLIC\SurpadClone\docker-compose.ultimate.yml up -d; if (-not $?) { throw 'Command failed' }
+[+] Running 5/5
+ ✔ Network binaa-ultimate-network     Created                                                       0.1s                    hrow '
+ ✔ Container binaa-minio-ultimate     Healthy                                                       6.6s
+ ✔ Container binaa-redis-ultimate     Healthy                                                      12.1s
+ ✔ Container binaa-postgres-ultimate  Healthy                                                       6.6s
+ ✔ Container binaa-app-ultimate       Started                                                      12.2s
+(base) PS H:\PUPLIC\SurpadClone> docker-compose -f H:\PUPLIC\SurpadClone\docker-compose.ultimate.yml ps; if (-not $?) { throw 'Command failed' }
+NAME                      IMAGE                    COMMAND                  SERVICE    CREATED          STATUS
+           PORTS
+binaa-app-ultimate        surpadclone-app          "docker-entrypoint.s…"   app        54 seconds ago   Restarting (1) 2 seconds ago
+binaa-minio-ultimate      minio/minio:latest       "/usr/bin/docker-ent…"   minio      54 seconds ago   Up 54 seconds (healthy)        0.0.0.0:9000-9001->9000-9001/tcp, [::]:9000-9001->9000-9001/tcp
+binaa-postgres-ultimate   postgis/postgis:15-3.3   "docker-entrypoint.s…"   postgres   54 seconds ago   Up 54 seconds (healthy)        0.0.0.0:5432->5432/tcp, [::]:5432->5432/tcp
+binaa-redis-ultimate      redis:7-alpine           "docker-entrypoint.s…"   redis      54 seconds ago   Up 54 seconds (healthy)        0.0.0.0:6379->6379/tcp, [::]:6379->6379/tcp
+(base) PS H:\PUPLIC\SurpadClone> docker logs binaa-app-ultimate; if (-not $?) { throw 'Command failed' }
+[dotenv@17.2.2] injecting env (0) from .env -- tip: 📡 auto-backup env with Radar: https://dotenvx.com/radar
+🏛️ تهيئة محرك الأتمتة القانونية المتقدم مع إدارة الإدارة
+📋 تم تهيئة الهيكل الإداري: 4 مستويات
+📋 تم تحميل القوانين النشطة: 0
+⚖️ تم تهيئة سجل القوانين: 3 قانون نافذ
+/app/node_modules/rollup/dist/native.js:67
+                throw new Error(
+                      ^
+
+Error: Cannot find module @rollup/rollup-linux-x64-musl. npm has a bug related to optional dependencies (https://github.com/npm/cli/issues/4828). Please try `npm i` again after removing both package-lock.json and node_modules directory.
+    at requireWithFriendlyError (/app/node_modules/rollup/dist/native.js:67:9)
+    at Object.<anonymous> (/app/node_modules/rollup/dist/native.js:76:76)
+    at Module._compile (node:internal/modules/cjs/loader:1364:14)
+    at Object.transformer (/app/node_modules/tsx/dist/register-D46fvsV_.cjs:3:1104)
+    at Module.load (node:internal/modules/cjs/loader:1203:32)
+    at Module._load (node:internal/modules/cjs/loader:1019:12)
+    at ModuleWrap.<anonymous> (node:internal/modules/esm/translators:203:29)
+    at ModuleJob.run (node:internal/modules/esm/module_job:195:25)
+    at async ModuleLoader.import (node:internal/modules/esm/loader:337:24)
+    at async loadESM (node:internal/process/esm_loader:34:7) {
+  [cause]: Error: Cannot find module '@rollup/rollup-linux-x64-musl'
+  Require stack:
+  - /app/node_modules/rollup/dist/native.js
+      at Module._resolveFilename (node:internal/modules/cjs/loader:1140:15)
+      at nextResolveSimple (/app/node_modules/tsx/dist/register-D46fvsV_.cjs:4:1004)
+      at /app/node_modules/tsx/dist/register-D46fvsV_.cjs:3:2630
+      at /app/node_modules/tsx/dist/register-D46fvsV_.cjs:3:1542
+      at resolveTsPaths (/app/node_modules/tsx/dist/register-D46fvsV_.cjs:4:760)
+      at /app/node_modules/tsx/dist/register-D46fvsV_.cjs:4:1102
+      at m._resolveFilename (file:///app/node_modules/tsx/dist/register-B7jrtLTO.mjs:1:789)
+      at Module._load (node:internal/modules/cjs/loader:981:27)
+      at Module.require (node:internal/modules/cjs/loader:1231:19)
+      at require (node:internal/modules/helpers:177:18) {
+    code: 'MODULE_NOT_FOUND',
+    requireStack: [ '/app/node_modules/rollup/dist/native.js' ]
+  }
+}
+
+Node.js v18.20.8
+npm notice
+npm notice New major version of npm available! 10.8.2 -> 11.6.0
+npm notice Changelog: https://github.com/npm/cli/releases/tag/v11.6.0
+npm notice To update run: npm install -g npm@11.6.0
+npm notice
+[dotenv@17.2.2] injecting env (0) from .env -- tip: 🔐 prevent building .env in docker: https://dotenvx.com/prebuild        
+🏛️ تهيئة محرك الأتمتة القانونية المتقدم مع إدارة الإدارة
+📋 تم تهيئة الهيكل الإداري: 4 مستويات
+📋 تم تحميل القوانين النشطة: 0
+⚖️ تم تهيئة سجل القوانين: 3 قانون نافذ
+/app/node_modules/rollup/dist/native.js:67
+                throw new Error(
+                      ^
+
+Error: Cannot find module @rollup/rollup-linux-x64-musl. npm has a bug related to optional dependencies (https://github.com/npm/cli/issues/4828). Please try `npm i` again after removing both package-lock.json and node_modules directory.
+    at requireWithFriendlyError (/app/node_modules/rollup/dist/native.js:67:9)
+    at Object.<anonymous> (/app/node_modules/rollup/dist/native.js:76:76)
+    at Module._compile (node:internal/modules/cjs/loader:1364:14)
+    at Object.transformer (/app/node_modules/tsx/dist/register-D46fvsV_.cjs:3:1104)
+    at Module.load (node:internal/modules/cjs/loader:1203:32)
+    at Module._load (node:internal/modules/cjs/loader:1019:12)
+    at ModuleWrap.<anonymous> (node:internal/modules/esm/translators:203:29)
+    at ModuleJob.run (node:internal/modules/esm/module_job:195:25)
+    at async ModuleLoader.import (node:internal/modules/esm/loader:337:24)
+    at async loadESM (node:internal/process/esm_loader:34:7) {
+  [cause]: Error: Cannot find module '@rollup/rollup-linux-x64-musl'
+  Require stack:
+  - /app/node_modules/rollup/dist/native.js
+      at Module._resolveFilename (node:internal/modules/cjs/loader:1140:15)
+      at nextResolveSimple (/app/node_modules/tsx/dist/register-D46fvsV_.cjs:4:1004)
+      at /app/node_modules/tsx/dist/register-D46fvsV_.cjs:3:2630
+      at /app/node_modules/tsx/dist/register-D46fvsV_.cjs:3:1542
+      at resolveTsPaths (/app/node_modules/tsx/dist/register-D46fvsV_.cjs:4:760)
+      at /app/node_modules/tsx/dist/register-D46fvsV_.cjs:4:1102
+      at m._resolveFilename (file:///app/node_modules/tsx/dist/register-B7jrtLTO.mjs:1:789)
+      at Module._load (node:internal/modules/cjs/loader:981:27)
+      at Module.require (node:internal/modules/cjs/loader:1231:19)
+      at require (node:internal/modules/helpers:177:18) {
+    code: 'MODULE_NOT_FOUND',
+    requireStack: [ '/app/node_modules/rollup/dist/native.js' ]
+  }
+}
+
+Node.js v18.20.8
+[dotenv@17.2.2] injecting env (0) from .env -- tip: ⚙️  write to custom object with { processEnv: myObject }
+🏛️ تهيئة محرك الأتمتة القانونية المتقدم مع إدارة الإدارة
+📋 تم تهيئة الهيكل الإداري: 4 مستويات
+📋 تم تحميل القوانين النشطة: 0
+⚖️ تم تهيئة سجل القوانين: 3 قانون نافذ
+/app/node_modules/rollup/dist/native.js:67
+                throw new Error(
+                      ^
+
+Error: Cannot find module @rollup/rollup-linux-x64-musl. npm has a bug related to optional dependencies (https://github.com/npm/cli/issues/4828). Please try `npm i` again after removing both package-lock.json and node_modules directory.
+    at requireWithFriendlyError (/app/node_modules/rollup/dist/native.js:67:9)
+    at Object.<anonymous> (/app/node_modules/rollup/dist/native.js:76:76)
+    at Module._compile (node:internal/modules/cjs/loader:1364:14)
+    at Object.transformer (/app/node_modules/tsx/dist/register-D46fvsV_.cjs:3:1104)
+    at Module.load (node:internal/modules/cjs/loader:1203:32)
+    at Module._load (node:internal/modules/cjs/loader:1019:12)
+    at ModuleWrap.<anonymous> (node:internal/modules/esm/translators:203:29)
+    at ModuleJob.run (node:internal/modules/esm/module_job:195:25)
+    at async ModuleLoader.import (node:internal/modules/esm/loader:337:24)
+    at async loadESM (node:internal/process/esm_loader:34:7) {
+  [cause]: Error: Cannot find module '@rollup/rollup-linux-x64-musl'
+  Require stack:
+  - /app/node_modules/rollup/dist/native.js
+      at Module._resolveFilename (node:internal/modules/cjs/loader:1140:15)
+      at nextResolveSimple (/app/node_modules/tsx/dist/register-D46fvsV_.cjs:4:1004)
+      at /app/node_modules/tsx/dist/register-D46fvsV_.cjs:3:2630
+      at /app/node_modules/tsx/dist/register-D46fvsV_.cjs:3:1542
+      at resolveTsPaths (/app/node_modules/tsx/dist/register-D46fvsV_.cjs:4:760)
+      at /app/node_modules/tsx/dist/register-D46fvsV_.cjs:4:1102
+      at m._resolveFilename (file:///app/node_modules/tsx/dist/register-B7jrtLTO.mjs:1:789)
+      at Module._load (node:internal/modules/cjs/loader:981:27)
+      at Module.require (node:internal/modules/cjs/loader:1231:19)
+      at require (node:internal/modules/helpers:177:18) {
+    code: 'MODULE_NOT_FOUND',
+    requireStack: [ '/app/node_modules/rollup/dist/native.js' ]
+  }
+}
+
+Node.js v18.20.8
+[dotenv@17.2.2] injecting env (0) from .env -- tip: ⚙️  load multiple .env files with { path: ['.env.local', '.env'] }      
+🏛️ تهيئة محرك الأتمتة القانونية المتقدم مع إدارة الإدارة
+📋 تم تهيئة الهيكل الإداري: 4 مستويات
+📋 تم تحميل القوانين النشطة: 0
+⚖️ تم تهيئة سجل القوانين: 3 قانون نافذ
+/app/node_modules/rollup/dist/native.js:67
+                throw new Error(
+                      ^
+
+Error: Cannot find module @rollup/rollup-linux-x64-musl. npm has a bug related to optional dependencies (https://github.com/npm/cli/issues/4828). Please try `npm i` again after removing both package-lock.json and node_modules directory.
+    at requireWithFriendlyError (/app/node_modules/rollup/dist/native.js:67:9)
+    at Object.<anonymous> (/app/node_modules/rollup/dist/native.js:76:76)
+    at Module._compile (node:internal/modules/cjs/loader:1364:14)
+    at Object.transformer (/app/node_modules/tsx/dist/register-D46fvsV_.cjs:3:1104)
+    at Module.load (node:internal/modules/cjs/loader:1203:32)
+    at Module._load (node:internal/modules/cjs/loader:1019:12)
+    at ModuleWrap.<anonymous> (node:internal/modules/esm/translators:203:29)
+    at ModuleJob.run (node:internal/modules/esm/module_job:195:25)
+    at async ModuleLoader.import (node:internal/modules/esm/loader:337:24)
+    at async loadESM (node:internal/process/esm_loader:34:7) {
+  [cause]: Error: Cannot find module '@rollup/rollup-linux-x64-musl'
+  Require stack:
+  - /app/node_modules/rollup/dist/native.js
+      at Module._resolveFilename (node:internal/modules/cjs/loader:1140:15)
+      at nextResolveSimple (/app/node_modules/tsx/dist/register-D46fvsV_.cjs:4:1004)
+      at /app/node_modules/tsx/dist/register-D46fvsV_.cjs:3:2630
+      at /app/node_modules/tsx/dist/register-D46fvsV_.cjs:3:1542
+      at resolveTsPaths (/app/node_modules/tsx/dist/register-D46fvsV_.cjs:4:760)
+      at /app/node_modules/tsx/dist/register-D46fvsV_.cjs:4:1102
+      at m._resolveFilename (file:///app/node_modules/tsx/dist/register-B7jrtLTO.mjs:1:789)
+      at Module._load (node:internal/modules/cjs/loader:981:27)
+      at Module.require (node:internal/modules/cjs/loader:1231:19)
+      at require (node:internal/modules/helpers:177:18) {
+    code: 'MODULE_NOT_FOUND',
+    requireStack: [ '/app/node_modules/rollup/dist/native.js' ]
+  }
+}
+
+Node.js v18.20.8
+[dotenv@17.2.2] injecting env (0) from .env -- tip: ⚙️  specify custom .env file path with { path: '/custom/path/.env' }    
+🏛️ تهيئة محرك الأتمتة القانونية المتقدم مع إدارة الإدارة
+📋 تم تهيئة الهيكل الإداري: 4 مستويات
+📋 تم تحميل القوانين النشطة: 0
+⚖️ تم تهيئة سجل القوانين: 3 قانون نافذ
+/app/node_modules/rollup/dist/native.js:67
+                throw new Error(
+                      ^
+
+Error: Cannot find module @rollup/rollup-linux-x64-musl. npm has a bug related to optional dependencies (https://github.com/npm/cli/issues/4828). Please try `npm i` again after removing both package-lock.json and node_modules directory.
+    at requireWithFriendlyError (/app/node_modules/rollup/dist/native.js:67:9)
+    at Object.<anonymous> (/app/node_modules/rollup/dist/native.js:76:76)
+    at Module._compile (node:internal/modules/cjs/loader:1364:14)
+    at Object.transformer (/app/node_modules/tsx/dist/register-D46fvsV_.cjs:3:1104)
+    at Module.load (node:internal/modules/cjs/loader:1203:32)
+    at Module._load (node:internal/modules/cjs/loader:1019:12)
+    at ModuleWrap.<anonymous> (node:internal/modules/esm/translators:203:29)
+    at ModuleJob.run (node:internal/modules/esm/module_job:195:25)
+    at async ModuleLoader.import (node:internal/modules/esm/loader:337:24)
+    at async loadESM (node:internal/process/esm_loader:34:7) {
+  [cause]: Error: Cannot find module '@rollup/rollup-linux-x64-musl'
+  Require stack:
+  - /app/node_modules/rollup/dist/native.js
+      at Module._resolveFilename (node:internal/modules/cjs/loader:1140:15)
+      at nextResolveSimple (/app/node_modules/tsx/dist/register-D46fvsV_.cjs:4:1004)
+      at /app/node_modules/tsx/dist/register-D46fvsV_.cjs:3:2630
+      at /app/node_modules/tsx/dist/register-D46fvsV_.cjs:3:1542
+      at resolveTsPaths (/app/node_modules/tsx/dist/register-D46fvsV_.cjs:4:760)
+      at /app/node_modules/tsx/dist/register-D46fvsV_.cjs:4:1102
+      at m._resolveFilename (file:///app/node_modules/tsx/dist/register-B7jrtLTO.mjs:1:789)
+      at Module._load (node:internal/modules/cjs/loader:981:27)
+      at Module.require (node:internal/modules/cjs/loader:1231:19)
+      at require (node:internal/modules/helpers:177:18) {
+    code: 'MODULE_NOT_FOUND',
+    requireStack: [ '/app/node_modules/rollup/dist/native.js' ]
+  }
+}
+
+Node.js v18.20.8
+[dotenv@17.2.2] injecting env (0) from .env -- tip: ⚙️  enable debug logging with { debug: true }
+🏛️ تهيئة محرك الأتمتة القانونية المتقدم مع إدارة الإدارة
+📋 تم تهيئة الهيكل الإداري: 4 مستويات
+📋 تم تحميل القوانين النشطة: 0
+⚖️ تم تهيئة سجل القوانين: 3 قانون نافذ
+/app/node_modules/rollup/dist/native.js:67
+                throw new Error(
+                      ^
+
+Error: Cannot find module @rollup/rollup-linux-x64-musl. npm has a bug related to optional dependencies (https://github.com/npm/cli/issues/4828). Please try `npm i` again after removing both package-lock.json and node_modules directory.
+    at requireWithFriendlyError (/app/node_modules/rollup/dist/native.js:67:9)
+    at Object.<anonymous> (/app/node_modules/rollup/dist/native.js:76:76)
+    at Module._compile (node:internal/modules/cjs/loader:1364:14)
+    at Object.transformer (/app/node_modules/tsx/dist/register-D46fvsV_.cjs:3:1104)
+    at Module.load (node:internal/modules/cjs/loader:1203:32)
+    at Module._load (node:internal/modules/cjs/loader:1019:12)
+    at ModuleWrap.<anonymous> (node:internal/modules/esm/translators:203:29)
+    at ModuleJob.run (node:internal/modules/esm/module_job:195:25)
+    at async ModuleLoader.import (node:internal/modules/esm/loader:337:24)
+    at async loadESM (node:internal/process/esm_loader:34:7) {
+  [cause]: Error: Cannot find module '@rollup/rollup-linux-x64-musl'
+  Require stack:
+  - /app/node_modules/rollup/dist/native.js
+      at Module._resolveFilename (node:internal/modules/cjs/loader:1140:15)
+      at nextResolveSimple (/app/node_modules/tsx/dist/register-D46fvsV_.cjs:4:1004)
+      at /app/node_modules/tsx/dist/register-D46fvsV_.cjs:3:2630
+      at /app/node_modules/tsx/dist/register-D46fvsV_.cjs:3:1542
+      at resolveTsPaths (/app/node_modules/tsx/dist/register-D46fvsV_.cjs:4:760)
+      at /app/node_modules/tsx/dist/register-D46fvsV_.cjs:4:1102
+      at m._resolveFilename (file:///app/node_modules/tsx/dist/register-B7jrtLTO.mjs:1:789)
+      at Module._load (node:internal/modules/cjs/loader:981:27)
+      at Module.require (node:internal/modules/cjs/loader:1231:19)
+      at require (node:internal/modules/helpers:177:18) {
+    code: 'MODULE_NOT_FOUND',
+    requireStack: [ '/app/node_modules/rollup/dist/native.js' ]
+  }
+}
+
+Node.js v18.20.8
+[dotenv@17.2.2] injecting env (0) from .env -- tip: 🔐 prevent committing .env to code: https://dotenvx.com/precommit       
+🏛️ تهيئة محرك الأتمتة القانونية المتقدم مع إدارة الإدارة
+📋 تم تهيئة الهيكل الإداري: 4 مستويات
+📋 تم تحميل القوانين النشطة: 0
+⚖️ تم تهيئة سجل القوانين: 3 قانون نافذ
+/app/node_modules/rollup/dist/native.js:67
+                throw new Error(
+                      ^
+
+Error: Cannot find module @rollup/rollup-linux-x64-musl. npm has a bug related to optional dependencies (https://github.com/npm/cli/issues/4828). Please try `npm i` again after removing both package-lock.json and node_modules directory.
+    at requireWithFriendlyError (/app/node_modules/rollup/dist/native.js:67:9)
+    at Object.<anonymous> (/app/node_modules/rollup/dist/native.js:76:76)
+    at Module._compile (node:internal/modules/cjs/loader:1364:14)
+    at Object.transformer (/app/node_modules/tsx/dist/register-D46fvsV_.cjs:3:1104)
+    at Module.load (node:internal/modules/cjs/loader:1203:32)
+    at Module._load (node:internal/modules/cjs/loader:1019:12)
+    at ModuleWrap.<anonymous> (node:internal/modules/esm/translators:203:29)
+    at ModuleJob.run (node:internal/modules/esm/module_job:195:25)
+    at async ModuleLoader.import (node:internal/modules/esm/loader:337:24)
+    at async loadESM (node:internal/process/esm_loader:34:7) {
+  [cause]: Error: Cannot find module '@rollup/rollup-linux-x64-musl'
+  Require stack:
+  - /app/node_modules/rollup/dist/native.js
+      at Module._resolveFilename (node:internal/modules/cjs/loader:1140:15)
+      at nextResolveSimple (/app/node_modules/tsx/dist/register-D46fvsV_.cjs:4:1004)
+      at /app/node_modules/tsx/dist/register-D46fvsV_.cjs:3:2630
+      at /app/node_modules/tsx/dist/register-D46fvsV_.cjs:3:1542
+      at resolveTsPaths (/app/node_modules/tsx/dist/register-D46fvsV_.cjs:4:760)
+      at /app/node_modules/tsx/dist/register-D46fvsV_.cjs:4:1102
+      at m._resolveFilename (file:///app/node_modules/tsx/dist/register-B7jrtLTO.mjs:1:789)
+      at Module._load (node:internal/modules/cjs/loader:981:27)
+      at Module.require (node:internal/modules/cjs/loader:1231:19)
+      at require (node:internal/modules/helpers:177:18) {
+    code: 'MODULE_NOT_FOUND',
+    requireStack: [ '/app/node_modules/rollup/dist/native.js' ]
+  }
+}
+
+Node.js v18.20.8
+[dotenv@17.2.2] injecting env (0) from .env -- tip: 📡 observe env with Radar: https://dotenvx.com/radar
+🏛️ تهيئة محرك الأتمتة القانونية المتقدم مع إدارة الإدارة
+📋 تم تهيئة الهيكل الإداري: 4 مستويات
+📋 تم تحميل القوانين النشطة: 0
+⚖️ تم تهيئة سجل القوانين: 3 قانون نافذ
+/app/node_modules/rollup/dist/native.js:67
+                throw new Error(
+                      ^
+
+Error: Cannot find module @rollup/rollup-linux-x64-musl. npm has a bug related to optional dependencies (https://github.com/npm/cli/issues/4828). Please try `npm i` again after removing both package-lock.json and node_modules directory.
+    at requireWithFriendlyError (/app/node_modules/rollup/dist/native.js:67:9)
+    at Object.<anonymous> (/app/node_modules/rollup/dist/native.js:76:76)
+    at Module._compile (node:internal/modules/cjs/loader:1364:14)
+    at Object.transformer (/app/node_modules/tsx/dist/register-D46fvsV_.cjs:3:1104)
+    at Module.load (node:internal/modules/cjs/loader:1203:32)
+    at Module._load (node:internal/modules/cjs/loader:1019:12)
+    at ModuleWrap.<anonymous> (node:internal/modules/esm/translators:203:29)
+    at ModuleJob.run (node:internal/modules/esm/module_job:195:25)
+    at async ModuleLoader.import (node:internal/modules/esm/loader:337:24)
+    at async loadESM (node:internal/process/esm_loader:34:7) {
+  [cause]: Error: Cannot find module '@rollup/rollup-linux-x64-musl'
+  Require stack:
+  - /app/node_modules/rollup/dist/native.js
+      at Module._resolveFilename (node:internal/modules/cjs/loader:1140:15)
+      at nextResolveSimple (/app/node_modules/tsx/dist/register-D46fvsV_.cjs:4:1004)
+      at /app/node_modules/tsx/dist/register-D46fvsV_.cjs:3:2630
+      at /app/node_modules/tsx/dist/register-D46fvsV_.cjs:3:1542
+      at resolveTsPaths (/app/node_modules/tsx/dist/register-D46fvsV_.cjs:4:760)
+      at /app/node_modules/tsx/dist/register-D46fvsV_.cjs:4:1102
+      at m._resolveFilename (file:///app/node_modules/tsx/dist/register-B7jrtLTO.mjs:1:789)
+      at Module._load (node:internal/modules/cjs/loader:981:27)
+      at Module.require (node:internal/modules/cjs/loader:1231:19)
+      at require (node:internal/modules/helpers:177:18) {
+    code: 'MODULE_NOT_FOUND',
+    requireStack: [ '/app/node_modules/rollup/dist/native.js' ]
+  }
+}
+
+Node.js v18.20.8
+[dotenv@17.2.2] injecting env (0) from .env -- tip: ⚙️  load multiple .env files with { path: ['.env.local', '.env'] }      
+🏛️ تهيئة محرك الأتمتة القانونية المتقدم مع إدارة الإدارة
+📋 تم تهيئة الهيكل الإداري: 4 مستويات
+📋 تم تحميل القوانين النشطة: 0
+⚖️ تم تهيئة سجل القوانين: 3 قانون نافذ
+/app/node_modules/rollup/dist/native.js:67
+                throw new Error(
+                      ^
+
+Error: Cannot find module @rollup/rollup-linux-x64-musl. npm has a bug related to optional dependencies (https://github.com/npm/cli/issues/4828). Please try `npm i` again after removing both package-lock.json and node_modules directory.
+    at requireWithFriendlyError (/app/node_modules/rollup/dist/native.js:67:9)
+    at Object.<anonymous> (/app/node_modules/rollup/dist/native.js:76:76)
+    at Module._compile (node:internal/modules/cjs/loader:1364:14)
+    at Object.transformer (/app/node_modules/tsx/dist/register-D46fvsV_.cjs:3:1104)
+    at Module.load (node:internal/modules/cjs/loader:1203:32)
+    at Module._load (node:internal/modules/cjs/loader:1019:12)
+    at ModuleWrap.<anonymous> (node:internal/modules/esm/translators:203:29)
+    at ModuleJob.run (node:internal/modules/esm/module_job:195:25)
+    at async ModuleLoader.import (node:internal/modules/esm/loader:337:24)
+    at async loadESM (node:internal/process/esm_loader:34:7) {
+  [cause]: Error: Cannot find module '@rollup/rollup-linux-x64-musl'
+  Require stack:
+  - /app/node_modules/rollup/dist/native.js
+      at Module._resolveFilename (node:internal/modules/cjs/loader:1140:15)
+      at nextResolveSimple (/app/node_modules/tsx/dist/register-D46fvsV_.cjs:4:1004)
+      at /app/node_modules/tsx/dist/register-D46fvsV_.cjs:3:2630
+      at /app/node_modules/tsx/dist/register-D46fvsV_.cjs:3:1542
+      at resolveTsPaths (/app/node_modules/tsx/dist/register-D46fvsV_.cjs:4:760)
+      at /app/node_modules/tsx/dist/register-D46fvsV_.cjs:4:1102
+      at m._resolveFilename (file:///app/node_modules/tsx/dist/register-B7jrtLTO.mjs:1:789)
+      at Module._load (node:internal/modules/cjs/loader:981:27)
+      at Module.require (node:internal/modules/cjs/loader:1231:19)
+      at require (node:internal/modules/helpers:177:18) {
+    code: 'MODULE_NOT_FOUND',
+    requireStack: [ '/app/node_modules/rollup/dist/native.js' ]
+  }
+}
+
+Node.js v18.20.8
+(base) PS H:\PUPLIC\SurpadClone> 

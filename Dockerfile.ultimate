@@ -1,15 +1,19 @@
 # ===============================================
-# Dockerfile النهائي - حل جذري لجميع المشاكل
+# Dockerfile النهائي - إصلاح مشكلة rollup نهائياً
 # ===============================================
 
 # استخدام Node.js 18 (مستقر مع WebSocket)
 FROM node:18-alpine
 
-# إعداد متغيرات البيئة
+# إعداد متغيرات البيئة لحل مشاكل npm وrollup
 ENV NODE_ENV=development
 ENV PORT=3000
 ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
 ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser
+ENV NPM_CONFIG_OPTIONAL=true
+ENV NPM_CONFIG_PLATFORM=linux
+ENV NPM_CONFIG_ARCH=x64
+ENV NPM_CONFIG_TARGET_LIBC=musl
 
 # تثبيت أدوات النظام المطلوبة
 RUN apk add --no-cache \
@@ -27,15 +31,29 @@ WORKDIR /app
 
 # نسخ package files أولاً للاستفادة من Docker cache
 COPY package*.json ./
+COPY tsconfig.json ./
 
-# تثبيت التبعيات مع تجاهل الأخطاء البسيطة
-RUN npm ci --only=production --ignore-scripts || npm install --only=production
+# تحديث npm إلى أحدث إصدار وتنظيف cache
+RUN npm install -g npm@latest && \
+    npm cache clean --force && \
+    npm config set fund false && \
+    npm config set audit false
 
-# تثبيت tsconfig-paths محلياً لحل مسارات TypeScript
-RUN npm install tsconfig-paths
+# تثبيت rollup platform-specific packages بشكل صريح لحل المشكلة
+RUN npm install @rollup/rollup-linux-x64-musl --save-optional --ignore-scripts || \
+    npm install @rollup/rollup-linux-x64-gnu --save-optional --ignore-scripts || \
+    npm install rollup --save-optional --ignore-scripts || true
+
+# تثبيت التبعيات الأساسية مع إجبار optional dependencies
+RUN npm ci --include=optional --ignore-scripts || \
+    npm install --include=optional --ignore-scripts || \
+    npm install --only=production --ignore-scripts
+
+# تثبيت أدوات إضافية
+RUN npm install tsconfig-paths tsx
 
 # تثبيت أدوات التطوير العالمية
-RUN npm install -g drizzle-kit tsx
+RUN npm install -g drizzle-kit
 
 # نسخ كامل المصدر
 COPY . .

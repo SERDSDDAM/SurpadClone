@@ -1,0 +1,101 @@
+(base) PS H:\PUPLIC\SurpadClone> docker-compose -f H:\PUPLIC\SurpadClone\docker-compose.ultimate.yml down
+[+] Running 5/5
+ ✔ Container binaa-app-ultimate       Removed                                                       0.0s 
+ ✔ Container binaa-postgres-ultimate  Removed                                                       0.4s 
+ ✔ Container binaa-minio-ultimate     Removed                                                       0.6s 
+ ✔ Container binaa-redis-ultimate     Removed                                                       0.8s 
+ ✔ Network binaa-ultimate-network     Removed                                                       0.4s 
+(base) PS H:\PUPLIC\SurpadClone> docker-compose -f H:\PUPLIC\SurpadClone\docker-compose.ultimate.yml build --no-cache app; if (-not $?) { throw 'Command failed' }
+[+] Building 1.1s (12/16)
+ => [internal] load local bake definitions                                                          0.0s 
+ => => reading from stdin 378B                                                                      0.0s 
+ => [internal] load build definition from Dockerfile.ultimate                                       0.0s 
+ => => transferring dockerfile: 2.04kB                                                              0.0s 
+ => [internal] load metadata for docker.io/library/node:18-alpine                                   0.0s 
+ => [internal] load .dockerignore                                                                   0.0s 
+ => => transferring context: 2.64kB                                                                 0.0s 
+ => CACHED [ 1/11] FROM docker.io/library/node:18-alpine                                            0.0s 
+ => [internal] load build context                                                                   0.1s 
+ => => transferring context: 36.85kB                                                                0.1s 
+ => CANCELED [ 2/11] RUN apk add --no-cache     chromium     nss     freetype     harfbuzz     ca-  0.5s 
+ => CACHED [ 3/11] WORKDIR /app                                                                     0.0s 
+ => CACHED [ 4/11] COPY package*.json ./                                                            0.0s 
+ => CACHED [ 5/11] RUN npm ci --only=production --ignore-scripts || npm install --only=production   0.0s 
+ => CACHED [ 6/11] RUN npm install -g drizzle-kit tsx                                               0.0s 
+ => ERROR [ 7/11] COPY tsconfig.json ./                                                             0.0s 
+------
+ > [ 7/11] COPY tsconfig.json ./:
+------
+Dockerfile.ultimate:38
+
+--------------------
+
+  36 |
+
+  37 |     # نسخ tsconfig.json لضمان عمل المسارات
+
+
+  39 |
+
+  40 |     # تثبيت tsconfig-paths محلياً
+
+--------------------
+
+-cecfc506516c::19jk37556rsmiq22g3elbj7lo: "/tsconfig.json": not found
+
+
+
+View build details: docker-desktop://dashboard/build/desktop-linux/desktop-linux/mp9xx7fiutu9wzn9m77hmtyzz
+
+Command failed
+At line:1 char:106
++ ... ate.yml build --no-cache app; if (-not $?) { throw 'Command failed' }
++                                                  ~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : OperationStopped: (Command failed:String) [], RuntimeException
+    + FullyQualifiedErrorId : Command failed
+ 
+(base) PS H:\PUPLIC\SurpadClone> docker-compose -f H:\PUPLIC\SurpadClone\docker-compose.ultimate.yml up -d; if (-not $?) { throw 'Command failed' }
+[+] Running 5/5
+ ✔ Network binaa-ultimate-network     Created                                                       0.1s 
+ ✔ Container binaa-minio-ultimate     Healthy                                                       7.3s 
+ ✔ Container binaa-redis-ultimate     Healthy                                                      12.8s 
+ ✔ Container binaa-postgres-ultimate  Healthy                                                       7.3s 
+ ✔ Container binaa-app-ultimate       Started                                                      12.9s 
+(base) PS H:\PUPLIC\SurpadClone> docker build -f H:\PUPLIC\SurpadClone\Dockerfile.ultimate -t surpadclone-app --no-cache H:\PUPLIC\SurpadClone; if (-not $?) { throw 'Command failed' }
+[+] Building 0.7s (11/15)                                                           docker:desktop-linux
+ => [internal] load build definition from Dockerfile.ultimate                                       0.0s
+ => => transferring dockerfile: 2.04kB                                                              0.0s 
+ => [internal] load metadata for docker.io/library/node:18-alpine                                   0.0s 
+ => [internal] load .dockerignore                                                                   0.0s 
+ => => transferring context: 2.64kB                                                                 0.0s 
+ => CACHED [ 1/11] FROM docker.io/library/node:18-alpine                                            0.0s 
+ => [internal] load build context                                                                   0.2s 
+ => => transferring context: 36.85kB                                                                0.1s 
+ => CANCELED [ 2/11] RUN apk add --no-cache     chromium     nss     freetype     harfbuzz     ca-  0.5s 
+ => CACHED [ 3/11] WORKDIR /app                                                                     0.0s
+ => CACHED [ 4/11] COPY package*.json ./                                                            0.0s 
+ => CACHED [ 5/11] RUN npm ci --only=production --ignore-scripts || npm install --only=production   0.0s 
+ => CACHED [ 6/11] RUN npm install -g drizzle-kit tsx                                               0.0s 
+ => ERROR [ 7/11] COPY tsconfig.json ./                                                             0.0s 
+------
+ > [ 7/11] COPY tsconfig.json ./:
+------
+Dockerfile.ultimate:38
+--------------------
+  36 |
+  37 |     # نسخ tsconfig.json لضمان عمل المسارات
+  38 | >>> COPY tsconfig.json ./
+  39 |
+  40 |     # تثبيت tsconfig-paths محلياً
+--------------------
+ERROR: failed to build: failed to solve: failed to compute cache key: failed to calculate checksum of ref 7dc8eab2-23c0-43b9-afbd-cecfc506516c::zsp2dp61xzwzukdlv7ktmennh: "/tsconfig.json": not found
+
+View build details: docker-desktop://dashboard/build/desktop-linux/desktop-linux/riunrf5q72rh0p3np4j4b0rhi
+Command failed
+At line:1 char:127
++ ... -cache H:\PUPLIC\SurpadClone; if (-not $?) { throw 'Command failed' }
++                                                  ~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : OperationStopped: (Command failed:String) [], RuntimeException
+    + FullyQualifiedErrorId : Command failed
+ 
+(base) PS H:\PUPLIC\SurpadClone>
