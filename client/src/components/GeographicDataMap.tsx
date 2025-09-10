@@ -306,11 +306,11 @@ export default function GeographicDataMap({
   // Convert API data to GeoJSON format
   const convertToGeoJSON = useCallback((data: any[]) => {
     return {
-      type: 'FeatureCollection',
+      type: 'FeatureCollection' as const,
       features: data
         .filter(item => item.geometry) // Only include items with geometry
         .map(item => ({
-          type: 'Feature',
+          type: 'Feature' as const,
           properties: item,
           geometry: item.geometry
         }))

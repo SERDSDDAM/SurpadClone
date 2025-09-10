@@ -55,6 +55,7 @@ import DigitalCertificates from "@/pages/digital-certificates";
 import NotificationsSystem from "@/pages/notifications-system";
 import { GISDataManagement, DigitizationTool } from "@/pages/gis";
 import SimpleDigitizationTool from "@/pages/gis/simple-digitization-tool";
+import GeographicDataBrowserPage from "@/pages/gis/geographic-data-browser";
 import RolesAndPermissions from "@/pages/admin/RolesAndPermissions";
 import AdvancedRBACManagement from "@/pages/admin/AdvancedRBACManagement";
 import AdminDashboardEnhanced from "@/pages/admin/AdminDashboardEnhanced";
@@ -90,6 +91,7 @@ function Navigation() {
     { name: "الشهادات الرقمية", href: "/digital-certificates", icon: ClipboardCheck },
     { name: "نظام الإشعارات", href: "/notifications", icon: MessageSquare },
     { name: "إدارة البيانات الجغرافية", href: "/gis-management", icon: MapPin },
+    { name: "متصفح البيانات الجغرافية", href: "/geographic-browser", icon: Building2 },
     { name: "أداة رقمنة المخططات", href: "/digitization-tool", icon: Layers },
     { name: "الرقمنة البسيطة (CRS.Simple)", href: "/simple-digitization", icon: Layers },
     { name: "🧪 Phase 0 Test Suite", href: "/phase0-test", icon: Layers },
@@ -274,6 +276,7 @@ function Router() {
           <Route path="/digital-certificates" component={DigitalCertificates} />
           <Route path="/notifications" component={NotificationsSystem} />
           <Route path="/gis-management" component={GISDataManagement} />
+          <Route path="/geographic-browser" component={GeographicDataBrowserPage} />
           <Route path="/digitization-tool" component={DigitizationTool} />
           <Route path="/simple-digitization-tool" component={SimpleDigitizationTool} />
           <Route path="/phase0-test" component={Phase0Test} />

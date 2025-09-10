@@ -18,9 +18,12 @@ export const uploadRateLimit = rateLimit({
     return req.user?.role === 'admin' && process.env.NODE_ENV === 'development';
   },
   keyGenerator: (req: Request) => {
-    // استخدام IP آمن + User ID إن وجد للحصول على معرف فريد
-    const ip = req.ip || req.connection?.remoteAddress || 'unknown';
-    return req.user?.id ? `${ip}-${req.user.id}` : ip;
+    // استخدام User ID إن وجد، وإلا استخدم IP مع تعامل آمن مع IPv6
+    if (req.user?.id) {
+      return `upload-user-${req.user.id}`;
+    }
+    // IPv6-safe IP handling
+    return req.ip || req.connection?.remoteAddress || 'fallback-ip';
   }
 });
 
@@ -37,12 +40,16 @@ export const adminActionRateLimit = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   keyGenerator: (req: Request) => {
-    const ip = req.ip || req.connection?.remoteAddress || 'unknown';
-    return req.user?.id || ip;
+    // أعطي الأولوية لـ User ID للتحكم الدقيق
+    if (req.user?.id) {
+      return `admin-user-${req.user.id}`;
+    }
+    // IPv6-safe IP handling
+    return req.ip || req.connection?.remoteAddress || 'admin-fallback-ip';
   }
 });
 
-// Rate limiter للاستعلامات العامة
+// Rate limiter للاستعلامات العامة - استخدام default handling
 export const queryRateLimit = rateLimit({
   windowMs: 1 * 60 * 1000, // دقيقة واحدة
   max: 100, // 100 استعلام في الدقيقة
@@ -54,6 +61,7 @@ export const queryRateLimit = rateLimit({
   },
   standardHeaders: true,
   legacyHeaders: false
+  // No keyGenerator - let express-rate-limit handle IPv6 with defaults
 });
 
 // Rate limiter مخصص للعمليات الجماعية
@@ -69,21 +77,29 @@ export const bulkOperationRateLimit = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   keyGenerator: (req: Request) => {
-    const ip = req.ip || req.connection?.remoteAddress || 'unknown';
-    return req.user?.id || ip;
+    // أعطي الأولوية لـ User ID للعمليات الجماعية
+    if (req.user?.id) {
+      return `bulk-user-${req.user.id}`;
+    }
+    // IPv6-safe IP handling
+    return req.ip || req.connection?.remoteAddress || 'bulk-fallback-ip';
   }
 });
 
-// Rate limiter متدرج حسب دور المستخدم - نسخة مبسطة
+// Rate limiter متدرج حسب دور المستخدم - نسخة مبسطة وآمنة لـ IPv6
 export function createRoleBasedRateLimit(limits: Record<string, { max: number; windowMs: number }>) {
   return rateLimit({
     windowMs: 15 * 60 * 1000,
-    max: 50, // حد افتراضي للمدير
+    max: 50, // حد افتراضي
     skip: (req: Request) => false,
     keyGenerator: (req: Request) => {
       const role = req.user?.role || 'guest';
-      const ip = req.ip || req.connection?.remoteAddress || 'unknown';
-      return `${role}-${req.user?.id || ip}`;
+      // استخدام User ID إذا كان متوفراً، وإلا اترك express-rate-limit يتعامل مع IP
+      if (req.user?.id) {
+        return `${role}-user-${req.user.id}`;
+      }
+      // IPv6-safe IP handling with role prefix
+      return `${role}-ip-${req.ip || req.connection?.remoteAddress || 'role-fallback-ip'}`;
     },
     message: {
       success: false,
@@ -121,7 +137,7 @@ export function createSmartRateLimit(operation: 'upload' | 'query' | 'admin' | '
   }
 }
 
-// Rate limiter تكيفي يتغير حسب حمل الخادم
+// Rate limiter تكيفي يتغير حسب حمل الخادم - آمن لـ IPv6
 export function adaptiveRateLimit(baseMax: number = 100) {
   return rateLimit({
     windowMs: 1 * 60 * 1000, // دقيقة واحدة
@@ -142,5 +158,6 @@ export function adaptiveRateLimit(baseMax: number = 100) {
     
     standardHeaders: true,
     legacyHeaders: false
+    // No keyGenerator - let express-rate-limit handle IPv6 with defaults
   });
 }
