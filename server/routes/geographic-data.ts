@@ -2,6 +2,7 @@ import express, { Request, Response } from 'express';
 import multer from 'multer';
 import path from 'path';
 import fs from 'fs/promises';
+import { authenticateToken } from '../auth/auth-middleware.js';
 import { 
   governorates, 
   districts, 
@@ -118,7 +119,16 @@ router.get('/governorates', async (req: Request, res: Response) => {
   try {
     const { includeGeometry = false, search, limit = 50, offset = 0 } = req.query;
     
-    let query = db.select({
+    // Build where conditions
+    const whereConditions = [eq(governorates.isActive, true)];
+    
+    if (search) {
+      whereConditions.push(
+        sql`(${governorates.nameAr} ILIKE ${`%${search}%`} OR ${governorates.nameEn} ILIKE ${`%${search}%`} OR ${governorates.code} ILIKE ${`%${search}%`})`
+      );
+    }
+
+    const allGovernorates = await db.select({
       id: governorates.id,
       code: governorates.code,
       nameAr: governorates.nameAr,
@@ -131,20 +141,12 @@ router.get('/governorates', async (req: Request, res: Response) => {
       createdAt: governorates.createdAt,
       updatedAt: governorates.updatedAt,
       ...(includeGeometry === 'true' && { geometry: governorates.geometry })
-    }).from(governorates).where(eq(governorates.isActive, true));
-
-    if (search) {
-      query = query.where(
-        and(
-          eq(governorates.isActive, true),
-          sql`(${governorates.nameAr} ILIKE ${`%${search}%`} OR ${governorates.nameEn} ILIKE ${`%${search}%`} OR ${governorates.code} ILIKE ${`%${search}%`})`
-        )
-      );
-    }
-
-    query = query.limit(Number(limit)).offset(Number(offset)).orderBy(governorates.nameAr);
-
-    const allGovernorates = await query;
+    })
+    .from(governorates)
+    .where(and(...whereConditions))
+    .limit(Number(limit))
+    .offset(Number(offset))
+    .orderBy(governorates.nameAr);
     
     res.json({
       success: true,
@@ -210,8 +212,8 @@ router.get('/governorates/:code', async (req: Request, res: Response) => {
   }
 });
 
-// POST /api/geographic/governorates/upload - رفع ملف GeoJSON للمحافظات
-router.post('/governorates/upload', upload.single('file'), async (req: Request, res: Response) => {
+// POST /api/geographic/governorates/upload - رفع ملف GeoJSON للمحافظات (يتطلب مصادقة)
+router.post('/governorates/upload', authenticateToken, upload.single('file'), async (req: Request, res: Response) => {
   try {
     console.log('🌍 بدء رفع ملف المحافظات الجغرافي');
     
@@ -347,7 +349,32 @@ router.get('/districts', async (req: Request, res: Response) => {
   try {
     const { governorateId, governorateCode, includeGeometry = false, search, limit = 100, offset = 0 } = req.query;
     
-    let query = db.select({
+    // Build where conditions
+    const whereConditions = [eq(districts.isActive, true)];
+    
+    if (governorateId) {
+      whereConditions.push(eq(districts.governorateId, governorateId as string));
+    }
+
+    if (governorateCode) {
+      // البحث بكود المحافظة
+      const governorate = await db.select({ id: governorates.id })
+        .from(governorates)
+        .where(eq(governorates.code, governorateCode as string))
+        .limit(1);
+      
+      if (governorate.length > 0) {
+        whereConditions.push(eq(districts.governorateId, governorate[0].id));
+      }
+    }
+
+    if (search) {
+      whereConditions.push(
+        sql`(${districts.nameAr} ILIKE ${`%${search}%`} OR ${districts.nameEn} ILIKE ${`%${search}%`} OR ${districts.code} ILIKE ${`%${search}%`})`
+      );
+    }
+
+    const allDistricts = await db.select({
       id: districts.id,
       governorateId: districts.governorateId,
       code: districts.code,
@@ -360,46 +387,12 @@ router.get('/districts', async (req: Request, res: Response) => {
       createdAt: districts.createdAt,
       updatedAt: districts.updatedAt,
       ...(includeGeometry === 'true' && { geometry: districts.geometry })
-    }).from(districts).where(eq(districts.isActive, true));
-
-    if (governorateId) {
-      query = query.where(
-        and(
-          eq(districts.isActive, true),
-          eq(districts.governorateId, governorateId as string)
-        )
-      );
-    }
-
-    if (governorateCode) {
-      // البحث بكود المحافظة
-      const governorate = await db.select({ id: governorates.id })
-        .from(governorates)
-        .where(eq(governorates.code, governorateCode as string))
-        .limit(1);
-      
-      if (governorate.length > 0) {
-        query = query.where(
-          and(
-            eq(districts.isActive, true),
-            eq(districts.governorateId, governorate[0].id)
-          )
-        );
-      }
-    }
-
-    if (search) {
-      query = query.where(
-        and(
-          eq(districts.isActive, true),
-          sql`(${districts.nameAr} ILIKE ${`%${search}%`} OR ${districts.nameEn} ILIKE ${`%${search}%`} OR ${districts.code} ILIKE ${`%${search}%`})`
-        )
-      );
-    }
-
-    query = query.limit(Number(limit)).offset(Number(offset)).orderBy(districts.nameAr);
-
-    const allDistricts = await query;
+    })
+    .from(districts)
+    .where(and(...whereConditions))
+    .limit(Number(limit))
+    .offset(Number(offset))
+    .orderBy(districts.nameAr);
     
     res.json({
       success: true,
@@ -416,8 +409,8 @@ router.get('/districts', async (req: Request, res: Response) => {
   }
 });
 
-// POST /api/geographic/districts/upload - رفع ملف GeoJSON للمديريات
-router.post('/districts/upload', upload.single('file'), async (req: Request, res: Response) => {
+// POST /api/geographic/districts/upload - رفع ملف GeoJSON للمديريات (يتطلب مصادقة)
+router.post('/districts/upload', authenticateToken, upload.single('file'), async (req: Request, res: Response) => {
   try {
     console.log('🏘️ بدء رفع ملف المديريات الجغرافي');
     
@@ -557,7 +550,32 @@ router.get('/sub-districts', async (req: Request, res: Response) => {
   try {
     const { districtId, districtCode, includeGeometry = false, search, limit = 200, offset = 0 } = req.query;
     
-    let query = db.select({
+    // Build where conditions
+    const whereConditions = [eq(subDistricts.isActive, true)];
+    
+    if (districtId) {
+      whereConditions.push(eq(subDistricts.districtId, districtId as string));
+    }
+
+    if (districtCode) {
+      // البحث بكود المديرية
+      const district = await db.select({ id: districts.id })
+        .from(districts)
+        .where(eq(districts.code, districtCode as string))
+        .limit(1);
+      
+      if (district.length > 0) {
+        whereConditions.push(eq(subDistricts.districtId, district[0].id));
+      }
+    }
+
+    if (search) {
+      whereConditions.push(
+        sql`(${subDistricts.nameAr} ILIKE ${`%${search}%`} OR ${subDistricts.nameEn} ILIKE ${`%${search}%`} OR ${subDistricts.code} ILIKE ${`%${search}%`})`
+      );
+    }
+
+    const allSubDistricts = await db.select({
       id: subDistricts.id,
       districtId: subDistricts.districtId,
       code: subDistricts.code,
@@ -570,46 +588,12 @@ router.get('/sub-districts', async (req: Request, res: Response) => {
       createdAt: subDistricts.createdAt,
       updatedAt: subDistricts.updatedAt,
       ...(includeGeometry === 'true' && { geometry: subDistricts.geometry })
-    }).from(subDistricts).where(eq(subDistricts.isActive, true));
-
-    if (districtId) {
-      query = query.where(
-        and(
-          eq(subDistricts.isActive, true),
-          eq(subDistricts.districtId, districtId as string)
-        )
-      );
-    }
-
-    if (districtCode) {
-      // البحث بكود المديرية
-      const district = await db.select({ id: districts.id })
-        .from(districts)
-        .where(eq(districts.code, districtCode as string))
-        .limit(1);
-      
-      if (district.length > 0) {
-        query = query.where(
-          and(
-            eq(subDistricts.isActive, true),
-            eq(subDistricts.districtId, district[0].id)
-          )
-        );
-      }
-    }
-
-    if (search) {
-      query = query.where(
-        and(
-          eq(subDistricts.isActive, true),
-          sql`(${subDistricts.nameAr} ILIKE ${`%${search}%`} OR ${subDistricts.nameEn} ILIKE ${`%${search}%`} OR ${subDistricts.code} ILIKE ${`%${search}%`})`
-        )
-      );
-    }
-
-    query = query.limit(Number(limit)).offset(Number(offset)).orderBy(subDistricts.nameAr);
-
-    const allSubDistricts = await query;
+    })
+    .from(subDistricts)
+    .where(and(...whereConditions))
+    .limit(Number(limit))
+    .offset(Number(offset))
+    .orderBy(subDistricts.nameAr);
     
     res.json({
       success: true,
@@ -626,8 +610,8 @@ router.get('/sub-districts', async (req: Request, res: Response) => {
   }
 });
 
-// POST /api/geographic/sub-districts/upload - رفع ملف GeoJSON للعزل
-router.post('/sub-districts/upload', upload.single('file'), async (req: Request, res: Response) => {
+// POST /api/geographic/sub-districts/upload - رفع ملف GeoJSON للعزل (يتطلب مصادقة)
+router.post('/sub-districts/upload', authenticateToken, upload.single('file'), async (req: Request, res: Response) => {
   try {
     console.log('🏡 بدء رفع ملف العزل الجغرافي');
     
