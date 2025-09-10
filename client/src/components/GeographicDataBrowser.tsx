@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import Autocomplete from '@/components/ui/autocomplete';
 import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -152,6 +153,21 @@ interface SearchFilters {
   level: string;
   parentFilter?: string;
   includeGeometry: boolean;
+  searchMode: 'simple' | 'advanced' | 'autocomplete';
+  exactMatch: boolean;
+  searchIn: 'name' | 'code' | 'all';
+  sortBy: 'name' | 'code' | 'relevance';
+  sortOrder: 'asc' | 'desc';
+}
+
+interface AutocompleteOption {
+  id: string;
+  label: string;
+  secondaryLabel?: string;
+  category: string;
+  icon?: React.ReactNode;
+  metadata?: any;
+  parentPath?: string[];
 }
 
 export default function GeographicDataBrowser({ 
@@ -167,8 +183,18 @@ export default function GeographicDataBrowser({
   const [searchFilters, setSearchFilters] = useState<SearchFilters>({
     text: '',
     level: 'governorates',
-    includeGeometry: false
+    includeGeometry: false,
+    searchMode: 'simple',
+    exactMatch: false,
+    searchIn: 'name',
+    sortBy: 'name',
+    sortOrder: 'asc'
   });
+
+  // حالة autocomplete
+  const [autocompleteOptions, setAutocompleteOptions] = useState<AutocompleteOption[]>([]);
+  const [selectedAutocomplete, setSelectedAutocomplete] = useState<AutocompleteOption | null>(null);
+  const [isSearching, setIsSearching] = useState(false);
   
   // المستوى النشط الحالي
   const [activeLevel, setActiveLevel] = useState<string>('governorates');
@@ -183,16 +209,18 @@ export default function GeographicDataBrowser({
   );
 
   // إعداد المعاملات لاستعلامات البيانات
-  const buildQueryParams = useCallback((level: AdministrativeLevel) => {
+  const buildQueryParams = useCallback((level: AdministrativeLevel, isAutocomplete = false) => {
     const params = new URLSearchParams();
     
     // إضافة البحث النصي
     if (searchFilters.text.trim()) {
       params.append('search', searchFilters.text);
+      params.append('searchIn', searchFilters.searchIn);
+      params.append('exactMatch', searchFilters.exactMatch.toString());
     }
     
-    // إضافة geometry إذا كان مطلوباً
-    if (searchFilters.includeGeometry) {
+    // إضافة geometry إذا كان مطلوباً (ليس للـ autocomplete)
+    if (searchFilters.includeGeometry && !isAutocomplete) {
       params.append('includeGeometry', 'true');
     }
     
@@ -202,8 +230,13 @@ export default function GeographicDataBrowser({
       params.append('parentId', parentId);
     }
     
+    // إضافة ترتيب البيانات
+    params.append('sortBy', searchFilters.sortBy);
+    params.append('sortOrder', searchFilters.sortOrder);
+    
     // حد افتراضي للنتائج
-    params.append('limit', '50');
+    const limit = isAutocomplete ? '10' : '50';
+    params.append('limit', limit);
     params.append('offset', '0');
     
     return params.toString();
@@ -215,7 +248,7 @@ export default function GeographicDataBrowser({
     queryFn: async () => {
       if (!currentLevel) return null;
       
-      const queryString = buildQueryParams(currentLevel);
+      const queryString = buildQueryParams(currentLevel, false);
       const url = queryString ? `${currentLevel.endpoint}?${queryString}` : currentLevel.endpoint;
       
       return await apiRequest(url);
@@ -224,6 +257,98 @@ export default function GeographicDataBrowser({
     refetchOnWindowFocus: false,
     staleTime: 5 * 60 * 1000, // 5 دقائق
   });
+
+  // دالة البحث المتقدم للـ Autocomplete
+  const handleAutocompleteSearch = useCallback(async (query: string) => {
+    if (!currentLevel || query.length < 2) {
+      setAutocompleteOptions([]);
+      return;
+    }
+    
+    setIsSearching(true);
+    try {
+      // بحث في المستوى الحالي
+      const tempFilters = {
+        ...searchFilters,
+        text: query,
+        searchMode: 'autocomplete' as const
+      };
+      
+      const params = new URLSearchParams();
+      params.append('search', query);
+      params.append('searchIn', 'all');
+      params.append('limit', '15');
+      
+      if (currentLevel.parentKey && selections[currentLevel.parentKey]) {
+        params.append('parentId', selections[currentLevel.parentKey].id);
+      }
+
+      const url = `${currentLevel.endpoint}?${params.toString()}`;
+      const response = await apiRequest(url);
+      
+      if (response?.data) {
+        const options: AutocompleteOption[] = response.data.map((item: any) => {
+          // تحديد المسار الهرمي
+          const parentPath = [];
+          if (selections.governorates && item.governorateId) {
+            parentPath.push(selections.governorates.name);
+          }
+          if (selections.districts && item.districtId) {
+            parentPath.push(selections.districts.name);
+          }
+          
+          return {
+            id: item.id,
+            label: item.nameAr || item.streetName || item.name || 'بدون اسم',
+            secondaryLabel: item.nameEn || item.code || '',
+            category: currentLevel.nameAr,
+            icon: currentLevel.icon,
+            metadata: item,
+            parentPath: parentPath.length > 0 ? parentPath : undefined
+          };
+        });
+        
+        setAutocompleteOptions(options);
+      }
+    } catch (error) {
+      console.error('خطأ في البحث:', error);
+      setAutocompleteOptions([]);
+    } finally {
+      setIsSearching(false);
+    }
+  }, [currentLevel, searchFilters, selections]);
+
+  // التعامل مع اختيار من الـ autocomplete
+  const handleAutocompleteSelect = useCallback((option: AutocompleteOption | null) => {
+    setSelectedAutocomplete(option);
+    if (option && option.metadata && currentLevel) {
+      // استخدام دالة handleItemSelection التي ستُعرف لاحقاً
+      const newSelections = { ...selections };
+      
+      newSelections[currentLevel.key] = {
+        id: option.metadata.id,
+        name: option.label,
+        data: option.metadata
+      };
+      
+      ADMINISTRATIVE_LEVELS.forEach(adminLevel => {
+        if (adminLevel.parentKey === currentLevel.key) {
+          delete newSelections[adminLevel.key];
+        }
+      });
+      
+      setSelections(newSelections);
+      
+      if (onSelectionChange) {
+        onSelectionChange(currentLevel.key, option.metadata);
+      }
+      
+      const nextLevel = ADMINISTRATIVE_LEVELS.find(l => l.parentKey === currentLevel.key);
+      if (nextLevel) {
+        setActiveLevel(nextLevel.key);
+      }
+    }
+  }, [currentLevel, selections, onSelectionChange]);
 
   // استعلام إحصائيات الطبقات
   const { data: layerStats } = useQuery({
@@ -403,22 +528,152 @@ export default function GeographicDataBrowser({
             ))}
           </div>
 
-          {/* شريط البحث والفلاتر */}
-          <div className="flex flex-wrap gap-3 items-center">
-            <div className="flex-1 min-w-[300px]">
-              <div className="relative">
-                <Search className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                <Input
-                  placeholder={`ابحث في ${currentLevel?.nameAr || 'البيانات'}...`}
-                  value={searchFilters.text}
-                  onChange={(e) => 
-                    setSearchFilters(prev => ({ ...prev, text: e.target.value }))
-                  }
-                  className="pr-10 text-right"
-                  data-testid="input-search"
-                />
+          {/* شريط البحث والفلاتر المتقدمة */}
+          <div className="space-y-4">
+            {/* البحث الرئيسي مع Autocomplete */}
+            <div className="flex flex-wrap gap-3 items-center">
+              <div className="flex-1 min-w-[300px]">
+                {searchFilters.searchMode === 'autocomplete' ? (
+                  <Autocomplete
+                    placeholder={`ابحث في ${currentLevel?.nameAr || 'البيانات'} مع الاقتراحات...`}
+                    options={autocompleteOptions}
+                    value={selectedAutocomplete}
+                    onSelect={handleAutocompleteSelect}
+                    onSearch={handleAutocompleteSearch}
+                    isLoading={isSearching}
+                    className="text-right"
+                    showCategories={true}
+                    allowClear={true}
+                    searchThreshold={2}
+                    debounceMs={300}
+                    emptyMessage="ابدأ بكتابة للبحث..."
+                    noResultsMessage="لا توجد نتائج مطابقة"
+                    data-testid="autocomplete-search"
+                  />
+                ) : (
+                  <div className="relative">
+                    <Search className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                    <Input
+                      placeholder={`ابحث في ${currentLevel?.nameAr || 'البيانات'}...`}
+                      value={searchFilters.text}
+                      onChange={(e) => 
+                        setSearchFilters(prev => ({ ...prev, text: e.target.value }))
+                      }
+                      className="pr-10 text-right"
+                      data-testid="input-search"
+                    />
+                  </div>
+                )}
               </div>
+
+              {/* خيارات البحث */}
+              <Select
+                value={searchFilters.searchMode}
+                onValueChange={(value: 'simple' | 'advanced' | 'autocomplete') => 
+                  setSearchFilters(prev => ({ ...prev, searchMode: value }))
+                }
+              >
+                <SelectTrigger className="w-[150px]" data-testid="select-search-mode">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="simple">بحث بسيط</SelectItem>
+                  <SelectItem value="autocomplete">بحث تفاعلي</SelectItem>
+                  <SelectItem value="advanced">بحث متقدم</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
+
+            {/* خيارات البحث المتقدمة */}
+            {(searchFilters.searchMode === 'advanced' || searchFilters.searchMode === 'autocomplete') && (
+              <div className="bg-muted/50 p-4 rounded-lg border">
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+                  {/* نطاق البحث */}
+                  <div>
+                    <label className="text-sm font-medium mb-1 block">البحث في:</label>
+                    <Select
+                      value={searchFilters.searchIn}
+                      onValueChange={(value: 'name' | 'code' | 'all') => 
+                        setSearchFilters(prev => ({ ...prev, searchIn: value }))
+                      }
+                    >
+                      <SelectTrigger data-testid="select-search-in">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="name">الأسماء فقط</SelectItem>
+                        <SelectItem value="code">الأكواد فقط</SelectItem>
+                        <SelectItem value="all">الكل</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* نوع المطابقة */}
+                  <div>
+                    <label className="text-sm font-medium mb-1 block">نوع المطابقة:</label>
+                    <Select
+                      value={searchFilters.exactMatch ? "exact" : "partial"}
+                      onValueChange={(value) => 
+                        setSearchFilters(prev => ({ ...prev, exactMatch: value === "exact" }))
+                      }
+                    >
+                      <SelectTrigger data-testid="select-match-type">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="partial">مطابقة جزئية</SelectItem>
+                        <SelectItem value="exact">مطابقة تامة</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* ترتيب النتائج */}
+                  <div>
+                    <label className="text-sm font-medium mb-1 block">ترتيب حسب:</label>
+                    <Select
+                      value={searchFilters.sortBy}
+                      onValueChange={(value: 'name' | 'code' | 'relevance') => 
+                        setSearchFilters(prev => ({ ...prev, sortBy: value }))
+                      }
+                    >
+                      <SelectTrigger data-testid="select-sort-by">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="name">الاسم</SelectItem>
+                        <SelectItem value="code">الكود</SelectItem>
+                        <SelectItem value="relevance">الصلة</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* اتجاه الترتيب */}
+                  <div>
+                    <label className="text-sm font-medium mb-1 block">الاتجاه:</label>
+                    <Select
+                      value={searchFilters.sortOrder}
+                      onValueChange={(value: 'asc' | 'desc') => 
+                        setSearchFilters(prev => ({ ...prev, sortOrder: value }))
+                      }
+                    >
+                      <SelectTrigger data-testid="select-sort-order">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="asc">تصاعدي</SelectItem>
+                        <SelectItem value="desc">تنازلي</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* خيارات إضافية */}
+          <div className="flex flex-wrap gap-3 items-center">
+            <div className="flex-1 min-w-[200px]" />
+            
             
             <Select
               value={searchFilters.includeGeometry ? "with-geometry" : "without-geometry"}
