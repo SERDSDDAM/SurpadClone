@@ -1,0 +1,135 @@
+# ===============================================
+# Docker Compose للنشر المحلي - بنّاء اليمن
+# نسخة محلية سهلة التشغيل والتطوير
+# ===============================================
+
+version: '3.8'
+
+services:
+  # التطبيق الرئيسي - نسخة محلية
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile.production
+    container_name: binaa-local-app
+    ports:
+      - "3000:3000"
+      - "5173:5173"  # منفذ Vite للتطوير
+    environment:
+      - NODE_ENV=development
+      - PORT=3000
+      - DATABASE_URL=postgresql://binaa_user:binaa_local_2024@postgres:5432/binaa_local_db
+      - REDIS_URL=redis://redis:6379
+      - MINIO_ENDPOINT=minio
+      - MINIO_PORT=9000
+      - MINIO_ACCESS_KEY=minioadmin
+      - MINIO_SECRET_KEY=minioadmin123
+      - SESSION_SECRET=local-session-secret-key-for-development
+      - JWT_SECRET=local-jwt-secret-key-for-development
+      - ENABLE_DEBUG=true
+      - ENABLE_API_DOCS=true
+      - LOG_LEVEL=debug
+      # تفعيل جميع المكونات للتطوير المحلي
+      - ENABLE_SURVEY_MODULE=true
+      - ENABLE_PERMITS_MODULE=true
+      - ENABLE_GIS_MODULE=true
+      - ENABLE_REPORTS_MODULE=true
+      - ENABLE_ADMIN_MODULE=true
+      - PDF_SERVICE_ENABLED=false
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+      minio:
+        condition: service_started
+    volumes:
+      - .:/app                            # ربط الكود المحلي للتطوير
+      - /app/node_modules                 # استثناء node_modules
+      - ./temp-uploads:/app/temp-uploads
+      - ./attached_assets:/app/attached_assets
+      - ./logs:/app/logs
+    networks:
+      - binaa-local-network
+    restart: unless-stopped
+    command: ["npm", "run", "dev"]       # استخدام وضع التطوير
+
+  # قاعدة بيانات PostgreSQL مع PostGIS للتطوير المحلي
+  postgres:
+    image: postgis/postgis:15-3.3
+    container_name: binaa-local-postgres
+    environment:
+      POSTGRES_DB: binaa_local_db
+      POSTGRES_USER: binaa_user
+      POSTGRES_PASSWORD: binaa_local_2024
+      POSTGRES_INITDB_ARGS: "--encoding=UTF-8 --locale=C"
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_local_data:/var/lib/postgresql/data
+      - ./init-sql:/docker-entrypoint-initdb.d:ro
+    networks:
+      - binaa-local-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U binaa_user -d binaa_local_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  # Redis للجلسات والتخزين المؤقت - نسخة خفيفة
+  redis:
+    image: redis:7-alpine
+    container_name: binaa-local-redis
+    command: redis-server --appendonly yes --maxmemory 128mb --maxmemory-policy allkeys-lru
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_local_data:/data
+    networks:
+      - binaa-local-network
+    restart: unless-stopped
+
+  # MinIO لتخزين الملفات - نسخة تطوير
+  minio:
+    image: minio/minio:latest
+    container_name: binaa-local-minio
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin123
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio_local_data:/data
+    networks:
+      - binaa-local-network
+    restart: unless-stopped
+
+  # Adminer لإدارة قاعدة البيانات (اختياري)
+  adminer:
+    image: adminer:latest
+    container_name: binaa-local-adminer
+    ports:
+      - "8080:8080"
+    environment:
+      ADMINER_DEFAULT_SERVER: postgres
+    networks:
+      - binaa-local-network
+    restart: unless-stopped
+    profiles:
+      - tools  # يتم تشغيله فقط مع --profile tools
+
+volumes:
+  postgres_local_data:
+    driver: local
+  redis_local_data:
+    driver: local
+  minio_local_data:
+    driver: local
+
+networks:
+  binaa-local-network:
+    driver: bridge
+    name: binaa-local-network
