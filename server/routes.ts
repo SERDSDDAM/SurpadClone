@@ -29,6 +29,8 @@ import organizationalAutomationRoutes from './routes/organizational-automation';
 import { requireAuth, requireRole } from './middleware/auth';
 import rateLimit from 'express-rate-limit';
 import cookieParser from 'cookie-parser';
+import sessionMiddleware from './middleware/session-config';
+import csrfTokenRoutes from './routes/csrf-token';
 import surveyRoutes from "./routes/survey-routes";
 import gisRoutes from "./routes/gis-routes";
 import geographicDataRoutes from "./routes/geographic-data";
@@ -45,6 +47,9 @@ import fs from "fs";
 export async function registerRoutes(app: Express): Promise<Server> {
   // Cookie parser middleware
   app.use(cookieParser());
+  
+  // Session middleware for CSRF protection
+  app.use(sessionMiddleware);
 
   // Trust proxy for rate limiting (fix for express-rate-limit warning)
   app.set('trust proxy', 1);
@@ -101,6 +106,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // Working JWT Auth system
   app.use("/api/auth", workingAuth);
+  
+  // CSRF Token endpoints
+  app.use("/api", csrfTokenRoutes);
   
   // Admin APIs with authentication
   app.get('/api/admin/users', authenticateToken, (req: any, res) => {

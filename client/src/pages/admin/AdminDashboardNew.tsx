@@ -69,9 +69,9 @@ export default function AdminDashboardNew() {
     },
     {
       title: "البيانات الجغرافية",
-      description: "إدارة الطبقات والخرائط الجغرافية",
+      description: "إدارة المحافظات والمديريات والعزل",
       icon: Map,
-      href: "/admin/gis",
+      href: "/admin/geographic-data",
       color: "bg-purple-500"
     },
     {

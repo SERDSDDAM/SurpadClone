@@ -440,6 +440,24 @@ function Router() {
             }}
           </Route>
 
+          <Route path="/admin/geographic-data">
+            {() => {
+              const AdminDashboardLayout = React.lazy(() => import('@/layouts/AdminDashboardLayout'));
+              const GeographicDataManagement = React.lazy(() => import('@/pages/admin/GeographicDataManagement'));
+              const RequireAuth = React.lazy(() => import('@/components/RequireAuth'));
+              
+              return (
+                <React.Suspense fallback={<div className="min-h-screen flex items-center justify-center"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-red-600"></div></div>}>
+                  <RequireAuth role="admin">
+                    <AdminDashboardLayout>
+                      <GeographicDataManagement />
+                    </AdminDashboardLayout>
+                  </RequireAuth>
+                </React.Suspense>
+              );
+            }}
+          </Route>
+
           <Route path="/admin/settings">
             {() => {
               const AdminDashboardLayout = React.lazy(() => import('@/layouts/AdminDashboardLayout'));

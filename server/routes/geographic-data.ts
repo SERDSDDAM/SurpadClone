@@ -1,8 +1,23 @@
-import express, { Request, Response } from 'express';
+import express, { Request, Response, NextFunction } from 'express';
 import multer from 'multer';
 import path from 'path';
 import fs from 'fs/promises';
-import { authenticateToken } from '../auth/auth-middleware.js';
+import { requireAuth, requireRole } from '../middleware/auth';
+import { csrfProtection, strictCsrfProtection } from '../middleware/csrf';
+import { AuditLogger } from '../middleware/audit-logger';
+import { 
+  uploadRateLimit, 
+  adminActionRateLimit, 
+  queryRateLimit, 
+  geographicDataRateLimit 
+} from '../middleware/enhanced-rate-limiting';
+import { 
+  governorateGeoJsonSchema,
+  districtGeoJsonSchema,
+  subDistrictGeoJsonSchema,
+  geographicQuerySchema,
+  validateFileUpload
+} from '../middleware/validation-schemas';
 import { 
   governorates, 
   districts, 
@@ -115,12 +130,24 @@ function calculatePolygonArea(geometry: any): number | null {
 // ========== GOVERNORATES ENDPOINTS ==========
 
 // GET /api/geographic/governorates - جلب جميع المحافظات
-router.get('/governorates', async (req: Request, res: Response) => {
+router.get('/governorates', queryRateLimit, async (req: Request, res: Response) => {
   try {
-    const { includeGeometry = false, search, limit = 50, offset = 0 } = req.query;
+    // التحقق من صحة معاملات الاستعلام
+    const queryValidation = geographicQuerySchema.safeParse(req.query);
+    if (!queryValidation.success) {
+      await AuditLogger.logValidationError(req, queryValidation.error.errors);
+      return res.status(400).json({
+        success: false,
+        error: 'معاملات الاستعلام غير صحيحة',
+        details: queryValidation.error.errors,
+        code: 'INVALID_QUERY_PARAMS'
+      });
+    }
+
+    const { includeGeometry = false, search, limit = 50, offset = 0 } = queryValidation.data;
     
-    // Build where conditions
-    const whereConditions = [eq(governorates.isActive, true)];
+    // Build where conditions - remove isActive filter since column doesn't exist in DB
+    const whereConditions: any[] = [];
     
     if (search) {
       whereConditions.push(
@@ -134,10 +161,10 @@ router.get('/governorates', async (req: Request, res: Response) => {
       nameAr: governorates.nameAr,
       nameEn: governorates.nameEn,
       bounds: governorates.bounds,
-      area: governorates.area,
+      area: sql<number>`area_km2`, // Use actual DB column name
       population: governorates.population,
-      capitalCity: governorates.capitalCity,
-      isActive: governorates.isActive,
+      capitalCity: sql<string>`capital_ar`, // Use actual DB column name  
+      isActive: sql<boolean>`true`, // Default to true since column doesn't exist
       createdAt: governorates.createdAt,
       updatedAt: governorates.updatedAt,
       ...(includeGeometry === 'true' && { geometry: governorates.geometry })
@@ -165,7 +192,7 @@ router.get('/governorates', async (req: Request, res: Response) => {
 });
 
 // GET /api/geographic/governorates/:code - جلب محافظة محددة
-router.get('/governorates/:code', async (req: Request, res: Response) => {
+router.get('/governorates/:code', queryRateLimit, async (req: Request, res: Response) => {
   try {
     const { code } = req.params;
     const { includeGeometry = false } = req.query;
@@ -176,10 +203,10 @@ router.get('/governorates/:code', async (req: Request, res: Response) => {
       nameAr: governorates.nameAr,
       nameEn: governorates.nameEn,
       bounds: governorates.bounds,
-      area: governorates.area,
+      area: sql<number>`area_km2`,
       population: governorates.population,
-      capitalCity: governorates.capitalCity,
-      isActive: governorates.isActive,
+      capitalCity: sql<string>`capital_ar`,
+      isActive: sql<boolean>`true`,
       createdAt: governorates.createdAt,
       updatedAt: governorates.updatedAt,
       ...(includeGeometry === 'true' && { geometry: governorates.geometry })
@@ -212,31 +239,26 @@ router.get('/governorates/:code', async (req: Request, res: Response) => {
   }
 });
 
-// POST /api/geographic/governorates/upload - رفع ملف GeoJSON للمحافظات (يتطلب مصادقة)
-router.post('/governorates/upload', authenticateToken, upload.single('file'), async (req: Request, res: Response) => {
+// POST /api/geographic/governorates/upload - رفع ملف GeoJSON للمحافظات (يتطلب مصادقة من المدير فقط)
+router.post('/governorates/upload', 
+  geographicDataRateLimit,
+  requireAuth, 
+  requireRole('admin'), 
+  strictCsrfProtection,
+  upload.single('file'), 
+  validateFileUpload(governorateGeoJsonSchema),
+  async (req: any, res: Response) => {
   try {
     console.log('🌍 بدء رفع ملف المحافظات الجغرافي');
     
-    if (!req.file) {
-      return res.status(400).json({
-        success: false,
-        error: 'لم يتم العثور على ملف'
-      });
-    }
-
+    // تسجيل محاولة رفع الملف
+    await AuditLogger.logFileUpload(req, req.file.originalname, req.file.size, false);
+    
+    // البيانات المحققة متوفرة في req.validatedGeoJson من middleware التحقق
+    const geoJsonData = req.validatedGeoJson;
+    
     const filePath = req.file.path;
     console.log(`📁 قراءة الملف: ${filePath}`);
-
-    // قراءة وتحليل ملف GeoJSON
-    const fileContent = await fs.readFile(filePath, 'utf8');
-    const geoJsonData = JSON.parse(fileContent);
-
-    if (geoJsonData.type !== 'FeatureCollection' || !Array.isArray(geoJsonData.features)) {
-      return res.status(400).json({
-        success: false,
-        error: 'تنسيق GeoJSON غير صحيح'
-      });
-    }
 
     console.log(`📊 عدد المحافظات في الملف: ${geoJsonData.features.length}`);
 
@@ -277,6 +299,7 @@ router.post('/governorates/upload', authenticateToken, upload.single('file'), as
 
       if (existingGov.length > 0) {
         // تحديث المحافظة الموجودة
+        const oldData = existingGov[0];
         await db.update(governorates)
           .set({
             nameAr: governorateData.nameAr,
@@ -290,11 +313,18 @@ router.post('/governorates/upload', authenticateToken, upload.single('file'), as
           })
           .where(eq(governorates.code, governorateData.code));
         
+        // تسجيل عملية التحديث
+        await AuditLogger.logGeographicDataMutation(req, 'update', 'governorates', governorateData, oldData);
+        
         updatedCount++;
         console.log(`📝 تم تحديث: ${governorateData.nameAr} (${governorateData.code})`);
       } else {
         // إدراج محافظة جديدة
         await db.insert(governorates).values(governorateData);
+        
+        // تسجيل عملية الإدراج
+        await AuditLogger.logGeographicDataMutation(req, 'insert', 'governorates', governorateData);
+        
         insertedCount++;
         console.log(`✅ تم إدراج: ${governorateData.nameAr} (${governorateData.code})`);
       }
@@ -308,6 +338,14 @@ router.post('/governorates/upload', authenticateToken, upload.single('file'), as
 
     // حذف الملف المؤقت
     await fs.unlink(filePath);
+
+    // تسجيل نجاح العملية
+    await AuditLogger.logFileUpload(req, req.file.originalname, req.file.size, true);
+    await AuditLogger.logAdminActivity(req, 'bulk_upload_governorates', 'governorates', {
+      inserted: insertedCount,
+      updated: updatedCount,
+      total: processedGovernorates.length
+    });
 
     console.log(`🎉 اكتملت المعالجة: ${insertedCount} جديد، ${updatedCount} محدث`);
 
@@ -324,6 +362,10 @@ router.post('/governorates/upload', authenticateToken, upload.single('file'), as
 
   } catch (error) {
     console.error('❌ خطأ في معالجة ملف المحافظات:', error);
+    
+    // تسجيل فشل العملية
+    await AuditLogger.logFileUpload(req, req.file?.originalname || 'unknown', req.file?.size || 0, false, 
+      error instanceof Error ? error.message : 'خطأ غير معروف');
     
     // حذف الملف المؤقت في حالة الخطأ
     if (req.file?.path) {
@@ -345,12 +387,24 @@ router.post('/governorates/upload', authenticateToken, upload.single('file'), as
 // ========== DISTRICTS ENDPOINTS ==========
 
 // GET /api/geographic/districts - جلب جميع المديريات
-router.get('/districts', async (req: Request, res: Response) => {
+router.get('/districts', queryRateLimit, async (req: Request, res: Response) => {
   try {
-    const { governorateId, governorateCode, includeGeometry = false, search, limit = 100, offset = 0 } = req.query;
+    // التحقق من صحة معاملات الاستعلام
+    const queryValidation = geographicQuerySchema.safeParse(req.query);
+    if (!queryValidation.success) {
+      await AuditLogger.logValidationError(req, queryValidation.error.errors);
+      return res.status(400).json({
+        success: false,
+        error: 'معاملات الاستعلام غير صحيحة',
+        details: queryValidation.error.errors,
+        code: 'INVALID_QUERY_PARAMS'
+      });
+    }
     
-    // Build where conditions
-    const whereConditions = [eq(districts.isActive, true)];
+    const { governorateId, governorateCode, includeGeometry = false, search, limit = 100, offset = 0 } = queryValidation.data;
+    
+    // Build where conditions - remove isActive filter since column doesn't exist in DB
+    const whereConditions: any[] = [];
     
     if (governorateId) {
       whereConditions.push(eq(districts.governorateId, governorateId as string));
@@ -381,9 +435,9 @@ router.get('/districts', async (req: Request, res: Response) => {
       nameAr: districts.nameAr,
       nameEn: districts.nameEn,
       bounds: districts.bounds,
-      area: districts.area,
+      area: sql<number>`area_km2`,
       population: districts.population,
-      isActive: districts.isActive,
+      isActive: sql<boolean>`true`,
       createdAt: districts.createdAt,
       updatedAt: districts.updatedAt,
       ...(includeGeometry === 'true' && { geometry: districts.geometry })
@@ -409,8 +463,15 @@ router.get('/districts', async (req: Request, res: Response) => {
   }
 });
 
-// POST /api/geographic/districts/upload - رفع ملف GeoJSON للمديريات (يتطلب مصادقة)
-router.post('/districts/upload', authenticateToken, upload.single('file'), async (req: Request, res: Response) => {
+// POST /api/geographic/districts/upload - رفع ملف GeoJSON للمديريات (يتطلب مصادقة من المدير فقط)
+router.post('/districts/upload',
+  geographicDataRateLimit,
+  requireAuth,
+  requireRole('admin'),
+  strictCsrfProtection,
+  upload.single('file'),
+  validateFileUpload(districtGeoJsonSchema),
+  async (req: any, res: Response) => {
   try {
     console.log('🏘️ بدء رفع ملف المديريات الجغرافي');
     
@@ -550,8 +611,8 @@ router.get('/sub-districts', async (req: Request, res: Response) => {
   try {
     const { districtId, districtCode, includeGeometry = false, search, limit = 200, offset = 0 } = req.query;
     
-    // Build where conditions
-    const whereConditions = [eq(subDistricts.isActive, true)];
+    // Build where conditions - remove isActive filter since column doesn't exist in DB
+    const whereConditions: any[] = [];
     
     if (districtId) {
       whereConditions.push(eq(subDistricts.districtId, districtId as string));
@@ -582,9 +643,9 @@ router.get('/sub-districts', async (req: Request, res: Response) => {
       nameAr: subDistricts.nameAr,
       nameEn: subDistricts.nameEn,
       bounds: subDistricts.bounds,
-      area: subDistricts.area,
+      area: sql<number>`area_km2`,
       population: subDistricts.population,
-      isActive: subDistricts.isActive,
+      isActive: sql<boolean>`true`,
       createdAt: subDistricts.createdAt,
       updatedAt: subDistricts.updatedAt,
       ...(includeGeometry === 'true' && { geometry: subDistricts.geometry })
@@ -610,8 +671,8 @@ router.get('/sub-districts', async (req: Request, res: Response) => {
   }
 });
 
-// POST /api/geographic/sub-districts/upload - رفع ملف GeoJSON للعزل (يتطلب مصادقة)
-router.post('/sub-districts/upload', authenticateToken, upload.single('file'), async (req: Request, res: Response) => {
+// POST /api/geographic/sub-districts/upload - رفع ملف GeoJSON للعزل (يتطلب مصادقة من المدير فقط)
+router.post('/sub-districts/upload', requireAuth, requireRole('admin'), upload.single('file'), async (req: any, res: Response) => {
   try {
     console.log('🏡 بدء رفع ملف العزل الجغرافي');
     
@@ -775,7 +836,7 @@ router.get('/hierarchy/:governorateCode', async (req: Request, res: Response) =>
       
       result.districts = governorateDistricts;
 
-      if (depth === 'all' || depth === 'sub-districts') {
+      if (depth === 'all' || (depth as string) === 'sub-districts') {
         // جلب العزل لكل مديرية
         for (const district of governorateDistricts) {
           const districtSubDistricts = await db.select()
@@ -805,9 +866,12 @@ router.get('/hierarchy/:governorateCode', async (req: Request, res: Response) =>
 // GET /api/geographic/statistics - إحصائيات النظام الجغرافي
 router.get('/statistics', async (req: Request, res: Response) => {
   try {
-    const [governoratesCount] = await db.select({ count: sql<number>`cast(count(*) as integer)` }).from(governorates).where(eq(governorates.isActive, true));
-    const [districtsCount] = await db.select({ count: sql<number>`cast(count(*) as integer)` }).from(districts).where(eq(districts.isActive, true));
-    const [subDistrictsCount] = await db.select({ count: sql<number>`cast(count(*) as integer)` }).from(subDistricts).where(eq(subDistricts.isActive, true));
+    const [governoratesCount] = await db.select({ count: sql<number>`cast(count(*) as integer)` })
+      .from(governorates);
+    const [districtsCount] = await db.select({ count: sql<number>`cast(count(*) as integer)` })
+      .from(districts);
+    const [subDistrictsCount] = await db.select({ count: sql<number>`cast(count(*) as integer)` })
+      .from(subDistricts);
 
     const statistics = {
       governorates: governoratesCount.count,
