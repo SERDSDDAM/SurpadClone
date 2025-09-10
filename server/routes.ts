@@ -31,6 +31,7 @@ import rateLimit from 'express-rate-limit';
 import cookieParser from 'cookie-parser';
 import surveyRoutes from "./routes/survey-routes";
 import gisRoutes from "./routes/gis-routes";
+import geographicDataRoutes from "./routes/geographic-data";
 import phase1Routes from "./routes/phase1-integration";
 import { registerGISFeatureRoutes } from "./routes/gis-features";
 import adminRoutes from "./routes/admin";
@@ -419,6 +420,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // Phase 1 GIS Routes - HIGHEST PRIORITY  
   app.use('/api/gis', gisRoutes);
+  
+  // Geographic Administrative Data Routes - نظام البيانات الجغرافية الإدارية
+  app.use('/api/geographic', geographicDataRoutes);
   
   // RBAC Routes
   app.use('/api/rbac', rbacRoutes);

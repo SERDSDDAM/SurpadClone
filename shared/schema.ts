@@ -863,3 +863,289 @@ export type InsertBranchPeriodicReport = typeof branchPeriodicReports.$inferInse
 // Insert schemas for validation
 export const insertStreetStatusDecisionSchema = createInsertSchema(streetStatusDecisions);
 export const insertBranchPeriodicReportSchema = createInsertSchema(branchPeriodicReports);
+
+// ========== GEOGRAPHIC ADMINISTRATIVE DIVISIONS TABLES ==========
+// 🗺️ النظام الجغرافي الإداري اليمني - 9 مستويات
+
+// 1. المحافظات - Governorates (22 محافظة)
+export const governorates = pgTable("governorates", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  code: varchar("code", { length: 10 }).notNull().unique(), // YE11, YE12, etc.
+  nameAr: varchar("name_ar", { length: 100 }).notNull(),
+  nameEn: varchar("name_en", { length: 100 }).notNull(),
+  geometry: jsonb("geometry").notNull(), // GeoJSON MultiPolygon
+  bounds: jsonb("bounds"), // [minLng, minLat, maxLng, maxLat]
+  area: real("area"), // Area in square kilometers
+  population: integer("population"),
+  capitalCity: varchar("capital_city", { length: 100 }),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// 2. المديريات - Districts (343 مديرية)
+export const districts = pgTable("districts", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  governorateId: varchar("governorate_id").notNull().references(() => governorates.id),
+  code: varchar("code", { length: 15 }).notNull().unique(), // YE1101, etc.
+  nameAr: varchar("name_ar", { length: 100 }).notNull(),
+  nameEn: varchar("name_en", { length: 100 }),
+  geometry: jsonb("geometry"), // GeoJSON MultiPolygon
+  bounds: jsonb("bounds"),
+  area: real("area"),
+  population: integer("population"),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// 3. العزل - Sub-Districts (2,157 عزلة)
+export const subDistricts = pgTable("sub_districts", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  districtId: varchar("district_id").notNull().references(() => districts.id),
+  code: varchar("code", { length: 20 }).notNull().unique(), // YE110121, etc.
+  nameAr: varchar("name_ar", { length: 100 }).notNull(),
+  nameEn: varchar("name_en", { length: 100 }),
+  geometry: jsonb("geometry"), // GeoJSON MultiPolygon
+  bounds: jsonb("bounds"),
+  area: real("area"),
+  population: integer("population"),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// 4. الأحياء - Neighborhoods
+export const neighborhoods = pgTable("neighborhoods", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  subDistrictId: varchar("sub_district_id").notNull().references(() => subDistricts.id),
+  nameAr: varchar("name_ar", { length: 100 }).notNull(),
+  nameEn: varchar("name_en", { length: 100 }),
+  neighborhoodType: varchar("neighborhood_type", { length: 50 }), // residential, commercial, industrial, mixed
+  geometry: jsonb("geometry"), // GeoJSON Polygon
+  bounds: jsonb("bounds"),
+  area: real("area"),
+  population: integer("population"),
+  housingUnits: integer("housing_units"),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// 5. القطاعات - Sectors
+export const sectors = pgTable("sectors", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()::text`),
+  neighborhoodId: varchar("neighborhood_id").notNull().references(() => neighborhoods.id),
+  nameAr: varchar("name_ar", { length: 100 }).notNull(),
+  nameEn: varchar("name_en", { length: 100 }),
+  sectorNumber: varchar("sector_number", { length: 20 }),
+  sectorType: varchar("sector_type", { length: 50 }), // residential, commercial, public_services
+  geometry: jsonb("geometry"), // GeoJSON Polygon
+  bounds: jsonb("bounds"),
+  area: real("area"),
+  plotsCount: integer("plots_count").default(0),
+  builtPlotsCount: integer("built_plots_count").default(0),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// 6. الحارات - Administrative Blocks (renamed to avoid conflicts)
+export const administrativeBlocks = pgTable("administrative_blocks", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()::text`),
+  sectorId: varchar("sector_id").notNull().references(() => sectors.id),
+  blockNumber: varchar("block_number", { length: 20 }).notNull(),
+  blockCode: varchar("block_code", { length: 30 }),
+  nameAr: varchar("name_ar", { length: 100 }),
+  nameEn: varchar("name_en", { length: 100 }),
+  geometry: jsonb("geometry"), // GeoJSON Polygon
+  bounds: jsonb("bounds"),
+  area: real("area"),
+  landUse: varchar("land_use", { length: 50 }), // residential, commercial, mixed, public
+  buildingType: varchar("building_type", { length: 50 }), // villa, apartment, commercial, mixed
+  plotsCount: integer("plots_count").default(0),
+  builtPlotsCount: integer("built_plots_count").default(0),
+  developmentStatus: varchar("development_status", { length: 30 }).default("undeveloped"),
+  ownershipType: varchar("ownership_type", { length: 30 }), // private, public, mixed
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// 7. وحدات الجوار - Neighborhood Units
+export const neighborhoodUnits = pgTable("neighborhood_units", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()::text`),
+  blockId: varchar("block_id").notNull().references(() => administrativeBlocks.id),
+  unitNumber: varchar("unit_number", { length: 20 }).notNull(),
+  unitCode: varchar("unit_code", { length: 30 }),
+  nameAr: varchar("name_ar", { length: 100 }),
+  nameEn: varchar("name_en", { length: 100 }),
+  geometry: jsonb("geometry"), // GeoJSON Polygon
+  bounds: jsonb("bounds"),
+  area: real("area"),
+  residentialUnits: integer("residential_units").default(0),
+  familiesCount: integer("families_count").default(0),
+  buildingsCount: integer("buildings_count").default(0),
+  accessibilityLevel: varchar("accessibility_level", { length: 20 }).default("medium"), // high, medium, low
+  infrastructureStatus: varchar("infrastructure_status", { length: 30 }).default("partial"), // complete, partial, poor
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// 8. البلوكات داخل وحدات الجوار - Unit Blocks
+export const unitBlocks = pgTable("unit_blocks", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  neighborhoodUnitId: varchar("neighborhood_unit_id").notNull().references(() => neighborhoodUnits.id),
+  blockCode: varchar("block_code", { length: 20 }).notNull(),
+  blockNumber: varchar("block_number", { length: 20 }),
+  nameAr: varchar("name_ar", { length: 100 }),
+  nameEn: varchar("name_en", { length: 100 }),
+  geometry: jsonb("geometry"), // GeoJSON Polygon
+  bounds: jsonb("bounds"),
+  area: real("area"),
+  plotsCount: integer("plots_count").default(0),
+  builtPlotsCount: integer("built_plots_count").default(0),
+  buildingsCount: integer("buildings_count").default(0),
+  landUseType: varchar("land_use_type", { length: 50 }), // residential, commercial, public, mixed
+  buildingDensity: varchar("building_density", { length: 20 }).default("medium"), // high, medium, low
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// 9. الشوارع - Streets (ربط متعدد المستويات)
+export const streets = pgTable("streets", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  streetCode: varchar("street_code", { length: 30 }).unique(),
+  nameAr: varchar("name_ar", { length: 100 }).notNull(),
+  nameEn: varchar("name_en", { length: 100 }),
+  streetType: varchar("street_type", { length: 30 }).notNull(), // main, secondary, local, alley
+  streetClass: varchar("street_class", { length: 20 }), // highway, arterial, collector, local
+  width: real("width"), // Street width in meters
+  length: real("length"), // Street length in meters
+  surfaceType: varchar("surface_type", { length: 30 }), // asphalt, concrete, gravel, dirt
+  direction: varchar("direction", { length: 20 }).default("both"), // one_way, both, reversible
+  condition: varchar("condition", { length: 20 }).default("good"), // excellent, good, fair, poor
+  lightingStatus: varchar("lighting_status", { length: 20 }).default("partial"), // complete, partial, none
+  drainageSystem: varchar("drainage_system", { length: 20 }).default("none"), // modern, traditional, none
+  geometry: jsonb("geometry").notNull(), // GeoJSON LineString
+  bounds: jsonb("bounds"),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// ربط الشوارع مع مستويات التقسيم الإداري المختلفة
+export const streetAdministrativeBoundaries = pgTable("street_administrative_boundaries", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  streetId: varchar("street_id").notNull().references(() => streets.id),
+  // ربط مع المستويات المختلفة (اختياري - حسب المستوى)
+  governorateId: varchar("governorate_id").references(() => governorates.id),
+  districtId: varchar("district_id").references(() => districts.id),
+  subDistrictId: varchar("sub_district_id").references(() => subDistricts.id),
+  neighborhoodId: varchar("neighborhood_id").references(() => neighborhoods.id),
+  sectorId: varchar("sector_id").references(() => sectors.id),
+  blockId: varchar("block_id").references(() => administrativeBlocks.id),
+  neighborhoodUnitId: varchar("neighborhood_unit_id").references(() => neighborhoodUnits.id),
+  unitBlockId: varchar("unit_block_id").references(() => unitBlocks.id),
+  // معلومات الحدود
+  boundaryType: varchar("boundary_type", { length: 30 }).notNull(), // crosses, within, boundary
+  segmentGeometry: jsonb("segment_geometry"), // الجزء من الشارع ضمن هذا المستوى الإداري
+  segmentLength: real("segment_length"), // طول الجزء بالمتر
+  isMainBoundary: boolean("is_main_boundary").default(false), // هل هذا الحد الإداري الرئيسي للشارع
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// ========== INSERT SCHEMAS & TYPES FOR GEOGRAPHIC TABLES ==========
+
+// Governorates schemas
+export const insertGovernorateSchema = createInsertSchema(governorates).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertDistrictSchema = createInsertSchema(districts).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertSubDistrictSchema = createInsertSchema(subDistricts).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertNeighborhoodSchema = createInsertSchema(neighborhoods).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertSectorSchema = createInsertSchema(sectors).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertAdministrativeBlockSchema = createInsertSchema(administrativeBlocks).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertNeighborhoodUnitSchema = createInsertSchema(neighborhoodUnits).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertUnitBlockSchema = createInsertSchema(unitBlocks).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertStreetSchema = createInsertSchema(streets).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertStreetAdministrativeBoundarySchema = createInsertSchema(streetAdministrativeBoundaries).omit({
+  id: true,
+  createdAt: true,
+});
+
+// Geographic types
+export type Governorate = typeof governorates.$inferSelect;
+export type InsertGovernorate = z.infer<typeof insertGovernorateSchema>;
+
+export type District = typeof districts.$inferSelect;
+export type InsertDistrict = z.infer<typeof insertDistrictSchema>;
+
+export type SubDistrict = typeof subDistricts.$inferSelect;
+export type InsertSubDistrict = z.infer<typeof insertSubDistrictSchema>;
+
+export type Neighborhood = typeof neighborhoods.$inferSelect;
+export type InsertNeighborhood = z.infer<typeof insertNeighborhoodSchema>;
+
+export type Sector = typeof sectors.$inferSelect;
+export type InsertSector = z.infer<typeof insertSectorSchema>;
+
+export type AdministrativeBlock = typeof administrativeBlocks.$inferSelect;
+export type InsertAdministrativeBlock = z.infer<typeof insertAdministrativeBlockSchema>;
+
+export type NeighborhoodUnit = typeof neighborhoodUnits.$inferSelect;
+export type InsertNeighborhoodUnit = z.infer<typeof insertNeighborhoodUnitSchema>;
+
+export type UnitBlock = typeof unitBlocks.$inferSelect;
+export type InsertUnitBlock = z.infer<typeof insertUnitBlockSchema>;
+
+export type Street = typeof streets.$inferSelect;
+export type InsertStreet = z.infer<typeof insertStreetSchema>;
+
+export type StreetAdministrativeBoundary = typeof streetAdministrativeBoundaries.$inferSelect;
+export type InsertStreetAdministrativeBoundary = z.infer<typeof insertStreetAdministrativeBoundarySchema>;
