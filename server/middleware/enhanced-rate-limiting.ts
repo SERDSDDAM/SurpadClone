@@ -18,8 +18,9 @@ export const uploadRateLimit = rateLimit({
     return req.user?.role === 'admin' && process.env.NODE_ENV === 'development';
   },
   keyGenerator: (req: Request) => {
-    // استخدام IP + User ID إن وجد للحصول على معرف فريد
-    return req.user?.id ? `${req.ip}-${req.user.id}` : req.ip || 'unknown';
+    // استخدام IP آمن + User ID إن وجد للحصول على معرف فريد
+    const ip = req.ip || req.connection?.remoteAddress || 'unknown';
+    return req.user?.id ? `${ip}-${req.user.id}` : ip;
   }
 });
 
@@ -36,7 +37,8 @@ export const adminActionRateLimit = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   keyGenerator: (req: Request) => {
-    return req.user?.id || req.ip || 'unknown';
+    const ip = req.ip || req.connection?.remoteAddress || 'unknown';
+    return req.user?.id || ip;
   }
 });
 
@@ -67,7 +69,8 @@ export const bulkOperationRateLimit = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   keyGenerator: (req: Request) => {
-    return req.user?.id || req.ip || 'unknown';
+    const ip = req.ip || req.connection?.remoteAddress || 'unknown';
+    return req.user?.id || ip;
   }
 });
 
@@ -79,7 +82,8 @@ export function createRoleBasedRateLimit(limits: Record<string, { max: number; w
     skip: (req: Request) => false,
     keyGenerator: (req: Request) => {
       const role = req.user?.role || 'guest';
-      return `${role}-${req.user?.id || req.ip || 'unknown'}`;
+      const ip = req.ip || req.connection?.remoteAddress || 'unknown';
+      return `${role}-${req.user?.id || ip}`;
     },
     message: {
       success: false,
