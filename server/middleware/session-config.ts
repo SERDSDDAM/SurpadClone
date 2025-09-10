@@ -1,6 +1,8 @@
 import session from 'express-session';
 import ConnectPgSimple from 'connect-pg-simple';
-import { Pool } from 'pg';
+import pg from 'pg';
+
+const { Pool } = pg;
 
 // إنشاء مخزن الجلسات باستخدام PostgreSQL
 const pgStore = ConnectPgSimple(session);
