@@ -1,4 +1,4 @@
-import rateLimit from 'express-rate-limit';
+import rateLimit, { ipKeyGenerator } from 'express-rate-limit';
 import { Request, Response } from 'express';
 
 // Rate limiter متقدم لعمليات رفع الملفات
@@ -18,12 +18,12 @@ export const uploadRateLimit = rateLimit({
     return req.user?.role === 'admin' && process.env.NODE_ENV === 'development';
   },
   keyGenerator: (req: Request) => {
-    // استخدام User ID إن وجد، وإلا استخدم IP مع تعامل آمن مع IPv6
+    // استخدام User ID إن وجد، وإلا استخدم ipKeyGenerator للتعامل الآمن مع IPv6
     if (req.user?.id) {
       return `upload-user-${req.user.id}`;
     }
-    // IPv6-safe IP handling
-    return req.ip || req.connection?.remoteAddress || 'fallback-ip';
+    // استخدام ipKeyGenerator للتعامل الآمن مع IPv6
+    return ipKeyGenerator(req, req.res, 'upload-');
   }
 });
 
@@ -44,8 +44,8 @@ export const adminActionRateLimit = rateLimit({
     if (req.user?.id) {
       return `admin-user-${req.user.id}`;
     }
-    // IPv6-safe IP handling
-    return req.ip || req.connection?.remoteAddress || 'admin-fallback-ip';
+    // استخدام ipKeyGenerator للتعامل الآمن مع IPv6
+    return ipKeyGenerator(req, req.res, 'admin-');
   }
 });
 
@@ -81,8 +81,8 @@ export const bulkOperationRateLimit = rateLimit({
     if (req.user?.id) {
       return `bulk-user-${req.user.id}`;
     }
-    // IPv6-safe IP handling
-    return req.ip || req.connection?.remoteAddress || 'bulk-fallback-ip';
+    // استخدام ipKeyGenerator للتعامل الآمن مع IPv6
+    return ipKeyGenerator(req, req.res, 'bulk-');
   }
 });
 
@@ -94,12 +94,12 @@ export function createRoleBasedRateLimit(limits: Record<string, { max: number; w
     skip: (req: Request) => false,
     keyGenerator: (req: Request) => {
       const role = req.user?.role || 'guest';
-      // استخدام User ID إذا كان متوفراً، وإلا اترك express-rate-limit يتعامل مع IP
+      // استخدام User ID إذا كان متوفراً، وإلا استخدام ipKeyGenerator للأمان
       if (req.user?.id) {
         return `${role}-user-${req.user.id}`;
       }
-      // IPv6-safe IP handling with role prefix
-      return `${role}-ip-${req.ip || req.connection?.remoteAddress || 'role-fallback-ip'}`;
+      // استخدام ipKeyGenerator للتعامل الآمن مع IPv6
+      return ipKeyGenerator(req, req.res, `${role}-`);
     },
     message: {
       success: false,
